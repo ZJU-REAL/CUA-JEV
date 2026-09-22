@@ -9,6 +9,8 @@
 
 CUA-JEV is an open-source reference framework for Jev-powered computer use on Windows. A task adapter turns structured state from the browser, desktop UI, Excel, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects an `intent × action channel`; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four complete workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
 
+Jev's fast, typed decisions are a promising fit for downstream systems that must choose actions repeatedly under latency constraints, including computer use, embodied agents, and potentially autonomous driving. [RoboJEV](https://github.com/lykycy123/RoboJEV) already explores the embodied setting with Jev-controlled manipulation in a MuJoCo simulator. CUA-JEV explores a different setting: choosing both *what to do next* and *which computer-use channel should do it*. This is a motivation for the design, not a claim that this framework has been validated for robotics or driving.
+
 > **Scope:** This is not a general agent that can operate any Windows application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
 
 ![CUA-JEV architecture: task adapters, Jev selection, guarded execution, and independent verification](assets/architecture.svg)
@@ -124,20 +126,12 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [ ] Divide work with general CUA / LLM models: use them for open-ended goal interpretation and new capability construction, and Jev for frequent constrained choices; optimize jointly for success, latency, and cost.
 - [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
 
-## Publishing the website
-
-GitHub Pages uses [`pages.yml`](.github/workflows/pages.yml) to build the read-only site from `main`. The build reads only reviewed `website/snapshot.json` and `website/media/`; it does not upload local `runs/`, `.env`, or raw recordings. After new experiments, inspect the data and videos locally before running:
-
-```powershell
-python scripts/build_pages.py --refresh-snapshot
-python scripts/prepare_public_demos.py
-python scripts/build_pages.py --build
-```
-
-Review the `website/` diff for private information before committing and pushing. Main-branch updates deploy automatically through GitHub Actions. See the [GitHub Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-
 ## Safety and license
 
 `ActionGuard` fails closed on candidate identity, stale observations, allowed roots, writes, and external side effects. Excel does not run VBA; MCP can invoke only registered typed tools. A successful tool receipt still requires task-level verification. API keys are used only for local HTTPS requests and are not written to traces, site snapshots, or the Git repository.
 
 The code is released under [Apache-2.0](LICENSE). The ZJU-REAL mark identifies the lab project and does not change ownership of third-party branding; app icon sources are listed in [`ATTRIBUTION.md`](src/cua_jev/ui/static/icons/ATTRIBUTION.md).
+
+## Acknowledgements
+
+We thank [TypeSafe AI](https://typesafe.ai/) for developing Jev and providing the API and documentation that make this integration possible. We also acknowledge the authors of [RoboJEV](https://github.com/lykycy123/RoboJEV) for their open embodied-agent demonstration, which helped motivate exploring Jev in another action-rich domain. CUA-JEV is an independent research and engineering project, not an official TypeSafe AI or RoboJEV product.

@@ -17,6 +17,8 @@
 
 CUA-JEV 是一个面向 Windows Computer-Use Agent（CUA）的开源参考框架。它把 DOM、Windows UI Automation、Excel COM、终端和文件系统等结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个完整可运行的任务范例及 Hybrid / GUI Only 对照实验。
 
+Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动作选择的下游方向，例如 CUA、具身智能，以及潜在的智能驾驶场景。[RoboJEV](https://github.com/lykycy123/RoboJEV) 已在 MuJoCo 仿真中探索 Jev 控制的机器人操作；CUA-JEV 则聚焦计算机使用中的“下一步做什么、通过哪种通道执行”。这是一项研究动机，不表示本框架已在机器人或智驾系统中得到验证。
+
 > **能力边界：**这不是“给任意指令，就能操作任意 Windows 软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本，也不凭截图理解陌生软件。
 
 ![CUA-JEV：任务适配器、Jev 决策、执行器与验证器组成的闭环](assets/architecture.svg)
@@ -132,20 +134,12 @@ python scripts/record_v2_demos.py --task all --profile both --policy jev
 - [ ] 与通用 CUA / LLM 模型分工：让大模型处理开放式目标理解和新能力构建，让 Jev 承担可约束的高频选择，以任务成功率、延迟和成本共同优化路由。
 - [ ] 完善跨通道失败恢复、动态 MCP 服务接入、安全确认与长期回归基准。
 
-## 网页如何发布
-
-GitHub Pages 使用 [`pages.yml`](.github/workflows/pages.yml) 从 `main` 构建只读站点。它**只读取仓库里经过审阅的 `website/snapshot.json` 和 `website/media/`**，不会把本机 `runs/`、`.env` 或原始视频上传。新增实验后，在本机核查数据和视频，再执行：
-
-```powershell
-python scripts/build_pages.py --refresh-snapshot
-python scripts/prepare_public_demos.py
-python scripts/build_pages.py --build
-```
-
-审阅 `website/` 的差异，确认无个人信息后提交推送。若仓库尚未启用 Pages，需要在 GitHub 仓库 **Settings → Pages → Build and deployment** 选择 **GitHub Actions**；之后 `main` 更新会自动部署到上面的网页地址。[GitHub 官方部署说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
-
 ## 安全与许可
 
 `ActionGuard` 对候选身份、过期观察、允许根目录、写入和外部副作用执行 fail-closed 检查。Excel 不运行 VBA；MCP 只能调用已注册的类型化工具。成功回执不是终态成功，必须由任务验证器确认。API 密钥只用于本地 HTTPS 请求，不写入 trace、网页快照或 Git 仓库。
 
 代码以 [Apache-2.0](LICENSE) 发布。ZJU-REAL 标识用于表明实验室项目身份，不改变第三方品牌素材的权利归属；应用图标的来源见 [`ATTRIBUTION.md`](src/cua_jev/ui/static/icons/ATTRIBUTION.md)。
+
+## 致谢
+
+感谢 [TypeSafe AI](https://typesafe.ai/) 开发 Jev 并提供 API 与文档，使本项目的集成实验成为可能。也感谢 [RoboJEV](https://github.com/lykycy123/RoboJEV) 作者公开具身智能方向的 Jev 实践，启发我们进一步探索计算机使用这一多动作通道场景。CUA-JEV 是独立的研究与工程项目，并非 TypeSafe AI 或 RoboJEV 的官方产品。
