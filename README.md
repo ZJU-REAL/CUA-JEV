@@ -1,75 +1,69 @@
-<p align="center">
-  <img src="src/cua_jev/ui/static/logo-mark.svg" width="100" alt="ZJU-REAL Lab logo">
-</p>
+<table>
+  <tr>
+    <td width="88"><img src="src/cua_jev/ui/static/logo-mark.svg" width="72" alt="ZJU-REAL Lab logo"></td>
+    <td><h1>CUA-JEV: Jev for Computer Use</h1></td>
+  </tr>
+</table>
 
-<h1 align="center">CUA-JEV</h1>
+[Webpage](https://zjureal.com/CUA-JEV/) · [中文文档](README.zh-CN.md)
 
-<p align="center"><strong>Jev-powered hybrid action space for computer use</strong><br>让 Jev 在真实桌面任务中选择下一步做什么，以及用哪一种工具做。</p>
+CUA-JEV is an open-source reference framework for Jev-powered computer use on Windows. A task adapter turns structured state from the browser, desktop UI, Excel, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects an `intent × action channel`; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four complete workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
 
-<p align="center">
-  <a href="https://zjureal.com/CUA-JEV/">项目网页 · 视频与交互式结果</a> ·
-  <a href="#快速开始">快速开始</a> ·
-  <a href="#扩展一个新任务">扩展指南</a> ·
-  <a href="#roadmap">Roadmap</a>
-</p>
+> **Scope:** This is not a general agent that can operate any Windows application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
 
-CUA-JEV 是一个面向 Windows Computer-Use Agent（CUA）的开源参考框架。它把 DOM、Windows UI Automation、Excel COM、终端和文件系统等结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个完整可运行的任务范例及 Hybrid / GUI Only 对照实验。
+![CUA-JEV architecture: task adapters, Jev selection, guarded execution, and independent verification](assets/architecture.svg)
 
-> **能力边界：**这不是“给任意指令，就能操作任意 Windows 软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本，也不凭截图理解陌生软件。
+## Why Jev × computer use?
 
-![CUA-JEV：任务适配器、Jev 决策、执行器与验证器组成的闭环](assets/architecture.svg)
+TypeSafe AI describes Jev as a *System One* decision model for software: given state and a typed question, it returns a structured answer suitable for an application branch. Its [Choice primitive](https://docs.typesafe.ai/introduction) fits the question “which of these known actions should we take?” better than generating prose and parsing it into a tool call. TypeSafe calls its training approach RLCD; **CUA-JEV uses the existing Jev API and does not train Jev or a new CUA model**. See the [TypeSafe overview](https://typesafe.ai/) and [developer documentation](https://docs.typesafe.ai/introduction).
 
-## 为什么是 Jev × CUA？
+Computer use naturally has a hybrid action space. A subgoal may be best served by visible mouse-and-keyboard work, or by DOM, COM, CLI, MCP, or a file API. Replanning, generating commands, and parsing output with a general-purpose model at every step can add latency and model cost; a fixed router, meanwhile, may miss useful alternative routes. We narrow the open-ended planning problem to **constrained action selection**: task adapters propose real actions, Jev chooses one online, and deterministic code handles safety and factual verification.
 
-TypeSafe AI 将 Jev 定位为供软件直接调用的 *System One* 决策模型：输入状态和类型化问题，返回可直接用于分支的结构化答案。其 [Choice](https://docs.typesafe.ai/introduction) 原语尤其适合“从已知选项中选一个”，而不是生成一段文本再解析。TypeSafe 将模型训练方法称为 RLCD；**本项目调用现成 Jev API，并没有训练 Jev 或一个新的 CUA 模型**。[官方介绍](https://typesafe.ai/) · [开发文档](https://docs.typesafe.ai/introduction)
+This division of labor depends on informative structured observations and well-engineered candidates and verifiers. Jev does not replace missing perception, task decomposition, or software integration.
 
-CUA 的动作空间天然是混合的。同一个子目标有时适合可见的鼠标键盘操作，有时更适合 DOM、COM、CLI、MCP 或文件 API。每一步都调用通用大模型重新规划、生成命令和解析输出，可能带来不必要的时间与推理费用；但固定规则也难以应对多种真实路线。我们的切入点是把**开放式规划问题收窄成受约束的动作选择问题**：适配器提供合法选项，Jev 在线选择，确定性代码负责安全与事实核验。
+## How it works
 
-这个契合点也有前提：当前任务必须能提供有用的结构化观察，并且开发者需要实现可靠的候选动作和验证器。Jev 不能替代缺失的感知、任务分解或软件集成工程。
+1. **Observe / Generate:** A task adapter reads application state and enumerates only currently legal `intent × channel` candidates. For example, repairing a failing test can offer real VS Code GUI, MCP, restricted CLI, and file API routes.
+2. **Select with Jev:** The Jev `choice` API selects a candidate ID. The chosen action and its arguments are already typed and defined; Jev does not execute arbitrary shell text.
+3. **Guard / Execute:** `ActionGuard` checks observation freshness, candidate identity, path scope, write permissions, and confirmation requirements before dispatching to a registered executor.
+4. **Verify / Repeat:** An executor receipt is not proof of success. An independent verifier checks the new application state; a JSONL trace records the choice, execution, timing, and evidence. The loop observes again until the terminal task condition holds.
 
-## 核心机制
+The reusable pieces are [`ActionCandidate`](src/cua_jev/models.py), [`AgentRuntime`](src/cua_jev/runtime.py), [`ActionGuard`](src/cua_jev/guard.py), [`ExecutorRegistry`](src/cua_jev/registry.py), observer and capability interfaces, and the evaluation/trace contract. The four workflows are reference implementations of these interfaces.
 
-1. **Observe / Generate**：任务适配器读取当前应用状态，只枚举此刻合法的 `intent × route` 候选。一个“修复失败测试”子目标可同时提供 VS Code GUI、MCP 写文件、受限 CLI、文件 API 等真实可行路线。
-2. **Select with Jev**：调用 Jev 的 `choice` 接口，从候选 ID 中选出一个动作。选中的只是预定义的类型化动作及参数；Jev 不直接执行任意 shell 文本。
-3. **Guard / Execute**：`ActionGuard` 检查观察版本、候选身份、路径边界、写入权限与确认要求，再分发到注册的执行器。
-4. **Verify / Repeat**：执行回执不等于成功。独立验证器检查应用的新状态，JSONL trace 记录选择、执行、耗时和验证证据，然后重新观察，直到达到任务终态。
+### Included workflows
 
-可复用的是 [`ActionCandidate`](src/cua_jev/models.py)、[`AgentRuntime`](src/cua_jev/runtime.py)、[`ActionGuard`](src/cua_jev/guard.py)、[`ExecutorRegistry`](src/cua_jev/registry.py)、观察器与能力包接口，以及评测/trace 契约；四个任务是这些接口的参考实现。
-
-### 首版支持什么
-
-| 任务范例 | 目标 | 首版可竞争通道 |
+| Application | Goal | Competing channels in this release |
 |---|---|---|
-| Edge | 公开演示商店登录、排序、购物车、结账和收据核验 | PyAutoGUI、DOM |
-| Excel | 计算指标、标记审核状态、生成图表并通过独立 COM 会话验证 | PyAutoGUI、COM |
-| VS Code | 定位并逐一修复多个缺陷、反复运行测试 | PyAutoGUI、MCP、CLI、文件 API |
-| Explorer | 从混合收件箱筛选报告并制作可验证的发布产物 | PyAutoGUI、MCP、CLI、文件 API |
+| Edge | Sign in to a public demo store, sort items, build a cart, check out, and verify the receipt | PyAutoGUI, DOM |
+| Excel | Compute metrics, mark review status, create charts, and verify the workbook in a separate COM session | PyAutoGUI, COM |
+| VS Code | Diagnose and repair multiple defects while repeatedly running tests | PyAutoGUI, MCP, CLI, file API |
+| Explorer | Select reports from a mixed inbox and produce verifiable release artifacts | PyAutoGUI, MCP, CLI, file API |
 
-GUI Only 中，状态读取与定位仍可使用结构化接口，但**修改操作通过 PyAutoGUI 完成**；Hybrid 则让 Jev 在真实可用的 GUI 与结构化执行路线中选择。项目同时提供无密钥的 Rule 策略，用于测试和策略消融。Windows UIA、终端文本、文件系统等也是适配器可用的观察通道。
+In **GUI Only**, structured interfaces may still provide observations and element locations, but mutations use PyAutoGUI. In **Hybrid**, Jev can select among the available GUI and structured execution routes. A keyless Rule policy is also included for testing and ablations. Windows UI Automation, terminal text, and filesystem state can serve as observation channels.
 
-## 实验与展示
+## Experiments and demos
 
-[项目网页](https://zjureal.com/CUA-JEV/)提供四个案例视频、两组分开的比较，以及可展开的执行记录：
+The [webpage](https://zjureal.com/CUA-JEV/) contains four workflow videos, two separate comparisons, and expandable execution records:
 
-- **Jev Hybrid vs Jev GUI Only**：保持 Jev 策略与终态验证相同，比较动作空间对完成时间的影响。
-- **Jev Hybrid vs Codex Computer Use Hybrid**：两者都允许混合工具，比较实测墙钟时间和基于公开费率的模型美元成本估算。
+- **Jev Hybrid vs Jev GUI Only:** Same Jev policy and terminal verifier; different action spaces. The comparison focuses on completion time.
+- **Jev Hybrid vs Codex Computer Use Hybrid:** Both may use mixed tools. The pilot compares measured wall time and estimated model cost in US dollars.
 
-2026-09-23 的首批 v2 记录如下（秒；Jev 为已有成功记录的中位数，Codex 为每任务一次 pilot）：
+Initial v2 records from 2026-09-23 are shown below in seconds. Jev values are medians of available successful runs; Codex has one pilot run per workflow.
 
-| 案例 | Jev Hybrid | Jev GUI Only | Codex Hybrid |
+| Workflow | Jev Hybrid | Jev GUI Only | Codex Hybrid |
 |---|---:|---:|---:|
 | Edge | 79.5 | 87.4 | 77.4 |
 | Excel | 84.2 | 83.2 | 39.2 |
 | VS Code | 14.0 | 90.8 | 57.9 |
 | Explorer | 13.2 | 211.1 | 50.9 |
 
-VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**Edge 与 Excel 的这批 Hybrid 运行实际上仍选择了 GUI，Excel 甚至略慢**。因此不能把这四行描述为“Jev 在所有任务上更快”。Codex 是通用工具代理，Jev 则使用预先构建的任务能力包；样本数也不足以形成通用速度排名。网站展示的美元数值是按 [TypeSafe 公开价格](https://docs.typesafe.ai/models)和 [OpenAI 公开费率](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing)折算的**模型成本估计，不是实际账单**。方法、token 计数与限制见 [`benchmarks/v2-cost-pilot-2026-09-23.json`](benchmarks/v2-cost-pilot-2026-09-23.json)。
+VS Code and Explorer illustrate how structured routes can avoid long sequences of GUI actions. **In these Edge and Excel Hybrid runs, however, Jev still chose GUI routes; Excel was slightly slower than GUI Only.** These results do not show that Jev is faster on every task. Codex is a general-purpose tool agent, while Jev uses prebuilt task capability packs; the samples are too small for a general performance ranking. The dollar figures on the website are **model-cost estimates, not billed charges**, derived from [TypeSafe public pricing](https://docs.typesafe.ai/models) and the [OpenAI public rate card](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing). Token accounting and caveats are in [`benchmarks/v2-cost-pilot-2026-09-23.json`](benchmarks/v2-cost-pilot-2026-09-23.json).
 
-网页是只读的公开实验快照，不连接 Jev API，也不运行用户电脑上的任务。案例视频是演示录制，表中耗时取自运行记录，而不是视频长度。Jev 展开的是代表性运行的逐步 trace；Codex 展开的是当时记录、按阶段合并的工具调用，不冒充一一对应的原子 GUI 动作。发布快照位于 [`website/snapshot.json`](website/snapshot.json)。
+The public site is a read-only experimental snapshot. It neither calls the Jev API nor runs tasks on a visitor's computer. Video durations are not the benchmark wall times. Jev step lists come from representative run traces; Codex entries summarize recorded tool calls by phase and are not presented as equivalent atomic GUI steps. The curated publication data lives in [`website/snapshot.json`](website/snapshot.json).
 
-## 快速开始
+## Quick start
 
-需要 Windows 和 Python 3.11+。先体验不需要 Jev 密钥的 Rule 基线：
+You need Windows and Python 3.11+. Try the keyless Rule baseline first:
 
 ```powershell
 py -m venv .venv
@@ -81,58 +75,58 @@ cua-jev demo --policy rule
 cua-jev suite --task vscode --policy rule --profile adaptive --open-vscode
 ```
 
-调用 Jev 时，把密钥写入本机被 Git 忽略的 `.env`，**不要提交密钥**：
+To use Jev, put your API key in the local, Git-ignored `.env` file. **Never commit the key.**
 
 ```powershell
 Copy-Item .env.example .env
-# 在 .env 中设置 TYPESAFE_API_KEY=...
+# Set TYPESAFE_API_KEY=... in .env
 cua-jev jev-smoke
 cua-jev suite --task vscode --policy jev --profile adaptive --open-vscode
 ```
 
-完整任务可用 `--task edge|excel|vscode|explorer|all`。`--profile adaptive` 是 Hybrid；`--profile visible` 为 GUI Only。Edge 可加 `--headed-edge`，Excel/Explorer 可加 `--visible-apps`。公开商店案例使用 [SauceDemo](https://www.saucedemo.com/) 测试账号与演示订单，不涉及真实付款。
+Use `--task edge|excel|vscode|explorer|all` to choose a workflow. `--profile adaptive` means Hybrid; `--profile visible` means GUI Only. Add `--headed-edge` for visible Edge, or `--visible-apps` for Excel/Explorer. The public store example uses a [SauceDemo](https://www.saucedemo.com/) test account and a demo order, with no real payment.
 
-本地只读展示页：
+To run the local, read-only showcase:
 
 ```powershell
 cua-jev-ui
 # http://127.0.0.1:8768
 ```
 
-可重复的配对实验和录制：
+To repeat paired runs and recordings:
 
 ```powershell
 python -m pip install -e ".[all,ui,recording]"
 python scripts/record_v2_demos.py --task all --profile both --policy jev
 ```
 
-本地运行记录保存在被忽略的 `runs/`，原始视频保存在被忽略的 `artifacts/demos/`。公开网页只使用经过审核的 `website/media/` 副本。CI 可在 Linux 上执行单元测试，但四个真实桌面案例需要 Windows 环境。
+Local records are written to ignored `runs/`; raw recordings go to ignored `artifacts/demos/`. The public site uses only reviewed copies in `website/media/`. CI can run unit tests on Linux, but the four desktop workflows require Windows.
 
-## 扩展一个新任务
+## Extend with another task
 
-1. **定义任务状态与终态条件**：实现观察器，输出尽量简洁、稳定、可验证的结构化状态；参考 [`observers.py`](src/cua_jev/observers.py) 与 [`suites.py`](src/cua_jev/suites.py)。
-2. **枚举真实候选动作**：为每个当前合法的 `意图 × 通道` 构建 [`ActionCandidate`](src/cua_jev/models.py)，提供稳定 ID、能力名、参数、风险级别与验证器。不要把不可执行的路线当作候选来“凑多样性”。
-3. **注册能力与执行器**：参考 [`capabilities.py`](src/cua_jev/capabilities.py) 和 [`registry.py`](src/cua_jev/registry.py)，让 GUI/DOM/COM/CLI/MCP/API 等通道映射到真正的工具调用。CLI 只允许注册的 argv 模板，不使用任意 `shell=True` 命令。
-4. **实现独立验证与复位**：验证实际状态变化，定义任务成功谓词和可重复的 reset；为失败、重复动作、拒绝执行等情况补测试。参考 [`verify.py`](src/cua_jev/verify.py) 与 [`tests/`](tests/)。
-5. **评测再发布**：同时跑 Hybrid 与 GUI Only，记录成功率、墙钟时间、决策时间、动作通道分布、回退和拒绝；不要只展示最佳一次运行。
+1. **Define state and success:** Implement an observer that produces compact, stable, verifiable structured state. See [`observers.py`](src/cua_jev/observers.py) and [`suites.py`](src/cua_jev/suites.py).
+2. **Enumerate real alternatives:** Build an [`ActionCandidate`](src/cua_jev/models.py) for every currently legal `intent × channel`, including a stable ID, capability, arguments, risk level, and verifier. Do not inflate the candidate set with actions that cannot execute.
+3. **Register capabilities and executors:** Use [`capabilities.py`](src/cua_jev/capabilities.py) and [`registry.py`](src/cua_jev/registry.py) as guides for mapping GUI/DOM/COM/CLI/MCP/API routes to actual tools. CLI actions use registered argv templates, not arbitrary `shell=True` commands.
+4. **Verify and reset independently:** Assert the resulting state, define terminal success, and make the fixture repeatable. Test failed, repeated, and rejected actions. See [`verify.py`](src/cua_jev/verify.py) and [`tests/`](tests/).
+5. **Evaluate before publishing:** Run Hybrid and GUI Only, recording success rate, wall time, decision time, action mix, fallback, and guard rejection—not only the best run.
 
-最小的 JSON 任务示例在 [`inspect_report.json`](src/cua_jev/predefined/inspect_report.json)。它适合学习候选动作契约；真正的应用扩展还需要动态观察、执行器和终态验证器。
+The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_report.json) introduces the candidate contract. A real new application also needs dynamic observation, executors, and terminal verification.
 
 ## Roadmap
 
-- [x] Jev `choice` 接入、类型化候选、统一运行时、guard、回执和 JSONL trace。
-- [x] GUI / DOM / COM / CLI / MCP / API 多通道执行接口；无密钥 Rule 基线。
-- [x] 四个 Windows 定义任务、独立终态验证、Hybrid / GUI Only 配对实验与 Codex Hybrid pilot。
-- [x] 只读项目网页、脱敏实验快照、真实视频与可展开执行步骤。
-- [ ] 从四个冻结案例扩展到参数化任务族、未见过的实例和足量重复试验；公布失败案例与置信区间。
-- [ ] 把任务适配器做得更通用：跨软件、跨任务，逐步扩展到 macOS / Linux 与更多浏览器/办公应用。
-- [ ] 增加可选的 VLM/视觉感知回退，用于 DOM、UIA、COM 不能可靠描述的界面；保持当前无 VLM 路径可用。
-- [ ] 与通用 CUA / LLM 模型分工：让大模型处理开放式目标理解和新能力构建，让 Jev 承担可约束的高频选择，以任务成功率、延迟和成本共同优化路由。
-- [ ] 完善跨通道失败恢复、动态 MCP 服务接入、安全确认与长期回归基准。
+- [x] Jev `choice`, typed candidates, shared runtime, guard, receipts, and JSONL traces.
+- [x] GUI / DOM / COM / CLI / MCP / API execution interfaces and a keyless Rule baseline.
+- [x] Four defined Windows workflows, independent terminal verification, Hybrid / GUI Only paired experiments, and a Codex Hybrid pilot.
+- [x] Read-only website, curated experimental snapshot, real videos, and expandable execution steps.
+- [ ] Move beyond four fixed cases to parameterized task families, unseen instances, adequate repeated trials, failure cases, and confidence intervals.
+- [ ] Generalize task adapters across software and tasks, then explore macOS / Linux and more browser and office applications.
+- [ ] Add optional VLM/visual-perception fallback for interfaces that DOM, UIA, or COM cannot describe reliably, while retaining the VLM-free path.
+- [ ] Divide work with general CUA / LLM models: use them for open-ended goal interpretation and new capability construction, and Jev for frequent constrained choices; optimize jointly for success, latency, and cost.
+- [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
 
-## 网页如何发布
+## Publishing the website
 
-GitHub Pages 使用 [`pages.yml`](.github/workflows/pages.yml) 从 `main` 构建只读站点。它**只读取仓库里经过审阅的 `website/snapshot.json` 和 `website/media/`**，不会把本机 `runs/`、`.env` 或原始视频上传。新增实验后，在本机核查数据和视频，再执行：
+GitHub Pages uses [`pages.yml`](.github/workflows/pages.yml) to build the read-only site from `main`. The build reads only reviewed `website/snapshot.json` and `website/media/`; it does not upload local `runs/`, `.env`, or raw recordings. After new experiments, inspect the data and videos locally before running:
 
 ```powershell
 python scripts/build_pages.py --refresh-snapshot
@@ -140,10 +134,10 @@ python scripts/prepare_public_demos.py
 python scripts/build_pages.py --build
 ```
 
-审阅 `website/` 的差异，确认无个人信息后提交推送。若仓库尚未启用 Pages，需要在 GitHub 仓库 **Settings → Pages → Build and deployment** 选择 **GitHub Actions**；之后 `main` 更新会自动部署到上面的网页地址。[GitHub 官方部署说明](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。
+Review the `website/` diff for private information before committing and pushing. Main-branch updates deploy automatically through GitHub Actions. See the [GitHub Pages workflow guide](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-## 安全与许可
+## Safety and license
 
-`ActionGuard` 对候选身份、过期观察、允许根目录、写入和外部副作用执行 fail-closed 检查。Excel 不运行 VBA；MCP 只能调用已注册的类型化工具。成功回执不是终态成功，必须由任务验证器确认。API 密钥只用于本地 HTTPS 请求，不写入 trace、网页快照或 Git 仓库。
+`ActionGuard` fails closed on candidate identity, stale observations, allowed roots, writes, and external side effects. Excel does not run VBA; MCP can invoke only registered typed tools. A successful tool receipt still requires task-level verification. API keys are used only for local HTTPS requests and are not written to traces, site snapshots, or the Git repository.
 
-代码以 [Apache-2.0](LICENSE) 发布。ZJU-REAL 标识用于表明实验室项目身份，不改变第三方品牌素材的权利归属；应用图标的来源见 [`ATTRIBUTION.md`](src/cua_jev/ui/static/icons/ATTRIBUTION.md)。
+The code is released under [Apache-2.0](LICENSE). The ZJU-REAL mark identifies the lab project and does not change ownership of third-party branding; app icon sources are listed in [`ATTRIBUTION.md`](src/cua_jev/ui/static/icons/ATTRIBUTION.md).
