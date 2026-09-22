@@ -1,38 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390" role="img" aria-labelledby="title desc">
-  <title id="title">CUA-JEV closed-loop architecture</title>
-  <desc id="desc">A task adapter observes structured state and creates typed actions. Jev chooses one. A guard dispatches it to GUI or structured tools. A verifier checks the result and returns new state to the adapter.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="370" viewBox="0 0 960 370" role="img" aria-labelledby="title desc">
+  <title id="title">CUA-JEV verified decision loop</title>
+  <desc id="desc">A task adapter observes structured state and proposes typed actions. Jev selects an intent and action channel. A guarded runtime executes the action, and an independent verifier returns evidence for the next decision.</desc>
   <defs>
-    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6faff"/><stop offset="1" stop-color="#fff9f2"/></linearGradient>
-    <linearGradient id="jev" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#23486c"/><stop offset="1" stop-color="#2d6b80"/></linearGradient>
-    <filter id="shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#17344d" flood-opacity=".09"/></filter>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M1 1l7 4-7 4" fill="none" stroke="#b56f4a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8fbff"/><stop offset="1" stop-color="#f4f9fc"/></linearGradient>
+    <linearGradient id="jev" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#126dff"/><stop offset="1" stop-color="#174d8d"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-25%" width="140%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#1b4570" flood-opacity=".10"/></filter>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M1 1l5 2.5L1 6" fill="none" stroke="#50718d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
-  <rect x="1" y="1" width="1198" height="388" rx="28" fill="url(#canvas)" stroke="#d8e6ed" stroke-width="2"/>
-  <text x="38" y="47" fill="#a45c3d" font-size="16" font-weight="700" font-family="Arial, sans-serif" letter-spacing="3">CUA-JEV · ONE VERIFIED DECISION LOOP</text>
+
+  <rect x="1" y="1" width="958" height="368" rx="22" fill="url(#canvas)" stroke="#d4e4f0" stroke-width="2"/>
+  <text x="30" y="42" fill="#49657e" font-size="14" font-weight="700" font-family="Arial, sans-serif" letter-spacing="2">CUA-JEV / VERIFIED DECISION LOOP</text>
+
   <g filter="url(#shadow)">
-    <rect x="38" y="78" width="263" height="182" rx="20" fill="#fff" stroke="#ccdee8"/>
-    <rect x="338" y="78" width="213" height="182" rx="20" fill="url(#jev)"/>
-    <rect x="588" y="78" width="264" height="182" rx="20" fill="#fff" stroke="#ccdee8"/>
-    <rect x="889" y="78" width="273" height="182" rx="20" fill="#eaf7f1" stroke="#c0dfcf"/>
+    <rect x="30" y="70" width="200" height="200" rx="18" fill="#fff" stroke="#c9dce9"/>
+    <rect x="258" y="66" width="260" height="208" rx="20" fill="url(#jev)"/>
+    <rect x="546" y="70" width="180" height="200" rx="18" fill="#fff" stroke="#c9dce9"/>
+    <rect x="754" y="70" width="176" height="200" rx="18" fill="#eaf8f2" stroke="#bddfce"/>
   </g>
-  <path d="M310 169h18M560 169h18M861 169h18" stroke="#b56f4a" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="61" y="120" fill="#a45c3d" font-size="15" font-weight="700" font-family="Arial, sans-serif">01 · TASK ADAPTER</text>
-  <text x="61" y="158" fill="#1d3951" font-size="27" font-weight="700" font-family="Georgia, serif">Observe &amp; propose</text>
-  <text x="61" y="192" fill="#50647a" font-size="17" font-family="Arial, sans-serif">Structured state + legal</text>
-  <text x="61" y="218" fill="#50647a" font-size="17" font-family="Arial, sans-serif">intent × route candidates</text>
-  <text x="362" y="120" fill="#a8dcd1" font-size="15" font-weight="700" font-family="Arial, sans-serif">02 · JEV CHOICE</text>
-  <text x="362" y="158" fill="#fff" font-size="29" font-weight="700" font-family="Georgia, serif">Select one</text>
-  <text x="362" y="192" fill="#e6f3f5" font-size="17" font-family="Arial, sans-serif">A typed decision,</text>
-  <text x="362" y="218" fill="#e6f3f5" font-size="17" font-family="Arial, sans-serif">not a generated script</text>
-  <text x="611" y="120" fill="#a45c3d" font-size="15" font-weight="700" font-family="Arial, sans-serif">03 · RUNTIME</text>
-  <text x="611" y="158" fill="#1d3951" font-size="27" font-weight="700" font-family="Georgia, serif">Guard &amp; execute</text>
-  <text x="611" y="192" fill="#50647a" font-size="17" font-family="Arial, sans-serif">GUI · DOM · COM · CLI</text>
-  <text x="611" y="218" fill="#50647a" font-size="17" font-family="Arial, sans-serif">MCP · API · script</text>
-  <text x="912" y="120" fill="#3a8064" font-size="15" font-weight="700" font-family="Arial, sans-serif">04 · VERIFIER</text>
-  <text x="912" y="158" fill="#1d3951" font-size="27" font-weight="700" font-family="Georgia, serif">Check the state</text>
-  <text x="912" y="192" fill="#50647a" font-size="17" font-family="Arial, sans-serif">Independent predicate</text>
-  <text x="912" y="218" fill="#50647a" font-size="17" font-family="Arial, sans-serif">+ evidence trace</text>
-  <path d="M1033 273v61H169v-61" fill="none" stroke="#8fb3b2" stroke-width="2.5" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
-  <rect x="471" y="314" width="258" height="39" rx="19" fill="#fff" stroke="#cbdfe5"/>
-  <text x="600" y="340" text-anchor="middle" fill="#31596d" font-size="16" font-weight="700" font-family="Arial, sans-serif">RE-OBSERVE · REPEAT</text>
+
+  <path d="M236 170h15" fill="none" stroke="#50718d" stroke-width="2.3" marker-end="url(#arrow)"/>
+  <path d="M524 170h15" fill="none" stroke="#50718d" stroke-width="2.3" marker-end="url(#arrow)"/>
+  <path d="M732 170h15" fill="none" stroke="#50718d" stroke-width="2.3" marker-end="url(#arrow)"/>
+
+  <text x="50" y="109" fill="#945c42" font-size="13" font-weight="700" font-family="Arial, sans-serif">01 / TASK ADAPTER</text>
+  <text x="50" y="151" fill="#163954" font-size="27" font-weight="700" font-family="Georgia, serif">Observe</text>
+  <text x="50" y="187" fill="#425d72" font-size="16" font-family="Arial, sans-serif">Structured state</text>
+  <text x="50" y="213" fill="#425d72" font-size="16" font-family="Arial, sans-serif">+ legal candidates</text>
+
+  <text x="282" y="108" fill="#d1f8ed" font-size="13" font-weight="700" font-family="Arial, sans-serif" letter-spacing="1.2">02 / FAST TYPED DECISION</text>
+  <text x="282" y="163" fill="#fff" font-size="52" font-weight="700" font-family="Georgia, serif">JEV</text>
+  <text x="282" y="202" fill="#fff" font-size="19" font-weight="700" font-family="Arial, sans-serif">Choose intent × route</text>
+  <text x="282" y="232" fill="#e2f0ff" font-size="16" font-family="Arial, sans-serif">One executable action</text>
+
+  <text x="563" y="109" fill="#945c42" font-size="13" font-weight="700" font-family="Arial, sans-serif">03 / RUNTIME</text>
+  <text x="563" y="151" fill="#163954" font-size="26" font-weight="700" font-family="Georgia, serif">Execute</text>
+  <text x="563" y="187" fill="#425d72" font-size="15" font-family="Arial, sans-serif">Guard + dispatch</text>
+  <text x="563" y="213" fill="#425d72" font-size="15" font-family="Arial, sans-serif">GUI / structured</text>
+
+  <text x="771" y="109" fill="#30795c" font-size="13" font-weight="700" font-family="Arial, sans-serif">04 / VERIFIER</text>
+  <text x="771" y="151" fill="#163954" font-size="26" font-weight="700" font-family="Georgia, serif">Verify</text>
+  <text x="771" y="187" fill="#425d72" font-size="15" font-family="Arial, sans-serif">Check new state</text>
+  <text x="771" y="213" fill="#425d72" font-size="15" font-family="Arial, sans-serif">Record evidence</text>
+
+  <path d="M842 280v39H130v-39" fill="none" stroke="#8fb6b0" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+  <rect x="321" y="300" width="318" height="38" rx="19" fill="#fff" stroke="#d3e3ec"/>
+  <text x="480" y="324" text-anchor="middle" fill="#315a70" font-size="14" font-weight="700" font-family="Arial, sans-serif" letter-spacing=".8">VERIFIED STATE → NEXT DECISION</text>
 </svg>

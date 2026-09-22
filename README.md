@@ -1,9 +1,4 @@
-<table>
-  <tr>
-    <td width="88"><img src="src/cua_jev/ui/static/logo-mark.svg" width="72" alt="ZJU-REAL Lab logo"></td>
-    <td><h1>CUA-JEV: Jev for Computer Use</h1></td>
-  </tr>
-</table>
+# <img src="src/cua_jev/ui/static/logo-mark.svg" width="44" alt="ZJU-REAL Lab logo"> CUA-JEV: Jev for Computer Use
 
 [Webpage](https://zjureal.com/CUA-JEV/) · [中文文档](README.zh-CN.md)
 

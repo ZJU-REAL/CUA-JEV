@@ -1,19 +1,6 @@
-<p align="center">
-  <img src="src/cua_jev/ui/static/logo-mark.svg" width="100" alt="ZJU-REAL Lab logo">
-</p>
+# <img src="src/cua_jev/ui/static/logo-mark.svg" width="44" alt="ZJU-REAL Lab logo"> CUA-JEV: Jev for Computer Use
 
-<h1 align="center">CUA-JEV</h1>
-
-<p align="center"><a href="README.md">English README</a></p>
-
-<p align="center"><strong>Jev-powered hybrid action space for computer use</strong><br>让 Jev 在真实桌面任务中选择下一步做什么，以及用哪一种工具做。</p>
-
-<p align="center">
-  <a href="https://zjureal.com/CUA-JEV/">项目网页 · 视频与交互式结果</a> ·
-  <a href="#快速开始">快速开始</a> ·
-  <a href="#扩展一个新任务">扩展指南</a> ·
-  <a href="#roadmap">Roadmap</a>
-</p>
+[项目网页](https://zjureal.com/CUA-JEV/) · [English README](README.md)
 
 CUA-JEV 是一个面向 Windows Computer-Use Agent（CUA）的开源参考框架。它把 DOM、Windows UI Automation、Excel COM、终端和文件系统等结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个完整可运行的任务范例及 Hybrid / GUI Only 对照实验。
 
