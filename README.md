@@ -7,7 +7,7 @@
 <p align="center"><strong>Jev-powered hybrid action space for computer use</strong><br>让 Jev 在真实桌面任务中选择下一步做什么，以及用哪一种工具做。</p>
 
 <p align="center">
-  <a href="https://zju-real.github.io/CUA-JEV/">项目网页 · 视频与交互式结果</a> ·
+  <a href="https://zjureal.com/CUA-JEV/">项目网页 · 视频与交互式结果</a> ·
   <a href="#快速开始">快速开始</a> ·
   <a href="#扩展一个新任务">扩展指南</a> ·
   <a href="#roadmap">Roadmap</a>
@@ -49,7 +49,7 @@ GUI Only 中，状态读取与定位仍可使用结构化接口，但**修改操
 
 ## 实验与展示
 
-[项目网页](https://zju-real.github.io/CUA-JEV/)提供四个案例视频、两组分开的比较，以及可展开的执行记录：
+[项目网页](https://zjureal.com/CUA-JEV/)提供四个案例视频、两组分开的比较，以及可展开的执行记录：
 
 - **Jev Hybrid vs Jev GUI Only**：保持 Jev 策略与终态验证相同，比较动作空间对完成时间的影响。
 - **Jev Hybrid vs Codex Computer Use Hybrid**：两者都允许混合工具，比较实测墙钟时间和基于公开费率的模型美元成本估算。
