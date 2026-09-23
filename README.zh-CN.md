@@ -2,13 +2,13 @@
 
 [项目网页](https://zjureal.com/CUA-JEV/) · [English README](README.md)
 
-CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个已在 Windows 验证的完整任务范例及 Hybrid / GUI Only 对照实验。
+CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择**具体动作及其执行路线**，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个已在 Windows 验证的完整任务范例及 Hybrid / GUI Only 对照实验。
 
 Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动作选择的下游方向，例如 CUA、具身智能，以及潜在的智能驾驶场景。[RoboJEV](https://github.com/lykycy123/RoboJEV) 已在 MuJoCo 仿真中探索 Jev 控制的机器人操作；CUA-JEV 则聚焦计算机使用中的“下一步做什么、通过哪种通道执行”。
 
 > **能力边界：**这不是“给任意指令，就能操作任意软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本或直接理解图像；实验性 VLM 路径会先把截图转换为受约束的文字场景与可点击目标。
 
-**平台现状：**类型化决策循环、Guard 和 trace 的设计可移植，Linux CI 也运行单元测试；但已发布的桌面案例和 `open-desktop` 路径目前依赖 Windows UI Automation、Excel COM、Explorer 等接口。macOS/Linux 桌面适配器**尚未实现或验证**，现阶段不能直接在 Mac 上运行这些案例。
+**平台现状：**类型化决策循环、Guard 和 trace 的设计可移植，CI 已配置 Windows、Linux、macOS 单元测试。实验性浏览器路径可改用 Playwright Chromium，但 macOS 上的真实运行仍待验证；已发布的桌面案例和 `open-desktop` 仍依赖 Windows UI Automation、Excel COM、Explorer 等接口。macOS/Linux 桌面适配器**尚未实现或验证**。
 
 ![CUA-JEV：任务适配器、Jev 决策、执行器与验证器组成的闭环](assets/architecture.svg)
 
@@ -69,6 +69,23 @@ VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**E
 [跨软件案例视频](https://zjureal.com/CUA-JEV/#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。其中 5 次通过 DOM 操作 Edge，5 次在框架内部记录引文，1 次通过文件 API 写入，1 次通过 CLI 打开 VS Code；内部记录不等同于外部计算机操作。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；这段公开录制只使用文本模型和 DOM，未使用 VLM，重复成功率与成本效果也尚未评测。
 
 公开录制的单次运行实测 155.9 秒，视频为观看方便统一加速 2.5 倍；另一次成功运行耗时 307 秒，其中 287 秒等待规划模型。也出现过网关超时和模型输出不合规的失败尝试，因此目前不能以该案例宣称开放任务模式在端到端速度或可靠性上已经占优。
+
+### 浏览器 DOM + VLM + Jev 联调（实验性）
+
+`open-browser` 现在可在用户明确授权后，把当前网页视口截图交给 VLM，并将有界的场景文字与实时 DOM 控件一起交给文本规划模型。框架校验模型提出的 DOM/视觉目标；当同一控件的文字和位置都匹配时，可同时提供 DOM 点击和视觉定位的浏览器鼠标点击候选，由 Jev 选择具体动作。视觉点击前会检查 URL、DOM、视口尺寸和截图是否过期；页面变化只是动作效果证据，受限目标仍需用实时 URL、标题或文本确认。截图上传、视觉点击和可能有外部副作用的点击分别需要显式开关。
+
+一次真实的公开 Python 文档单步导航用时 **9.8 秒**：VLM 生成场景信息，文本模型提出 DOM 与视觉两种候选，Jev 以 **0.99 / 0.01** 的概率选择 DOM 并完成页面验证。其中 VLM 约 4.7 秒、文本规划约 1.9 秒、Jev 约 0.66 秒。此前也出现 VLM 输出格式和规划格式导致的失败；这只是一次联调成功，**不是成功率或速度基准**。原 12 步公开视频仍然只使用文本与 DOM。
+
+```powershell
+python -m pip install -e ".[browser-vision]"
+python -m playwright install chromium
+cua-jev open-browser --goal "Open a chapter" --url "https://docs.python.org/3/tutorial/index.html" `
+  --browser-channel chromium --model-base-url "https://YOUR_MODEL_GATEWAY/v1" `
+  --model "YOUR_TEXT_MODEL" --vision-model "YOUR_VISION_MODEL" --vision-mode always `
+  --allow-screenshot-upload --policy jev
+```
+
+只有在受控测试且允许视觉鼠标操作时，才追加 `--allow-visual-clicks --allow-external-actions`。校园模型网关默认直连，绕过环境代理。
 
 ### 可选窗口截图 / VLM 路径（实验性）
 
@@ -147,6 +164,7 @@ python scripts/record_v2_demos.py --task all --profile both --policy jev
 - [ ] 把任务适配器做得更通用：跨软件、跨任务，逐步扩展到 macOS / Linux 与更多浏览器/办公应用。
 - [x] 在实验性单窗口桌面路径中加入可选的截图/VLM 目标锚定；保留无 VLM 路径，并通过离线集成测试。
 - [x] 将受限的视觉场景文本与 UIA 观察融合，并完成一次直连校园视觉模型的合成图像探针；加入 trace 级别的成功率、耗时和 Jev 通道概率分析。
+- [x] 将浏览器 DOM 与视口视觉信息融合，加入可验证的视觉鼠标候选，并完成一次真实的 VLM＋文本模型＋Jev 单步浏览器联调；失败尝试也保留为本地实验记录。
 - [ ] 建立跨平台场景与能力提供者接口，接入 macOS Accessibility、更多 CLI/MCP/文件工具，并在真实陌生跨软件任务上验证。
 - [ ] 完成真实 VLM 任务及未见桌面任务的重复评测，报告定位、安全性、成功率、延迟和成本。
 - [ ] 缓存或复用较慢的规划模型调用；让通用 CUA / LLM 模型处理陌生目标，Jev 承担高频受约束选择，以成功率、延迟和成本共同优化。

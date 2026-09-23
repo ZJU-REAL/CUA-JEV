@@ -76,18 +76,29 @@ class VisualScene:
     def from_response(cls, data: Any) -> VisualScene:
         if not isinstance(data, dict):
             raise ValueError("vision scene must be an object")
+        if not any(field in data for field in ("summary", "visible_text", "targets")):
+            raise ValueError("vision scene has no observations")
         summary = data.get("summary", "")
         lines = data.get("visible_text", [])
-        if not isinstance(summary, str) or len(summary) > 1000:
+        if not isinstance(summary, str):
             raise ValueError("vision scene summary is invalid")
-        if not isinstance(lines, list) or len(lines) > MAX_VISIBLE_TEXT:
+        if not isinstance(lines, list):
             raise ValueError("vision scene visible text is invalid")
-        if any(not isinstance(line, str) or len(line) > 160 for line in lines):
+        if any(not isinstance(line, str) for line in lines):
             raise ValueError("vision scene visible text line is invalid")
+        targets = data.get("targets", [])
+        if targets is None:
+            targets = []
+        if not isinstance(targets, list):
+            raise ValueError("vision scene targets are invalid")
+        # A model can exceed the requested count; retain only a bounded prefix.
+        # Every retained box still passes the same strict geometric validation.
         return cls(
-            summary=summary.strip(),
-            visible_text=tuple(line.strip() for line in lines if line.strip()),
-            targets=VisualTarget.from_response(data),
+            summary=summary.strip()[:1000],
+            visible_text=tuple(
+                line.strip()[:160] for line in lines[:MAX_VISIBLE_TEXT] if line.strip()
+            ),
+            targets=VisualTarget.from_response({"targets": targets[:MAX_VISUAL_TARGETS]}),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -103,3 +114,24 @@ def changed_fraction(before: bytes, after: bytes, *, threshold: int = 20) -> flo
     if len(before) != SAMPLE_EDGE * SAMPLE_EDGE or len(after) != len(before):
         raise ValueError("incompatible window image samples")
     return sum(abs(x - y) >= threshold for x, y in zip(before, after, strict=True)) / len(before)
+
+
+def browser_viewport_image(page: Any) -> WindowImage:
+    """Capture only the current browser viewport for model grounding and freshness checks."""
+    import io
+
+    try:
+        from PIL import Image
+    except ImportError:
+        raise RuntimeError("install Pillow for browser vision capture") from None
+    raw = page.screenshot(type="jpeg", quality=70, scale="css", full_page=False)
+    with Image.open(io.BytesIO(raw)) as source:
+        image = source.convert("RGB")
+    width, height = image.size
+    if width < 40 or height < 40 or width * height > 16_000_000:
+        raise ValueError("browser viewport is outside safe screenshot size bounds")
+    sample = image.convert("L").resize((SAMPLE_EDGE, SAMPLE_EDGE)).tobytes()
+    image.thumbnail((1280, 1280))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=72)
+    return WindowImage(buffer.getvalue(), sample, (0, 0, width, height))

@@ -48,12 +48,15 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
     entropies: list[float] = []
     chosen_channels: Counter[str] = Counter()
     channel_masses: dict[str, list[float]] = defaultdict(list)
+    chosen_routes: Counter[str] = Counter()
+    route_masses: dict[str, list[float]] = defaultdict(list)
     statuses: Counter[str] = Counter()
     token_usage: dict[str, Counter[str]] = defaultdict(Counter)
     complete = 0
     decisions = 0
     for events in runs.values():
         candidate_channels: dict[str, str] = {}
+        candidate_routes: dict[str, str] = {}
         for event in sorted(events, key=lambda item: item.get("sequence", 0)):
             kind, payload = event.get("kind"), event.get("payload")
             if not isinstance(payload, dict):
@@ -66,6 +69,12 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
                     and isinstance(item.get("id"), str)
                     and isinstance(item.get("channel"), str)
                 }
+                candidate_routes = {
+                    item["id"]: f"{item['channel']}:{item['capability']}"
+                    for item in payload.get("items", [])
+                    if isinstance(item, dict)
+                    and all(isinstance(item.get(key), str) for key in ("id", "channel", "capability"))
+                }
             elif kind == "decision":
                 if not str(payload.get("model", "")).startswith("jev-"):
                     continue
@@ -73,6 +82,7 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
                 if not isinstance(probabilities, dict) or not candidate_channels:
                     continue
                 masses: dict[str, float] = defaultdict(float)
+                route_probabilities: dict[str, float] = defaultdict(float)
                 valid = True
                 for candidate_id, value in probabilities.items():
                     if (
@@ -84,14 +94,21 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
                         valid = False
                         break
                     masses[candidate_channels[candidate_id]] += float(value)
+                    if candidate_id in candidate_routes:
+                        route_probabilities[candidate_routes[candidate_id]] += float(value)
                 if not valid or abs(sum(masses.values()) - 1) > 0.02:
                     continue
                 decisions += 1
                 for channel in set(candidate_channels.values()):
                     channel_masses[channel].append(masses.get(channel, 0.0))
+                for route in set(candidate_routes.values()):
+                    route_masses[route].append(route_probabilities.get(route, 0.0))
                 selected = candidate_channels.get(payload.get("candidate_id"))
                 if selected:
                     chosen_channels[selected] += 1
+                selected_route = candidate_routes.get(payload.get("candidate_id"))
+                if selected_route:
+                    chosen_routes[selected_route] += 1
                 latency = payload.get("latency_ms")
                 confidence = payload.get("confidence")
                 if type(latency) in (int, float) and math.isfinite(latency) and latency >= 0:
@@ -131,9 +148,14 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
         "mean_confidence": round(statistics.mean(confidences), 4) if confidences else None,
         "mean_choice_entropy_bits": round(statistics.mean(entropies), 4) if entropies else None,
         "selected_channels": dict(chosen_channels),
+        "selected_routes": dict(chosen_routes),
         "mean_probability_by_available_channel": {
             channel: round(statistics.mean(values), 4)
             for channel, values in sorted(channel_masses.items())
+        },
+        "mean_probability_by_available_route": {
+            route: round(statistics.mean(values), 4)
+            for route, values in sorted(route_masses.items())
         },
         "reported_model_tokens": {role: dict(values) for role, values in token_usage.items()},
         "cost_usd": None,  # Requires actual provider usage and a dated rate card.

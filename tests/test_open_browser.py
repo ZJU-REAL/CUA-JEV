@@ -1,3 +1,4 @@
+import io
 import json
 from types import SimpleNamespace
 
@@ -19,6 +20,7 @@ from cua_jev.policy import JevPolicy, RulePolicy
 from cua_jev.registry import ExecutorRegistry
 from cua_jev.runtime import AgentRuntime
 from cua_jev.verify import VerifierRegistry
+from cua_jev.vision import VisualScene, VisualTarget
 
 
 class FakeLocator:
@@ -87,6 +89,44 @@ class FakePage:
         return FakeLocator(self)
 
 
+class FakeVisualPage(FakePage):
+    def __init__(self):
+        super().__init__()
+        self.elements = []
+        self.color = "#f5f7fa"
+        self.mouse = self
+        self.clicks = []
+
+    def screenshot(self, **_kwargs):
+        from PIL import Image, ImageDraw
+
+        image = Image.new("RGB", (400, 240), self.color)
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((250, 150, 370, 210), fill="#145ea8")
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG")
+        return buffer.getvalue()
+
+    def click(self, x, y):
+        self.clicks.append((x, y))
+        self.url = "https://example.test/done"
+        self.title_value = "Finished"
+        self.text = "Completed"
+
+
+class FakeBrowserVision:
+    def __init__(self):
+        self.calls = 0
+
+    def perceive_scene(self, goal, window_title, ui_text, image):
+        self.calls += 1
+        assert image.region == (0, 0, 400, 240)
+        return VisualScene(
+            "A page with a visible Finish button.", ("Finish",),
+            (VisualTarget("v0", "Finish", (650, 625, 925, 875)),),
+        )
+
+
 class FakePlanner:
     def __init__(self, options=None):
         self.calls = 0
@@ -137,6 +177,109 @@ def test_open_task_runs_with_dynamic_options_and_one_planning_call():
     assert result.steps[0].decision.candidate_id == "option_0_dom"
     assert result.steps[0].verification.passed
     assert environment.planner_calls == 1
+
+
+def test_browser_vision_fuses_scene_and_routes_canvas_target_through_mouse_script():
+    page = FakeVisualPage()
+    grounder = FakeBrowserVision()
+    environment = task(
+        page=page, planner=FakePlanner([{"ref": "v0", "operation": "click"}]),
+        vision_grounder=grounder, allow_screenshot_upload=True,
+        allow_visual_clicks=True, allow_external_actions=True,
+    )
+
+    def factory(item):
+        executors = ExecutorRegistry()
+        executors.register(Channel.SCRIPT, item)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        item.register_verifiers(verifiers)
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(RulePolicy()),
+            guard=ActionGuard(allow_destructive=True),
+            executors=executors, verifiers=verifiers,
+        )
+
+    result = EpisodeRunner(factory, EpisodeConfig(max_steps=3)).run(environment)
+    assert result.status == EpisodeStatus.SUCCESS
+    assert result.channel_counts == {"script": 1}
+    assert grounder.calls == 1
+    assert page.clicks == [(315.0, 180.0)]
+
+
+def test_browser_vision_requires_opt_in_and_rejects_stale_viewport():
+    page = FakeVisualPage()
+    grounder = FakeBrowserVision()
+    with pytest.raises(ValueError, match="screenshot-upload consent"):
+        task(page=page, vision_grounder=grounder)
+    environment = task(
+        page=page, planner=FakePlanner([{"ref": "v0", "operation": "click"}]),
+        vision_grounder=grounder, allow_screenshot_upload=True,
+        allow_visual_clicks=True, allow_external_actions=True,
+    )
+    environment.reset()
+    observation = environment.observe(())
+    assert observation.state["visual_summary"] == "A page with a visible Finish button."
+    assert observation.state["visual_text"] == ["Finish"]
+    candidate = environment.candidates(observation, ())[0]
+    page.color = "#000000"
+    receipt = environment(candidate, observation.observation_id, "d1")
+    assert not receipt.success
+    assert "stale" in (receipt.error or "")
+    assert not page.clicks
+    environment.close()
+
+
+def test_browser_vision_failure_falls_back_to_live_dom_when_available():
+    class FailingVision:
+        def perceive_scene(self, *_args):
+            raise ValueError("malformed VLM response")
+
+    page = FakeVisualPage()
+    page.elements = FakePage().elements
+    environment = task(
+        page=page, vision_grounder=FailingVision(),
+        vision_mode="always", allow_screenshot_upload=True,
+    )
+    environment.reset()
+    observation = environment.observe(())
+    assert observation.state["visual_summary"] == ""
+    assert environment.vision_failures == 1
+    assert environment.candidates(observation, ())[0].id == "option_0_dom"
+    environment.close()
+
+
+def test_dom_and_visual_alternatives_require_matching_label_and_box():
+    page = FakeVisualPage()
+    page.elements = [
+        {**FakePage().elements[0], "box": [650, 625, 925, 875]},
+    ]
+    environment = task(
+        page=page, planner=FakePlanner([
+            {"ref": "e0", "operation": "click"},
+            {"ref": "v0", "operation": "click"},
+        ]),
+        vision_grounder=FakeBrowserVision(), vision_mode="always",
+        allow_screenshot_upload=True, allow_visual_clicks=True,
+        allow_external_actions=True,
+    )
+    environment.reset()
+    observation = environment.observe(())
+    assert {item.id for item in environment.candidates(observation, ())} == {
+        "option_0_dom", "option_0_visual",
+    }
+    environment.close()
+
+
+def test_browser_channel_and_normalized_dom_boxes_are_bounded():
+    with pytest.raises(ValueError, match="browser channel"):
+        task(browser_channel="unknown")
+    page = FakePage()
+    page.elements[0]["box"] = [100, 200, 300, 260]
+    page.elements[1]["box"] = [-1, 0, 100, 100]
+    snapshot = BrowserSnapshot.capture(page)
+    assert snapshot.elements[0].box == (100, 200, 300, 260)
+    assert snapshot.elements[1].box is None
 
 
 def test_candidate_generation_filters_external_and_button_actions():
@@ -221,6 +364,10 @@ def test_planner_cannot_invent_element_or_use_password_control():
     base = {"subgoal": "Continue", "success": {"kind": "url_contains", "value": "/done"}}
     with pytest.raises(ValueError, match="unavailable"):
         BrowserPlan.from_dict({**base, "options": [{"ref": "e99", "operation": "click"}]}, snapshot)
+    click_with_null_value = BrowserPlan.from_dict(
+        {**base, "options": [{"ref": "e0", "operation": "click", "value": None}]}, snapshot
+    )
+    assert click_with_null_value.options[0].value == ""
     page = FakePage()
     page.elements.append(
         {

@@ -25,6 +25,7 @@ from .models import ActionCandidate, ActionReceipt, Channel, Decision, Observati
 from .policy import DecisionPolicy
 from .runtime import StepResult
 from .verify import VerifierRegistry
+from .vision import VisualScene, VisualTarget, WindowImage, browser_viewport_image, changed_fraction
 
 SELECTOR = "a[href],button,input,textarea,select,[role=button],[role=link],[role=textbox]"
 MAX_ELEMENTS = 60
@@ -39,6 +40,31 @@ def _origin(url: str) -> tuple[str, str, int | None]:
     return parsed.scheme, parsed.hostname.lower(), parsed.port
 
 
+def _matching_visual_target(
+    element: BrowserElement, targets: tuple[VisualTarget, ...]
+) -> VisualTarget | None:
+    if element.box is None or not element.label:
+        return None
+    label = re.sub(r"\W+", "", element.label, flags=re.UNICODE).casefold()
+    if len(label) < 4:
+        return None
+    left, top, right, bottom = element.box
+    element_area = (right - left) * (bottom - top)
+    for target in targets:
+        target_label = re.sub(r"\W+", "", target.label, flags=re.UNICODE).casefold()
+        if len(target_label) < 4 or not (
+            label in target_label or target_label in label
+        ):
+            continue
+        x0, y0, x1, y1 = target.box
+        overlap = max(0, min(right, x1) - max(left, x0)) * max(
+            0, min(bottom, y1) - max(top, y0)
+        )
+        if overlap >= 0.5 * min(element_area, (x1 - x0) * (y1 - y0)):
+            return target
+    return None
+
+
 @dataclass(frozen=True)
 class BrowserElement:
     ref: str
@@ -49,9 +75,19 @@ class BrowserElement:
     input_type: str
     disabled: bool
     href: str
+    box: tuple[int, int, int, int] | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> BrowserElement:
+        raw_box = value.get("box")
+        box = None
+        if (
+            isinstance(raw_box, list) and len(raw_box) == 4
+            and all(type(item) is int for item in raw_box)
+            and 0 <= raw_box[0] < raw_box[2] <= 1000
+            and 0 <= raw_box[1] < raw_box[3] <= 1000
+        ):
+            box = tuple(raw_box)
         return cls(
             ref=str(value["ref"]),
             index=int(value["index"]),
@@ -61,6 +97,7 @@ class BrowserElement:
             input_type=str(value.get("input_type") or ""),
             disabled=bool(value.get("disabled")),
             href=str(value.get("href") or ""),
+            box=box,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -73,6 +110,11 @@ class BrowserSnapshot:
     title: str
     text: str
     elements: tuple[BrowserElement, ...]
+    visual_summary: str = ""
+    visual_text: tuple[str, ...] = ()
+    visual_targets: tuple[VisualTarget, ...] = ()
+    visual_image_hash: str = ""
+    visual_viewport: tuple[int, int] | None = None
 
     @classmethod
     def capture(cls, page: Any) -> BrowserSnapshot:
@@ -91,7 +133,13 @@ class BrowserSnapshot:
                   ref: `e${index}`, index, tag: el.tagName.toLowerCase(),
                   role: el.getAttribute('role') || '', label: label.trim().slice(0, 120),
                   input_type: el.getAttribute('type') || '', disabled: !!el.disabled,
-                  href: el.href || ''
+                  href: el.href || '',
+                  box: [
+                    Math.max(0, Math.round(rect.left / innerWidth * 1000)),
+                    Math.max(0, Math.round(rect.top / innerHeight * 1000)),
+                    Math.min(1000, Math.round(rect.right / innerWidth * 1000)),
+                    Math.min(1000, Math.round(rect.bottom / innerHeight * 1000))
+                  ]
                 };
               }).filter(Boolean).slice(0, 60);
               return {
@@ -114,6 +162,11 @@ class BrowserSnapshot:
             "title": self.title,
             "text": self.text,
             "elements": [element.to_dict() for element in self.elements],
+            "visual_summary": self.visual_summary,
+            "visual_text": list(self.visual_text),
+            "visual_targets": [target.to_dict() for target in self.visual_targets],
+            "visual_image_hash": self.visual_image_hash,
+            "visual_viewport": self.visual_viewport,
         }
 
     def fingerprint(self) -> str:
@@ -142,7 +195,7 @@ class BrowserPlan:
         items = data["options"]
         if not 1 <= len(items) <= MAX_OPTIONS:
             raise ValueError("planner must return 1-16 options")
-        known = {element.ref: element for element in snapshot.elements}
+        known = {element.ref: element for element in (*snapshot.elements, *snapshot.visual_targets)}
         options: list[PlannedOption] = []
         for item in items:
             if not isinstance(item, dict):
@@ -156,9 +209,16 @@ class BrowserPlan:
             ):
                 raise ValueError("planner referenced an unavailable element or operation")
             element = known[ref]
+            if isinstance(element, VisualTarget):
+                if operation != "click" or item.get("value"):
+                    raise ValueError("visual targets support click only")
+                options.append(PlannedOption(ref, "click"))
+                continue
             if element.disabled or element.input_type.lower() == "password":
                 raise ValueError("planner referenced a disabled or password control")
             value = item.get("value", "")
+            if operation == "click" and value is None:
+                value = ""
             if not isinstance(value, str) or len(value) > MAX_INPUT_CHARS:
                 raise ValueError("planner value is not valid")
             if operation == "fill" and element.tag not in {"input", "textarea"}:
@@ -192,6 +252,12 @@ class GoalPlanner(Protocol):
     def plan(
         self, goal: str, snapshot: BrowserSnapshot, recent_actions: Sequence[dict[str, Any]]
     ) -> BrowserPlan: ...
+
+
+class BrowserVisionGrounder(Protocol):
+    def perceive_scene(
+        self, goal: str, window_title: str, ui_text: str, image: WindowImage
+    ) -> VisualScene: ...
 
 
 class HttpJsonPlanner:
@@ -286,9 +352,20 @@ class OpenBrowserTask:
         allow_form_input: bool = False,
         allow_external_actions: bool = False,
         screen: ScreenController | None = None,
+        vision_grounder: BrowserVisionGrounder | None = None,
+        vision_mode: str = "fallback",
+        allow_screenshot_upload: bool = False,
+        allow_visual_clicks: bool = False,
+        browser_channel: str = "msedge",
     ) -> None:
         if not goal.strip():
             raise ValueError("goal is required")
+        if vision_mode not in {"fallback", "always"}:
+            raise ValueError("vision mode must be fallback or always")
+        if vision_grounder is not None and not allow_screenshot_upload:
+            raise ValueError("vision requires explicit screenshot-upload consent")
+        if browser_channel not in {"msedge", "chrome", "chromium"}:
+            raise ValueError("browser channel must be msedge, chrome, or chromium")
         self.goal = goal.strip()
         self.start_url = start_url
         self.allowed_origin = _origin(start_url)
@@ -298,6 +375,12 @@ class OpenBrowserTask:
         self.allow_form_input = allow_form_input
         self.allow_external_actions = allow_external_actions
         self.screen = screen or ScreenController()
+        self.vision_grounder = vision_grounder
+        self.vision_mode = vision_mode
+        self.allow_visual_clicks = allow_visual_clicks
+        self.browser_channel = browser_channel
+        self._visual_image: WindowImage | None = None
+        self._before_images: dict[str, WindowImage] = {}
         self._playwright = None
         self._browser = None
         self._plan: BrowserPlan | None = None
@@ -306,6 +389,7 @@ class OpenBrowserTask:
         self._used: set[int] = set()
         self._snapshot: BrowserSnapshot | None = None
         self._before: dict[str, BrowserSnapshot] = {}
+        self.vision_failures = 0
         self.planner_calls = 0
 
     def reset(self) -> None:
@@ -315,12 +399,19 @@ class OpenBrowserTask:
             except ImportError:
                 raise CapabilityUnavailable("install cua-jev[browser] for open browser tasks") from None
             self._playwright = sync_playwright().start()
-            self._browser = self._playwright.chromium.launch(channel="msedge", headless=not self.headed)
+            launch_options = {} if self.browser_channel == "chromium" else {
+                "channel": self.browser_channel
+            }
+            self._browser = self._playwright.chromium.launch(
+                headless=not self.headed, **launch_options
+            )
             self.page = self._browser.new_page()
         self.page.route("**/*", self._route_request)
         self.page.goto(self.start_url, wait_until="domcontentloaded")
         self._plan = None
         self._used.clear()
+        self._visual_image = None
+        self.vision_failures = 0
 
     def close(self) -> None:
         if self._browser is not None:
@@ -342,16 +433,42 @@ class OpenBrowserTask:
                 return
         route.fallback()
 
-    def _capture(self) -> BrowserSnapshot:
+    def _capture(self, *, vision: bool = False) -> BrowserSnapshot:
         if self.page is None:
             raise RuntimeError("browser task has not been reset")
         snapshot = BrowserSnapshot.capture(self.page)
         if _origin(snapshot.url) != self.allowed_origin:
             raise RuntimeError("browser left the allowed origin")
+        if vision and self.vision_grounder is not None:
+            actionable = any(
+                not item.disabled and item.input_type.lower() != "password"
+                for item in snapshot.elements
+            )
+            if self.vision_mode == "always" or not actionable:
+                image = browser_viewport_image(self.page)
+                try:
+                    scene = self.vision_grounder.perceive_scene(
+                        self.goal, snapshot.title, snapshot.text, image
+                    )
+                except (RuntimeError, ValueError):
+                    self.vision_failures += 1
+                    self._visual_image = None
+                    if not actionable:
+                        raise
+                else:
+                    self._visual_image = image
+                    snapshot = replace(
+                        snapshot, visual_summary=scene.summary, visual_text=scene.visible_text,
+                        visual_targets=scene.targets if self.allow_visual_clicks else (),
+                        visual_image_hash=hashlib.sha256(image.sample).hexdigest(),
+                        visual_viewport=(image.region[2], image.region[3]),
+                    )
+            else:
+                self._visual_image = None
         return snapshot
 
     def observe(self, history: Sequence[StepResult]) -> Observation:
-        snapshot = self._capture()
+        snapshot = self._capture(vision=True)
         self._snapshot = snapshot
         return Observation(
             task=self.goal,
@@ -419,6 +536,15 @@ class OpenBrowserTask:
         for index, option in enumerate(self._plan.options):
             if index in self._used:
                 continue
+            visual = next(
+                (target for target in self._snapshot.visual_targets if target.ref == option.ref),
+                None,
+            )
+            if visual is not None:
+                if not (self.allow_visual_clicks and self.allow_external_actions):
+                    continue
+                result.append(self._visual_candidate(index, visual))
+                continue
             element = known.get(option.ref)
             if element is None or element.disabled or element.input_type.lower() == "password":
                 continue
@@ -461,7 +587,35 @@ class OpenBrowserTask:
                         verifier="browser.effect", intent=f"option_{index}",
                     )
                 )
-        return tuple(result)
+            if option.operation == "click" and self.allow_visual_clicks and self.allow_external_actions:
+                match = _matching_visual_target(element, self._snapshot.visual_targets)
+                if match is not None:
+                    result.append(self._visual_candidate(index, match))
+        unique: dict[tuple[str, str, str, str, str], ActionCandidate] = {}
+        for candidate in result:
+            args = candidate.arguments
+            key = (
+                str(candidate.channel), candidate.capability, str(args["ref"]),
+                str(args["operation"]), str(args.get("value", "")),
+            )
+            unique.setdefault(key, candidate)
+        return tuple(unique.values())
+
+    def _visual_candidate(self, index: int, target: VisualTarget) -> ActionCandidate:
+        assert self._snapshot is not None
+        return ActionCandidate(
+            id=f"option_{index}_visual", channel=Channel.SCRIPT,
+            capability="browser.visual_click",
+            description=f"Click visually grounded {target.label} using browser mouse",
+            arguments={
+                "ref": target.ref, "label": target.label, "box": list(target.box),
+                "visual_image_hash": self._snapshot.visual_image_hash,
+                "visual_viewport": self._snapshot.visual_viewport,
+                "url": self._snapshot.url, "operation": "visual_click",
+            },
+            risk=Risk.EXTERNAL_SIDE_EFFECT, verifier="browser.effect",
+            intent=f"option_{index}",
+        )
 
     def executor_bindings(self) -> dict[Channel, Any]:
         bindings: dict[Channel, Any] = {Channel.SCRIPT: self}
@@ -478,6 +632,38 @@ class OpenBrowserTask:
         def operation() -> dict[str, Any]:
             before = self._capture()
             self._before[decision_id] = before
+            if candidate.capability == "browser.visual_click":
+                if self._snapshot is None or self._visual_image is None:
+                    raise RuntimeError("visual browser observation is unavailable")
+                target = next(
+                    (item for item in self._snapshot.visual_targets
+                     if item.ref == candidate.arguments["ref"]), None,
+                )
+                if target is None or target.label != candidate.arguments["label"] or (
+                    list(target.box) != candidate.arguments["box"]
+                ):
+                    raise RuntimeError("visual browser target changed since observation")
+                prior = replace(
+                    self._snapshot, visual_summary="", visual_text=(), visual_targets=(),
+                    visual_image_hash="", visual_viewport=None,
+                )
+                if before.fingerprint() != prior.fingerprint() or before.url != candidate.arguments["url"]:
+                    raise RuntimeError("browser DOM changed since visual observation")
+                current = browser_viewport_image(self.page)
+                if (
+                    current.region != self._visual_image.region
+                    or candidate.arguments["visual_viewport"]
+                    != (current.region[2], current.region[3])
+                    or candidate.arguments["visual_image_hash"]
+                    != hashlib.sha256(self._visual_image.sample).hexdigest()
+                    or changed_fraction(self._visual_image.sample, current.sample) > 0.08
+                ):
+                    raise RuntimeError("visual browser screenshot became stale")
+                self._before_images[decision_id] = current
+                _, _, width, height = current.region
+                left, top, right, bottom = target.box
+                self.page.mouse.click((left + right) * width / 2000, (top + bottom) * height / 2000)
+                return {"url": self.page.url, "visual_target": target.ref}
             element = next((item for item in before.elements if item.ref == candidate.arguments["ref"]), None)
             if element is None or any(
                 getattr(element, name) != candidate.arguments[name]
@@ -533,6 +719,17 @@ class OpenBrowserTask:
         if before is None:
             return Verification(False, "browser.effect", {"error": "missing pre-action snapshot"})
         after = self._capture()
+        if candidate.capability == "browser.visual_click":
+            image = self._before_images.get(receipt.decision_id)
+            if image is None:
+                return Verification(False, "browser.effect", {"error": "missing visual before image"})
+            current = browser_viewport_image(self.page)
+            fraction = changed_fraction(image.sample, current.sample)
+            passed = after.fingerprint() != before.fingerprint() or fraction >= 0.01
+            return Verification(passed, "browser.effect", {
+                "state_changed": after.fingerprint() != before.fingerprint(),
+                "visual_changed_fraction": round(fraction, 4),
+            })
         if candidate.arguments["operation"] in {"fill", "select"}:
             locator = self.page.locator(SELECTOR).nth(candidate.arguments["index"])
             passed = locator.input_value() == candidate.arguments["value"]

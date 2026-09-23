@@ -21,6 +21,25 @@ from .open_browser import BrowserPlan, BrowserSnapshot
 from .vision import VisualScene, VisualTarget, WindowImage
 
 
+def _json_object(content: str) -> dict[str, Any]:
+    """Extract one JSON object from a model reply without accepting extra actions."""
+    fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", content, re.DOTALL | re.IGNORECASE)
+    source = fenced.group(1) if fenced else content
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(source):
+        if char != "{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(source[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and any(
+            field in value for field in ("summary", "visible_text", "targets")
+        ):
+            return value
+    raise ValueError("model reply contains no JSON object")
+
+
 class ChatModelPlanner:
     """Ask a general model for grounded options; never execute model-supplied code."""
 
@@ -139,10 +158,11 @@ class ChatModelPlanner:
             if not isinstance(content, str):
                 raise ValueError("missing vision text")
             content = content.strip()
-            fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", content, re.DOTALL | re.IGNORECASE)
-            raw = json.loads(fenced.group(1) if fenced else content)
+            raw = _json_object(content)
             scene = VisualScene.from_response(raw)
-        except (KeyError, IndexError, TypeError, ValueError) as exc:
+        except ValueError as exc:
+            raise ValueError(f"vision model returned invalid targets or scene ({exc})") from None
+        except (KeyError, IndexError, TypeError) as exc:
             raise ValueError(
                 f"vision model returned invalid targets or scene ({type(exc).__name__})"
             ) from None
@@ -162,7 +182,7 @@ class ChatModelPlanner:
         if isinstance(snapshot, BrowserSnapshot):
             medium = "browser"
             schema = (
-                '{"subgoal":"...","options":[{"ref":"e0","operation":"click|fill|select",'
+                '{"subgoal":"...","options":[{"ref":"e0 or v0","operation":"click|fill|select",'
                 '"value":"only for fill/select"}],"success":{"kind":"url_contains|'
                 'title_contains|text_contains","value":"..."}}'
             )
@@ -210,6 +230,13 @@ class ChatModelPlanner:
                 "executed through GUI. A cN ref is a live UI Automation control. Prefer cN "
                 "when both refer to the same control. Do not claim task completion from a "
                 "screenshot alone; choose a success check observable in live UIA state."
+            )
+        if isinstance(snapshot, BrowserSnapshot) and snapshot.visual_targets:
+            instructions += (
+                " A vN ref is a VLM-grounded target in the current viewport; it supports click "
+                "only through a browser mouse script. Prefer an eN DOM element when both refer "
+                "to the same control. A visual pixel change is not proof of task completion; "
+                "choose a success check observable in the live URL, title, or DOM text."
             )
         if isinstance(snapshot, DesktopSnapshot) and snapshot.visual_summary:
             instructions += (

@@ -249,7 +249,7 @@ def test_visual_scene_is_fused_into_desktop_observation_without_image_bytes():
     environment = OpenDesktopTask(
         goal="Finish the window", window_title_re="Example", window=window,
         screen=FakeVisualScreen(window), planner=FakeDesktopPlanner(),
-        vision_grounder=grounder, allow_screenshot_upload=True,
+        vision_grounder=grounder, allow_screenshot_upload=True, allow_visual_clicks=True,
     )
     environment.reset()
     observation = environment.observe(())
@@ -258,6 +258,30 @@ def test_visual_scene_is_fused_into_desktop_observation_without_image_bytes():
     assert observation.state["visual_targets"][0]["ref"] == "v0"
     assert "image/jpeg" not in str(observation.state)
     assert grounder.calls == 1
+    environment.close()
+
+
+def test_desktop_vision_failure_falls_back_to_uia_when_available():
+    class FailingVision:
+        def perceive_scene(self, *_args):
+            raise ValueError("malformed VLM response")
+
+    class WindowWithRect(FakeWindow):
+        def rectangle(self):
+            return SimpleNamespace(left=20, top=30, right=220, bottom=230)
+
+    window = WindowWithRect()
+    environment = OpenDesktopTask(
+        goal="Finish the window", window_title_re="Example", window=window,
+        screen=FakeVisualScreen(window), planner=FakeDesktopPlanner(),
+        vision_grounder=FailingVision(), vision_mode="always",
+        allow_screenshot_upload=True, allow_button_actions=True,
+    )
+    environment.reset()
+    observation = environment.observe(())
+    assert observation.state["visual_summary"] == ""
+    assert environment.vision_failures == 1
+    assert environment.candidates(observation, ())[0].channel == Channel.API
     environment.close()
 
 

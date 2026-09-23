@@ -87,8 +87,15 @@ def _parser() -> argparse.ArgumentParser:
     open_browser.add_argument("--use-env-proxy", action="store_true")
     open_browser.add_argument("--policy", choices=("rule", "jev"), default="jev")
     open_browser.add_argument("--headed", action="store_true")
+    open_browser.add_argument(
+        "--browser-channel", choices=("msedge", "chrome", "chromium"), default="msedge"
+    )
     open_browser.add_argument("--allow-form-input", action="store_true")
     open_browser.add_argument("--allow-external-actions", action="store_true")
+    open_browser.add_argument("--vision-model", help="Optional VLM for viewport scene grounding")
+    open_browser.add_argument("--vision-mode", choices=("fallback", "always"), default="fallback")
+    open_browser.add_argument("--allow-screenshot-upload", action="store_true")
+    open_browser.add_argument("--allow-visual-clicks", action="store_true")
     open_browser.add_argument("--max-steps", type=int, default=20)
     open_browser.add_argument("--trace", help="Opt-in local trace; may contain task data")
     open_desktop = sub.add_parser(
@@ -309,10 +316,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "open-browser":
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
+        if args.vision_model and not (args.allow_screenshot_upload and args.model_base_url):
+            raise SystemExit("--vision-model requires --model-base-url and --allow-screenshot-upload")
+        if args.allow_visual_clicks and not (args.vision_model and args.allow_external_actions):
+            raise SystemExit(
+                "--allow-visual-clicks requires --vision-model and --allow-external-actions"
+            )
         planner = (
             HttpJsonPlanner(args.planner_endpoint, api_key=os.getenv("CUA_JEV_PLANNER_API_KEY"))
             if args.planner_endpoint else _chat_planner(args)
         )
+        vision_planner = _chat_planner(args, model=args.vision_model) if args.vision_model else None
         try:
             environment = OpenBrowserTask(
                 goal=args.goal,
@@ -321,14 +335,24 @@ def main(argv: list[str] | None = None) -> int:
                 headed=args.headed,
                 allow_form_input=args.allow_form_input,
                 allow_external_actions=args.allow_external_actions,
+                vision_grounder=vision_planner, vision_mode=args.vision_mode,
+                allow_screenshot_upload=args.allow_screenshot_upload,
+                allow_visual_clicks=args.allow_visual_clicks,
+                browser_channel=args.browser_channel,
             )
             result = _open_browser_runner(args).run(environment)
         finally:
             planner.close()
+            if vision_planner is not None:
+                vision_planner.close()
         summary = result.to_dict()
         summary["planner_calls"] = environment.planner_calls
         summary["planner_wall_ms"] = getattr(planner, "planning_wall_ms", None)
         summary["planner_model_usage"] = getattr(planner, "usage_totals", None)
+        summary["vision_calls"] = vision_planner.vision_calls if vision_planner else 0
+        summary["vision_failures"] = environment.vision_failures
+        summary["vision_wall_ms"] = vision_planner.vision_wall_ms if vision_planner else 0
+        summary["vision_model_usage"] = vision_planner.usage_totals if vision_planner else None
         summary["policy"] = args.policy
         summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
         print(json.dumps(summary, indent=2, ensure_ascii=False))
@@ -363,6 +387,7 @@ def main(argv: list[str] | None = None) -> int:
         summary["planner_wall_ms"] = planner.planning_wall_ms
         summary["planner_model_usage"] = planner.usage_totals
         summary["vision_calls"] = vision_planner.vision_calls if vision_planner else 0
+        summary["vision_failures"] = environment.vision_failures
         summary["vision_wall_ms"] = vision_planner.vision_wall_ms if vision_planner else 0
         summary["vision_model_usage"] = vision_planner.usage_totals if vision_planner else None
         summary["policy"] = args.policy

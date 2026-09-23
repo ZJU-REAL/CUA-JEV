@@ -36,7 +36,19 @@ def test_visual_scene_contains_bounded_text_and_grounded_targets():
     })
     assert scene.targets[0].ref == "v0"
     assert scene.to_dict()["visible_text"] == ["Settings", "Save"]
-    with pytest.raises(ValueError, match="summary"):
-        VisualScene.from_response({"summary": "x" * 1001, "targets": []})
-    with pytest.raises(ValueError, match="visible text"):
-        VisualScene.from_response({"visible_text": ["x"] * 25, "targets": []})
+    assert VisualScene.from_response({"summary": "No actionable target"}).targets == ()
+    with pytest.raises(ValueError, match="no observations"):
+        VisualScene.from_response({})
+    bounded = VisualScene.from_response({
+        "summary": "x" * 1001, "visible_text": ["x" * 200] * 25, "targets": [],
+    })
+    assert len(bounded.summary) == 1000
+    assert len(bounded.visible_text) == 24
+    assert len(bounded.visible_text[0]) == 160
+    overproduced = VisualScene.from_response({
+        "targets": [
+            {"label": f"Button {index}", "box": [10 + index * 10, 10, 20 + index * 10, 30]}
+            for index in range(14)
+        ],
+    })
+    assert len(overproduced.targets) == 12

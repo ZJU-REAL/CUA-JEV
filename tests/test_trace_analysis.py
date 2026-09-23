@@ -9,9 +9,9 @@ def test_trace_analysis_aggregates_channel_probability_not_sensitive_state(tmp_p
     trace = JsonlTrace(path, run_id="run-1")
     trace.append("observation", {"text": "private task content"})
     trace.append("candidates", {"items": [
-        {"id": "gui-a", "channel": "gui"},
-        {"id": "cli-a", "channel": "cli"},
-        {"id": "cli-b", "channel": "cli"},
+        {"id": "gui-a", "channel": "gui", "capability": "browser.click"},
+        {"id": "cli-a", "channel": "cli", "capability": "tool.run"},
+        {"id": "cli-b", "channel": "cli", "capability": "tool.run"},
     ]})
     trace.append("decision", {
         "model": "jev-1.13.0",
@@ -29,7 +29,11 @@ def test_trace_analysis_aggregates_channel_probability_not_sensitive_state(tmp_p
     assert result["wall_ms_median"] == 1200
     assert result["decision_ms_median"] == 43
     assert result["selected_channels"] == {"cli": 1}
+    assert result["selected_routes"] == {"cli:tool.run": 1}
     assert result["mean_probability_by_available_channel"] == {"cli": 0.8, "gui": 0.2}
+    assert result["mean_probability_by_available_route"] == {
+        "cli:tool.run": 0.8, "gui:browser.click": 0.2,
+    }
     assert result["cost_usd"] is None
     assert result["reported_model_tokens"]["vision"]["prompt_tokens"] == 286
     assert "private task content" not in str(result)

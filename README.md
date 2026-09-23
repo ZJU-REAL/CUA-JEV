@@ -2,13 +2,13 @@
 
 [Webpage](https://zjureal.com/CUA-JEV/) · [中文文档](README.zh-CN.md)
 
-CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects an `intent × action channel`; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four Windows-validated workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
+CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects a **concrete action and its execution route**; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four Windows-validated workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
 
 Jev's fast, typed decisions are a promising fit for downstream systems that must choose actions repeatedly under latency constraints, including computer use, embodied agents, and potentially autonomous driving. [RoboJEV](https://github.com/lykycy123/RoboJEV) already explores the embodied setting with Jev-controlled manipulation in a MuJoCo simulator. CUA-JEV explores a different setting: choosing both *what to do next* and *which computer-use channel should do it*.
 
 > **Scope:** This is not a general agent that can operate any application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
 
-**Platform status:** The typed decision loop, guards, and traces are designed to be portable, and CI runs unit tests on Linux. The published desktop workflows and `open-desktop` path currently depend on Windows integrations such as UI Automation, Excel COM, and Explorer. macOS/Linux desktop adapters have **not** been implemented or validated; running these cases on a Mac is not supported yet.
+**Platform status:** The typed decision loop, guards, and traces are designed to be portable, and CI is configured to run unit tests on Linux and macOS as well as Windows. The experimental Playwright browser path can be configured to use bundled Chromium; its macOS behavior still needs a live run. The published desktop workflows and `open-desktop` depend on Windows integrations such as UI Automation, Excel COM, and Explorer. macOS/Linux **desktop** adapters have not been implemented or validated.
 
 The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. A twelve-action browser-to-VS-Code research case now runs end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
 
@@ -64,7 +64,7 @@ The public site is a read-only experimental snapshot. It neither calls the Jev A
 
 ## Open-task pilot
 
-An open goal requires two different kinds of decisions. A general model can interpret unfamiliar state and propose a *grounded next intent*; Jev can quickly choose among already-typed, legal execution routes. The framework sits between them: it reads the live DOM/UI Automation/file state, validates the proposed intent against that observation, expands it into executable GUI/DOM/API/CLI candidates, guards the selected action, and checks the resulting state before repeating. Jev does **not** interpret screenshots or generate shell commands. An optional screenshot/VLM grounding path is now integrated into `open-desktop`, but it was **not used in the recorded cross-app case**.
+An open goal requires two different kinds of decisions. A general model can interpret unfamiliar state and propose *grounded next actions*; Jev can quickly choose among already-typed, legal action-and-route candidates. The framework sits between them: it reads live DOM/UI Automation/file state and optionally bounded VLM scene text, validates the proposal against that observation, expands it into executable GUI/DOM/API/CLI candidates, guards the selected action, and checks the resulting state before repeating. Jev does **not** interpret screenshots or generate shell commands. The optional screenshot/VLM path is integrated into `open-browser` and `open-desktop`, but was **not used in the recorded 12-decision cross-app case**.
 
 ![CUA-JEV open-task loop: live state, model intent, typed route construction, highlighted Jev choice, execution and verification](src/cua_jev/ui/static/open-task-loop.svg)
 
@@ -87,6 +87,23 @@ cua-jev open-workspace --goal "Study the first five official Python tutorial cha
 ```
 
 For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; broader multi-app planning remains future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
+
+### Browser DOM + VLM + Jev pilot (experimental)
+
+`open-browser` can now fuse live DOM controls with an opt-in VLM description of the current viewport. The text model proposes grounded DOM or visual refs; the framework validates each one and can offer both DOM click and screenshot-grounded browser-mouse routes for the same visible control. Jev chooses one concrete candidate. Visual clicks require explicit screenshot-upload, visual-click, and external-action opt-ins; they are checked against the current URL, DOM, viewport geometry, and screenshot freshness before execution. DOM/visual changes check **effect**, while a live URL/title/text condition checks the bounded goal. This is not unrestricted web automation.
+
+One real public Python-documentation run completed a **single-step** chapter navigation in 9.8 s: the VLM returned scene text, the planner proposed DOM and visual options, and Jev chose DOM with probabilities **0.99 vs 0.01**. The VLM took 4.7 s, the planner 1.9 s, and Jev 0.66 s. Earlier attempts failed on malformed VLM output and a malformed plan; these are **pilot observations, not a success-rate or speed benchmark**. The older 12-decision video remains text + DOM.
+
+```powershell
+python -m pip install -e ".[browser-vision]"
+python -m playwright install chromium
+cua-jev open-browser --goal "Open a chapter" --url "https://docs.python.org/3/tutorial/index.html" `
+  --browser-channel chromium --model-base-url "https://YOUR_MODEL_GATEWAY/v1" `
+  --model "YOUR_TEXT_MODEL" --vision-model "YOUR_VISION_MODEL" --vision-mode always `
+  --allow-screenshot-upload --policy jev
+```
+
+Add `--allow-visual-clicks --allow-external-actions` only for a controlled test where visual mouse actions are authorized. The model gateway is contacted directly by default, bypassing environment proxies.
 
 ### Optional window-screenshot/VLM path (experimental)
 
@@ -163,6 +180,7 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [ ] Generalize task adapters across software and tasks, then explore macOS / Linux and more browser and office applications.
 - [x] Add opt-in, window-only screenshot/VLM target grounding to the experimental desktop path, while retaining the text-only path; offline integration tests pass.
 - [x] Fuse bounded VLM scene text with UI Automation for grounded planning; validate a synthetic image against the campus VLM gateway and add trace-level decision/channel analysis.
+- [x] Fuse DOM and viewport vision in the open-browser path, add grounded visual-mouse alternatives, and complete a real single-step VLM + text model + Jev browser pilot (with failed attempts recorded).
 - [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.
 - [ ] Replace one-window/task-family constraints with a portable scene and capability-provider contract (DOM, Windows UIA, macOS Accessibility, vision, CLI/MCP/file tools), then validate real unfamiliar cross-app tasks on both operating systems.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.

@@ -142,3 +142,22 @@ def test_vision_model_cannot_return_out_of_window_coordinates():
     image = WindowImage(b"\xff\xd8\xff\xd9", bytes(64 * 64), (0, 0, 200, 200))
     with pytest.raises(ValueError, match="invalid targets"):
         planner.perceive_window("Finish", "Example", "", image)
+
+
+def test_vision_scene_extracts_json_wrapped_in_model_commentary():
+    reply = "Observed the window.\n```json\n" + json.dumps({
+        "summary": "A simple settings page.",
+        "visible_text": ["Save"],
+        "targets": [{"label": "Save", "box": [600, 600, 900, 850]}],
+    }) + "\n```"
+    planner = ChatModelPlanner(
+        "https://model.example/v1", "vision-model",
+        client=httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(
+            200, json={"choices": [{"message": {"content": reply}}]},
+        ))),
+    )
+    scene = planner.perceive_scene(
+        "Save", "Settings", "", WindowImage(b"\xff\xd8\xff\xd9", bytes(64 * 64), (0, 0, 400, 240))
+    )
+    assert scene.summary == "A simple settings page."
+    assert scene.targets[0].ref == "v0"

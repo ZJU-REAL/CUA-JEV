@@ -232,6 +232,7 @@ class OpenDesktopTask:
         self._before_images: dict[str, WindowImage] = {}
         self._visual_image: WindowImage | None = None
         self.planner_calls = 0
+        self.vision_failures = 0
 
     def reset(self) -> None:
         if self.window is None:
@@ -250,6 +251,7 @@ class OpenDesktopTask:
         self._plan = None
         self._used.clear()
         self._visual_image = None
+        self.vision_failures = 0
 
     def close(self) -> None:
         self.window = None
@@ -273,21 +275,28 @@ class OpenDesktopTask:
                 )
                 image = self.screen.capture_region(region)
                 perceive_scene = getattr(self.vision_grounder, "perceive_scene", None)
-                if perceive_scene is not None:
-                    scene = perceive_scene(self.goal, snapshot.window_title, snapshot.text, image)
+                try:
+                    if perceive_scene is not None:
+                        scene = perceive_scene(self.goal, snapshot.window_title, snapshot.text, image)
+                    else:
+                        # Older grounders expose target-only output; retain their adapter path.
+                        targets = self.vision_grounder.perceive_window(
+                            self.goal, snapshot.window_title, snapshot.text, image
+                        )
+                        scene = VisualScene("", (), targets)
+                except (RuntimeError, ValueError):
+                    self.vision_failures += 1
+                    self._visual_image = None
+                    if not actionable:
+                        raise
                 else:
-                    # Older grounders expose target-only output; retain their adapter path.
-                    targets = self.vision_grounder.perceive_window(
-                        self.goal, snapshot.window_title, snapshot.text, image
+                    self._visual_image = image
+                    snapshot = replace(
+                        snapshot, visual_targets=scene.targets if self.allow_visual_clicks else (),
+                        visual_summary=scene.summary, visual_text=scene.visible_text,
+                        visual_region=region,
+                        visual_image_hash=hashlib.sha256(image.sample).hexdigest(),
                     )
-                    scene = VisualScene("", (), targets)
-                self._visual_image = image
-                snapshot = replace(
-                    snapshot, visual_targets=scene.targets,
-                    visual_summary=scene.summary, visual_text=scene.visible_text,
-                    visual_region=region,
-                    visual_image_hash=hashlib.sha256(image.sample).hexdigest(),
-                )
             else:
                 self._visual_image = None
         return snapshot
