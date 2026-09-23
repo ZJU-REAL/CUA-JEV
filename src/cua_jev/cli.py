@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -15,12 +16,14 @@ from .experiment import ExperimentRunner
 from .frozen import builtin_task_specs
 from .guard import ActionGuard
 from .models import Channel
+from .open_browser import HttpJsonPlanner, OpenBrowserTask, PublicDecisionPolicy
 from .policy import JevPolicy, RulePolicy
 from .registry import ExecutorRegistry
 from .runtime import AgentRuntime
 from .sandbox import FileOrganizationTask, sandbox_mcp_executor
 from .suites import SUITE_NAMES, make_suite
 from .trace import JsonlTrace
+from .verify import VerifierRegistry
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -64,6 +67,18 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="fall back to the deterministic rule policy after transient Jev transport failures",
     )
+    open_browser = sub.add_parser(
+        "open-browser", help="Experimental open-goal browser loop with a pluggable JSON planner"
+    )
+    open_browser.add_argument("--goal", required=True)
+    open_browser.add_argument("--url", required=True)
+    open_browser.add_argument("--planner-endpoint", required=True)
+    open_browser.add_argument("--policy", choices=("rule", "jev"), default="jev")
+    open_browser.add_argument("--headed", action="store_true")
+    open_browser.add_argument("--allow-form-input", action="store_true")
+    open_browser.add_argument("--allow-external-actions", action="store_true")
+    open_browser.add_argument("--max-steps", type=int, default=20)
+    open_browser.add_argument("--trace", help="Opt-in local trace; may contain task data")
     return parser
 
 
@@ -102,6 +117,29 @@ def _suite_runner(policy_name: str, trace: Path, *, policy_fallback: bool = Fals
         )
 
     return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=20, timeout_s=300))
+
+
+def _open_browser_runner(args: argparse.Namespace) -> EpisodeRunner:
+    def runtime_factory(environment: OpenBrowserTask) -> AgentRuntime:
+        executors = ExecutorRegistry()
+        for channel, executor in environment.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        environment.register_verifiers(verifiers)
+        inner = JevPolicy(retries=2) if args.policy == "jev" else RulePolicy()
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(inner),
+            guard=ActionGuard(
+                allow_writes=args.allow_form_input,
+                allow_destructive=args.allow_external_actions,
+            ),
+            executors=executors,
+            verifiers=verifiers,
+            trace=JsonlTrace(args.trace),
+        )
+
+    return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=600))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -143,6 +181,26 @@ def main(argv: list[str] | None = None) -> int:
             policy.close()
         print(json.dumps(decision.to_dict(), indent=2, ensure_ascii=False))
         return 0
+    if args.command == "open-browser":
+        if args.max_steps < 1:
+            raise SystemExit("--max-steps must be positive")
+        planner = HttpJsonPlanner(
+            args.planner_endpoint, api_key=os.getenv("CUA_JEV_PLANNER_API_KEY")
+        )
+        try:
+            environment = OpenBrowserTask(
+                goal=args.goal,
+                start_url=args.url,
+                planner=planner,
+                headed=args.headed,
+                allow_form_input=args.allow_form_input,
+                allow_external_actions=args.allow_external_actions,
+            )
+            result = _open_browser_runner(args).run(environment)
+        finally:
+            planner.close()
+        print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+        return 0 if result.success else 1
     if args.command in {"episode-demo", "experiment"}:
         workspace = Path(args.workspace).resolve()
         runner = _episode_runner(args.policy, workspace, Path(args.trace))
