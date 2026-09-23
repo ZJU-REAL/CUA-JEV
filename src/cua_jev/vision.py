@@ -7,6 +7,7 @@ from typing import Any
 
 SAMPLE_EDGE = 64
 MAX_VISUAL_TARGETS = 12
+MAX_VISIBLE_TEXT = 24
 
 
 @dataclass(frozen=True)
@@ -61,6 +62,40 @@ class VisualTarget:
             seen.add(key)
             result.append(cls(f"v{index}", key[0], key[1]))
         return tuple(result)
+
+
+@dataclass(frozen=True)
+class VisualScene:
+    """Bounded textual description of one screenshot; pixels never enter Jev state."""
+
+    summary: str
+    visible_text: tuple[str, ...]
+    targets: tuple[VisualTarget, ...]
+
+    @classmethod
+    def from_response(cls, data: Any) -> VisualScene:
+        if not isinstance(data, dict):
+            raise ValueError("vision scene must be an object")
+        summary = data.get("summary", "")
+        lines = data.get("visible_text", [])
+        if not isinstance(summary, str) or len(summary) > 1000:
+            raise ValueError("vision scene summary is invalid")
+        if not isinstance(lines, list) or len(lines) > MAX_VISIBLE_TEXT:
+            raise ValueError("vision scene visible text is invalid")
+        if any(not isinstance(line, str) or len(line) > 160 for line in lines):
+            raise ValueError("vision scene visible text line is invalid")
+        return cls(
+            summary=summary.strip(),
+            visible_text=tuple(line.strip() for line in lines if line.strip()),
+            targets=VisualTarget.from_response(data),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "summary": self.summary,
+            "visible_text": list(self.visible_text),
+            "targets": [target.to_dict() for target in self.targets],
+        }
 
 
 def changed_fraction(before: bytes, after: bytes, *, threshold: int = 20) -> float:

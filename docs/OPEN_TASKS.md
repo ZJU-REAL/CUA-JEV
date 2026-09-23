@@ -6,12 +6,14 @@ This is an integration scaffold, not a claim of general computer-use capability.
 
 ## Division of labor
 
-1. Playwright observes a browser page (URL, title, short visible text, up to 60 interactive elements with temporary `eN` refs). UI Automation observes a selected desktop window (title, visible named controls, up to 80 `cN` refs). Password controls are excluded from UIA observations. With explicit opt-in, `open-desktop` can additionally upload a cropped-window JPEG to a vision model, which returns up to 12 labeled `vN` boxes; visual boxes are **not** a reliable secret-field detector.
-2. A low-frequency planner proposes a subgoal, up to 16 grounded options, and an observable completion condition. The OpenAI-compatible chat adapter calls `/v1/chat/completions`; the original provider-neutral JSON endpoint is also supported for browsers. Text plans cannot propose code, selectors, coordinates, shell commands, or arbitrary tool calls. The separate VLM can propose normalized visual boxes only, which are validated and converted to click-only GUI refs.
-3. The framework turns each legal browser option into DOM and (when headed) physical GUI routes. Desktop options can use UIA `invoke`/`set_edit_text` or physical GUI; VLM targets offer GUI clicks only. Jev chooses a typed option/channel at each step. Candidate arguments, screenshot bytes, and snapshot text are withheld from the Jev request, though the goal, titles, and element labels are still sent.
+1. Playwright observes a browser page (URL, title, short visible text, up to 60 interactive elements with temporary `eN` refs). UI Automation observes a selected desktop window (title, visible named controls, up to 80 `cN` refs). Password controls are excluded from UIA observations. With explicit opt-in, `open-desktop` can additionally upload a cropped-window JPEG to a vision model, which returns a bounded scene summary, short visible-text excerpts, and up to 12 labeled `vN` boxes; visual boxes are **not** a reliable secret-field detector.
+2. A planner proposes a subgoal, up to 16 grounded options, and an observable completion condition. The OpenAI-compatible chat adapter calls `/v1/chat/completions`; the original provider-neutral JSON endpoint is also supported for browsers. Text plans cannot propose code, selectors, coordinates, shell commands, or arbitrary tool calls. The separate VLM's scene text is fused with UIA state before planning; its normalized boxes are validated and converted to click-only GUI refs.
+3. The framework turns each legal browser option into DOM and (when headed) physical GUI routes. Desktop options can use UIA `invoke`/`set_edit_text` or physical GUI; VLM targets offer GUI clicks only. Jev chooses a **concrete typed action and channel** at each step. Candidate arguments, screenshot bytes, verbatim OCR lines, and snapshot text are withheld from the Jev request, though the bounded visual summary, goal, titles, and element labels are still sent.
 4. The normal `ActionGuard`, executor, and verifier run. A failed effect check or exhausted options triggers another planner call. A model-proposed completion condition is checked against live state, but **is not independent semantic proof** that the user's original goal was achieved.
 
 The long-term design aims to call the planner less often than Jev by reusing a grounded subgoal across several constrained decisions. The current pilot called both once per step, so this is still an architectural hypothesis, not a measured speed/cost result for open tasks. The four published benchmark cases are unchanged.
+
+For repeated runs, keep each run's private JSONL trace locally and aggregate only numerical results with `cua-jev analyze-traces runs/*.jsonl`. The command reports completed episodes, success rate, median/p95 wall and Jev decision time, mean confidence/choice entropy, selected channels, and mean probability mass by *available* channel. It also sums provider-reported token counts where present. It deliberately leaves `cost_usd` unset until the actual model usage and a dated rate card are supplied. One synthetic-image probe or one completed case is not a benchmark.
 
 ## Browser-to-VS-Code pilot
 
@@ -52,7 +54,7 @@ The model adapter connects directly by default, ignoring OS/environment proxies.
 
 ### Optional one-window screenshot/VLM grounding
 
-`open-desktop` accepts a separate `--vision-model` alongside the text planner. `fallback` sends a screenshot only when UIA reports no actionable control; `always` sends it every observation. The image is a resized JPEG of the selected window rectangle, held in memory and omitted from trace/Jev choices. The VLM returns visible labels and bounded `0..1000` boxes. The planner may reference these as `vN`; the framework permits click only, then checks the current window geometry, UIA state, and image freshness before a physical GUI click. After the click, UIA or pixel change checks **effect**, not semantic task completion; completion still needs a live UIA-observable condition.
+`open-desktop` accepts a separate `--vision-model` alongside the text planner. `fallback` sends a screenshot only when UIA reports no actionable control; `always` sends it every observation. The image is a resized JPEG of the selected window rectangle, held in memory and omitted from trace/Jev choices. The VLM returns a bounded scene summary, short visible text, and labeled `0..1000` boxes. The planner may reference these as `vN`; the framework permits click only, then checks the current window geometry, UIA state, and image freshness before a physical GUI click. After the click, UIA or pixel change checks **effect**, not semantic task completion; completion still needs a live UIA-observable condition.
 
 ```powershell
 cua-jev open-desktop --goal "Complete a controlled window task" --window-title "^Your Test Window$" `
@@ -61,7 +63,7 @@ cua-jev open-desktop --goal "Complete a controlled window task" --window-title "
   --allow-screenshot-upload --allow-visual-clicks --allow-button-actions --policy jev
 ```
 
-Both upload and visual clicks are deliberate opt-ins; clicking is also gated by `--allow-button-actions`. Use only a non-sensitive controlled window. An unrelated overlay inside the window rectangle could also appear in the uploaded screenshot. Unit and mocked integration tests pass, but a current 90-second campus-gateway image request timed out: **no completed live VLM task or arbitrary-task success is claimed**. The provider-neutral browser endpoint and `open-workspace` do not use this VLM route.
+Both upload and visual clicks are deliberate opt-ins; clicking is also gated by `--allow-button-actions`. Use only a non-sensitive controlled window. An unrelated overlay inside the window rectangle could also appear in the uploaded screenshot. Unit and mocked integration tests pass. A new direct, proxy-bypassing campus-gateway call with a **synthetic** Settings/Save image returned valid scene text and a bounded Save box in 7.9 s, with 351 reported tokens. This is a wire/grounding probe, **not** a completed live VLM + Jev task or arbitrary-task evaluation. The provider-neutral browser endpoint and `open-workspace` do not use this VLM route.
 
 ### Provisional model shortlist
 
@@ -70,7 +72,7 @@ The accessible gateway advertised these IDs, and minimal live calls established 
 | Model ID | Initial role | Evidence |
 |---|---|---|
 | `dashscope/qwen-flash` | Default structured-state planner candidate | Returned a valid grounded browser plan; a short public-site task completed with Jev. |
-| `dashscope/qwen3-vl-32b-instruct` | Experimental screenshot/VLM grounder | Previously accepted a trivial image test and is now wired to the optional desktop observer; current live grounding probe timed out. |
+| `dashscope/qwen3-vl-32b-instruct` | Experimental screenshot/VLM grounder | A direct synthetic-image call returned a scene summary, OCR excerpts, and one bounded Save target in 7.9 s; this is not a desktop-task success rate. |
 | `dashscope/qwen-plus`, `dashscope/qwen3.5-plus` | Escalation candidates | Returned valid plans on the same tiny prompt, but were slower in one-shot calls. |
 
 The [Qwen Flash model page](https://help.aliyun.com/en/model-studio/qwen-flash) and [visual-model documentation](https://help.aliyun.com/en/model-studio/vision-model/) describe provider capabilities, but the campus gateway's actual behavior must be evaluated separately. One prompt and one image do not establish reliability, latency distributions, or cost under real CUA workloads.

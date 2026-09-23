@@ -166,6 +166,18 @@ class EpisodeRunner:
         counts = Counter(str(step.receipt.channel) for step in history)
         result = EpisodeResult(environment.name, status, reason, tuple(history), started, ended, dict(counts))
         runtime.trace.append("episode", result.to_dict())
+        for role, adapter in (
+            ("planner", getattr(environment, "planner", None)),
+            ("vision", getattr(environment, "vision_grounder", None)),
+        ):
+            usage = getattr(adapter, "usage_totals", None)
+            if isinstance(usage, dict) and usage:
+                runtime.trace.append("model_usage", {
+                    "role": role,
+                    "model": str(getattr(adapter, "model", "unknown")),
+                    "usage": {key: value for key, value in usage.items()
+                              if isinstance(key, str) and type(value) is int and value >= 0},
+                })
         completion_hold = _completion_hold_seconds()
         if completion_hold:
             time.sleep(completion_hold)

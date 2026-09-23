@@ -19,7 +19,7 @@ from .executors.screen import ScreenController
 from .models import ActionCandidate, ActionReceipt, Channel, Observation, Risk, Verification
 from .runtime import StepResult
 from .verify import VerifierRegistry
-from .vision import VisualTarget, WindowImage, changed_fraction
+from .vision import VisualScene, VisualTarget, WindowImage, changed_fraction
 
 MAX_CONTROLS = 80
 MAX_OPTIONS = 16
@@ -48,6 +48,8 @@ class DesktopSnapshot:
     text: str
     controls: tuple[DesktopControl, ...]
     visual_targets: tuple[VisualTarget, ...] = ()
+    visual_summary: str = ""
+    visual_text: tuple[str, ...] = ()
     visual_region: tuple[int, int, int, int] | None = None
     visual_image_hash: str = ""
 
@@ -103,6 +105,8 @@ class DesktopSnapshot:
             "window_title": self.window_title, "window_handle": self.window_handle,
             "text": self.text, "controls": [item.to_dict() for item in self.controls],
             "visual_targets": [item.to_dict() for item in self.visual_targets],
+            "visual_summary": self.visual_summary,
+            "visual_text": list(self.visual_text),
             "visual_region": self.visual_region, "visual_image_hash": self.visual_image_hash,
         }
 
@@ -178,9 +182,9 @@ class DesktopGoalPlanner(Protocol):
 
 
 class WindowVisionGrounder(Protocol):
-    def perceive_window(
+    def perceive_scene(
         self, goal: str, window_title: str, ui_text: str, image: WindowImage
-    ) -> tuple[VisualTarget, ...]: ...
+    ) -> VisualScene: ...
 
 
 class OpenDesktopTask:
@@ -268,12 +272,20 @@ class OpenDesktopTask:
                     int(rect.right - rect.left), int(rect.bottom - rect.top),
                 )
                 image = self.screen.capture_region(region)
-                targets = self.vision_grounder.perceive_window(
-                    self.goal, snapshot.window_title, snapshot.text, image
-                )
+                perceive_scene = getattr(self.vision_grounder, "perceive_scene", None)
+                if perceive_scene is not None:
+                    scene = perceive_scene(self.goal, snapshot.window_title, snapshot.text, image)
+                else:
+                    # Older grounders expose target-only output; retain their adapter path.
+                    targets = self.vision_grounder.perceive_window(
+                        self.goal, snapshot.window_title, snapshot.text, image
+                    )
+                    scene = VisualScene("", (), targets)
                 self._visual_image = image
                 snapshot = replace(
-                    snapshot, visual_targets=targets, visual_region=region,
+                    snapshot, visual_targets=scene.targets,
+                    visual_summary=scene.summary, visual_text=scene.visible_text,
+                    visual_region=region,
                     visual_image_hash=hashlib.sha256(image.sample).hexdigest(),
                 )
             else:

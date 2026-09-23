@@ -254,7 +254,12 @@ class PublicDecisionPolicy:
 
     def choose(self, observation: Observation, candidates: Sequence[ActionCandidate]) -> Decision:
         public = tuple(replace(item, arguments={}, expected={}) for item in candidates)
-        public_state = {key: value for key, value in observation.state.items() if key != "text"}
+        # Exact OCR lines may reproduce private screen content; Jev gets the bounded
+        # scene summary and grounded target labels, but not verbatim visual text.
+        public_state = {
+            key: value for key, value in observation.state.items()
+            if key not in {"text", "visual_text"}
+        }
         if observation.source == "open-workspace":
             browser = public_state.get("browser", {})
             public_state = {

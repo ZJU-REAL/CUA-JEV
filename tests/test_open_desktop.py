@@ -12,7 +12,7 @@ from cua_jev.policy import RulePolicy
 from cua_jev.registry import ExecutorRegistry
 from cua_jev.runtime import AgentRuntime
 from cua_jev.verify import VerifierRegistry
-from cua_jev.vision import VisualTarget, WindowImage
+from cua_jev.vision import VisualScene, VisualTarget, WindowImage
 
 
 class FakeControl:
@@ -183,6 +183,15 @@ class FakeVisionGrounder:
         return (VisualTarget("v0", "Finish", (400, 400, 600, 600)),)
 
 
+class FakeSceneGrounder(FakeVisionGrounder):
+    def perceive_scene(self, goal, window_title, ui_text, image):
+        self.calls += 1
+        return VisualScene(
+            "A dialog with a Finish button.", ("Finish",),
+            (VisualTarget("v0", "Finish", (400, 400, 600, 600)),),
+        )
+
+
 class FakeVisualScreen:
     def __init__(self, window):
         self.window = window
@@ -232,6 +241,24 @@ def test_visual_fallback_routes_a_window_only_target_through_gui_and_verifies_ef
     assert result.channel_counts == {"gui": 1}
     assert grounder.calls == 1
     assert screen.clicks == [(120, 130)]
+
+
+def test_visual_scene_is_fused_into_desktop_observation_without_image_bytes():
+    window = VisualFakeWindow()
+    grounder = FakeSceneGrounder()
+    environment = OpenDesktopTask(
+        goal="Finish the window", window_title_re="Example", window=window,
+        screen=FakeVisualScreen(window), planner=FakeDesktopPlanner(),
+        vision_grounder=grounder, allow_screenshot_upload=True,
+    )
+    environment.reset()
+    observation = environment.observe(())
+    assert observation.state["visual_summary"] == "A dialog with a Finish button."
+    assert observation.state["visual_text"] == ["Finish"]
+    assert observation.state["visual_targets"][0]["ref"] == "v0"
+    assert "image/jpeg" not in str(observation.state)
+    assert grounder.calls == 1
+    environment.close()
 
 
 def test_visual_click_rejects_changed_screenshot_and_requires_explicit_opt_ins():

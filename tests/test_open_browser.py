@@ -272,6 +272,7 @@ def test_public_policy_does_not_send_page_text_or_action_arguments():
         body = json.loads(request.content)
         assert "private page text" not in request.content.decode()
         assert "private input" not in request.content.decode()
+        assert "private OCR line" not in request.content.decode()
         assert body["state"]["state"] == {"url": "https://example.test"}
         assert body["state"]["available_actions"][0]["arguments"] == {}
         return httpx.Response(
@@ -290,7 +291,10 @@ def test_public_policy_does_not_send_page_text_or_action_arguments():
     )
     policy = PublicDecisionPolicy(inner)
     decision = policy.choose(
-        Observation("test", "test", {"url": "https://example.test", "text": "private page text"}),
+        Observation("test", "test", {
+            "url": "https://example.test", "text": "private page text",
+            "visual_text": ["private OCR line"],
+        }),
         [ActionCandidate("fill", Channel.SCRIPT, "browser.fill", "Fill a field", {"value": "private input"})],
     )
     assert decision.candidate_id == "fill"

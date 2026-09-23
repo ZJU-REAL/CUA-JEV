@@ -1,6 +1,6 @@
 import pytest
 
-from cua_jev.vision import VisualTarget, WindowImage, changed_fraction
+from cua_jev.vision import VisualScene, VisualTarget, WindowImage, changed_fraction
 
 
 def test_visual_target_parser_rejects_ambiguous_or_invalid_boxes():
@@ -26,3 +26,17 @@ def test_window_image_is_bounded_and_change_fraction_detects_effect():
     assert changed_fraction(image.sample, bytes([255]) * (64 * 64)) == 1.0
     with pytest.raises(ValueError, match="JPEG"):
         WindowImage(b"not-an-image", bytes(64 * 64), (10, 20, 200, 100))
+
+
+def test_visual_scene_contains_bounded_text_and_grounded_targets():
+    scene = VisualScene.from_response({
+        "summary": "A settings dialog with a Save button.",
+        "visible_text": ["Settings", "Save"],
+        "targets": [{"label": "Save", "box": [400, 700, 600, 780]}],
+    })
+    assert scene.targets[0].ref == "v0"
+    assert scene.to_dict()["visible_text"] == ["Settings", "Save"]
+    with pytest.raises(ValueError, match="summary"):
+        VisualScene.from_response({"summary": "x" * 1001, "targets": []})
+    with pytest.raises(ValueError, match="visible text"):
+        VisualScene.from_response({"visible_text": ["x"] * 25, "targets": []})

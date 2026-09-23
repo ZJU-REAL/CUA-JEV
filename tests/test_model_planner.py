@@ -109,6 +109,8 @@ def test_vision_request_sends_window_jpeg_and_validates_grounded_boxes():
         assert content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
         return httpx.Response(200, json={
             "choices": [{"message": {"content": json.dumps({
+                "summary": "A task dialog with a Finish button.",
+                "visible_text": ["Task dialog", "Finish"],
                 "targets": [{"label": "Finish", "box": [400, 400, 600, 600]}],
             })}}],
             "usage": {"prompt_tokens": 300, "completion_tokens": 40},
@@ -119,9 +121,11 @@ def test_vision_request_sends_window_jpeg_and_validates_grounded_boxes():
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
     image = WindowImage(b"\xff\xd8\xff\xd9", bytes(64 * 64), (20, 30, 200, 200))
-    targets = planner.perceive_window("Finish", "Example", "", image)
-    assert targets[0].ref == "v0"
-    assert targets[0].box == (400, 400, 600, 600)
+    scene = planner.perceive_scene("Finish", "Example", "", image)
+    assert scene.summary == "A task dialog with a Finish button."
+    assert scene.visible_text == ("Task dialog", "Finish")
+    assert scene.targets[0].ref == "v0"
+    assert scene.targets[0].box == (400, 400, 600, 600)
     assert planner.vision_calls == 1
     assert planner.usage_totals["prompt_tokens"] == 300
 

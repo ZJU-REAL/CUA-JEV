@@ -25,6 +25,7 @@ from .runtime import AgentRuntime
 from .sandbox import FileOrganizationTask, sandbox_mcp_executor
 from .suites import SUITE_NAMES, make_suite
 from .trace import JsonlTrace
+from .trace_analysis import analyze_traces
 from .verify import VerifierRegistry
 
 
@@ -43,6 +44,10 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--trace", default="runs/benchmark.jsonl")
     sub.add_parser("jev-smoke", help="Make one read-only Jev decision without executing an action")
     sub.add_parser("tasks", help="List the four current workflow cases")
+    analyze = sub.add_parser(
+        "analyze-traces", help="Aggregate local run outcomes and Jev route probabilities"
+    )
+    analyze.add_argument("paths", nargs="+", help="One or more local JSONL trace files")
     episode = sub.add_parser("episode-demo", help="Run the closed-loop sandbox episode")
     episode.add_argument("--policy", choices=("rule", "jev"), default="rule")
     episode.add_argument("--workspace", default="demo-workspace/episode")
@@ -274,6 +279,9 @@ def main(argv: list[str] | None = None) -> int:
                 indent=2,
             )
         )
+        return 0
+    if args.command == "analyze-traces":
+        print(json.dumps(analyze_traces(args.paths), indent=2, ensure_ascii=False))
         return 0
     if args.command == "jev-smoke":
         from .models import ActionCandidate, Channel, Observation
