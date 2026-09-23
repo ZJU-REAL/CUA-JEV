@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
+  <title id="title">Model and Jev collaboration in CUA-JEV</title>
+  <desc id="desc">Live computer state goes to a general model for grounded intent planning. The framework expands legal execution routes. Jev selects one typed action. A guard executes it, verifies the changed state, and repeats. Screenshot-based VLM perception is planned but not part of the recorded pilot.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#a3b7c5"/></marker>
+    <marker id="loop" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#4d7862"/></marker>
+  </defs>
+  <rect x="1" y="1" width="1198" height="348" rx="20" fill="#f5f9fa" stroke="#ced8dd"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="34" y="39" fill="#1e476d" font-size="17" font-weight="800">ONE CLOSED LOOP</text>
+    <text x="1166" y="39" text-anchor="end" fill="#5e7180" font-size="15">Text + DOM: validated pilot · VLM screenshot fallback: planned</text>
+    <g stroke="#a3b7c5" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M224 164H244"/><path d="M452 164H472"/><path d="M680 164H700"/><path d="M908 164H928"/>
+    </g>
+    <g>
+      <rect x="30" y="82" width="194" height="166" rx="15" fill="#ffffff" stroke="#ced8dd"/>
+      <text x="48" y="112" fill="#b96843" font-size="15" font-weight="800">01 · OBSERVE</text>
+      <text x="48" y="147" fill="#24364b" font-size="24" font-family="Georgia, serif" font-weight="700">Live state</text>
+      <text x="48" y="181" fill="#465b6c" font-size="15">DOM · UIA · files</text>
+      <text x="48" y="207" fill="#465b6c" font-size="15">Current app only</text>
+    </g>
+    <g>
+      <rect x="258" y="82" width="194" height="166" rx="15" fill="#ffffff" stroke="#ced8dd"/>
+      <text x="276" y="112" fill="#b96843" font-size="15" font-weight="800">02 · MODEL</text>
+      <text x="276" y="147" fill="#24364b" font-size="24" font-family="Georgia, serif" font-weight="700">Plan intent</text>
+      <text x="276" y="181" fill="#465b6c" font-size="15">Interpret the goal</text>
+      <text x="276" y="207" fill="#465b6c" font-size="15">Ground in live evidence</text>
+    </g>
+    <g>
+      <rect x="486" y="82" width="194" height="166" rx="15" fill="#ffffff" stroke="#ced8dd"/>
+      <text x="504" y="112" fill="#b96843" font-size="15" font-weight="800">03 · FRAMEWORK</text>
+      <text x="504" y="147" fill="#24364b" font-size="24" font-family="Georgia, serif" font-weight="700">Build routes</text>
+      <text x="504" y="181" fill="#465b6c" font-size="15">Typed legal candidates</text>
+      <text x="504" y="207" fill="#465b6c" font-size="15">GUI · DOM · API · CLI</text>
+    </g>
+    <g>
+      <rect x="714" y="72" width="194" height="186" rx="17" fill="#1e476d" stroke="#1e476d"/>
+      <rect x="729" y="88" width="59" height="29" rx="8" fill="#e3eee7"/>
+      <text x="758" y="108" text-anchor="middle" fill="#1e476d" font-size="15" font-weight="900">JEV</text>
+      <text x="732" y="151" fill="#ffffff" font-size="27" font-family="Georgia, serif" font-weight="700">Choose one</text>
+      <text x="732" y="187" fill="#e0ebf2" font-size="15">Fast typed selection</text>
+      <text x="732" y="213" fill="#e0ebf2" font-size="15">No new router training</text>
+    </g>
+    <g>
+      <rect x="942" y="82" width="228" height="166" rx="15" fill="#ffffff" stroke="#ced8dd"/>
+      <text x="960" y="112" fill="#b96843" font-size="15" font-weight="800">04 · RUNTIME</text>
+      <text x="960" y="147" fill="#24364b" font-size="24" font-family="Georgia, serif" font-weight="700">Act + verify</text>
+      <text x="960" y="181" fill="#465b6c" font-size="15">Guard · real executor</text>
+      <text x="960" y="207" fill="#465b6c" font-size="15">Check changed state</text>
+    </g>
+    <path d="M1057 263V301H128V263" fill="none" stroke="#4d7862" stroke-width="2" marker-end="url(#loop)"/>
+    <rect x="460" y="285" width="282" height="32" rx="16" fill="#e3eee7"/>
+    <text x="601" y="306" text-anchor="middle" fill="#365e4b" font-size="15" font-weight="700">Reobserve · replan · repeat</text>
+  </g>
+</svg>

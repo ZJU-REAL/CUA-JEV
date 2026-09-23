@@ -109,7 +109,7 @@ def build(output: Path = ROOT / "dist-pages") -> None:
         shutil.rmtree(target)
     target.mkdir(parents=True)
     shutil.copytree(SOURCE / "icons", target / "static" / "icons")
-    for name in ("app.js", "style.css", "logo-mark.svg"):
+    for name in ("app.js", "style.css", "logo-mark.svg", "open-task-loop.svg"):
         shutil.copy2(SOURCE / name, target / "static" / name)
     html = (SOURCE / "index.html").read_text(encoding="utf-8")
     marker = '<html lang="en">'
@@ -130,7 +130,7 @@ def build(output: Path = ROOT / "dist-pages") -> None:
                 raise ValueError(f"Missing curated demo: {source}")
             shutil.copy2(source, target / "media" / name)
             demos[task]["gui_only" if mode == "gui-only" else mode] = f"media/{name}"
-    for name in ("open-workspace-python.mp4", "open-workspace-python-poster.jpg"):
+    for name in ("open-workspace-research.mp4", "open-workspace-research-poster.jpg"):
         source = MEDIA / name
         if not source.is_file():
             raise ValueError(f"Missing curated open-task media: {source}")

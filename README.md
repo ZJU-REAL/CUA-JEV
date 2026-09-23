@@ -8,7 +8,7 @@ Jev's fast, typed decisions are a promising fit for downstream systems that must
 
 > **Scope:** This is not a general agent that can operate any Windows application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
 
-The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. A browser-to-VS-Code pilot now runs end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
+The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. A twelve-action browser-to-VS-Code research case now runs end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
 
 ![CUA-JEV architecture: task adapters, Jev selection, guarded execution, and independent verification](assets/architecture.svg)
 
@@ -62,21 +62,29 @@ The public site is a read-only experimental snapshot. It neither calls the Jev A
 
 ## Open-task pilot
 
-The [new cross-app video](https://zjureal.com/CUA-JEV/#open-task) shows an instruction that is **not one of the four encoded workflows**: inspect the official Python site, find the latest stable Python 3 release and date, create a sourced note, and open it in VS Code. No Python.org selector or click sequence is stored in the task. The planner reads live DOM text and link refs and proposes one grounded next intent; Jev chooses among real routes; the normal guard, executor, and effect verifier close the loop. The scoped note target and a required source clue (`Release date:`) are supplied as acceptance constraints, not as navigation steps.
+An open goal requires two different kinds of decisions. A general model can interpret unfamiliar state and propose a *grounded next intent*; Jev can quickly choose among already-typed, legal execution routes. The framework sits between them: it reads the live DOM/UI Automation/file state, validates the proposed intent against that observation, expands it into executable GUI/DOM/API/CLI candidates, guards the selected action, and checks the resulting state before repeating. Jev does **not** interpret a screenshot or generate shell commands. A future VLM adapter could turn otherwise inaccessible screenshots into grounded UI targets; this **has not been integrated or tested** in the recorded case.
 
-One recorded run on 2026-09-23 used `DeepSeek-V4-Flash` for three planner calls and Jev for three decisions, executing **DOM → file API → VS Code CLI** in **49.8 s**. A [separate acceptance check](scripts/verify_open_workspace_demo.py) revisited the source page in a fresh browser and confirmed that the note's `Python 3.14.7` and `Aug. 5, 2026` matched it. This is a single verified pilot, **not** a performance benchmark or evidence that the agent can handle arbitrary sites, dialogs, or Windows apps. The [curated recording](website/media/open-workspace-python.mp4) is cropped to the task windows; its playback length is not wall time.
+![CUA-JEV open-task loop: live state, model intent, typed route construction, highlighted Jev choice, execution and verification](src/cua_jev/ui/static/open-task-loop.svg)
+
+The [twelve-action cross-app recording](https://zjureal.com/CUA-JEV/#open-task) starts at the official Python tutorial index. Given five requested chapter headings—but **no chapter URLs, selectors, or click sequence**—the text model follows live links, extracts one exact quote from each of five distinct chapter pages, synthesizes a sourced study guide, writes a new Markdown file, and opens it in VS Code. Jev selects every action from the current typed candidates: **5 DOM navigations → 5 evidence records → 1 file write → 1 VS Code launch**. Research-topic headings and the new output path are user-supplied acceptance constraints; this remains a bounded browser-to-editor task family.
+
+The [independent research verifier](scripts/verify_research_demo.py) reopens the five cited official pages in a fresh browser, checks their headings and exact quotations, confirms the written file, and checks that every decision came from Jev. It checks provenance and execution, **not** whether the model wrote the best possible teaching material. The recorded `dashscope/qwen3.5-plus` run made 12 model plans and 12 Jev decisions in **155.9 s**; the public video is uniformly sped up 2.5× for viewing. A separate successful `DeepSeek-V4-Flash` run took **307 s**, including **287 s** in planner requests. Failed attempts also occurred due to gateway timeouts and malformed plans. These are case studies, **not** a repeated success-rate, latency, or cost benchmark; an end-to-end speed advantage for open-task mode has not been established.
 
 To reproduce this task family on Windows, use an existing HTTPS model gateway (or explicitly opt in to trusted local-network HTTP), a new `.md` output path, and a private model key. The command never overwrites an existing note:
 
 ```powershell
 $env:CUA_JEV_MODEL_API_KEY = "..."  # keep local; do not commit
-cua-jev open-workspace --goal "Find the latest stable Python 3 release and date on Python.org; write a sourced note and open it in VS Code" `
-  --url "https://www.python.org/" --note "artifacts/open-workspace/my-note.md" `
+cua-jev open-workspace --goal "Study the first five official Python tutorial chapters, cite one exact quote from each, and open a sourced guide in VS Code" `
+  --url "https://docs.python.org/3/tutorial/" --note "artifacts/open-workspace/my-guide.md" `
   --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_MODEL_ID" `
-  --required-source-text "Release date:" --policy jev
+  --research-topic "Whetting Your Appetite" `
+  --research-topic "Using the Python Interpreter" `
+  --research-topic "An Informal Introduction to Python" `
+  --research-topic "More Control Flow Tools" `
+  --research-topic "Data Structures" --max-steps 20 --policy jev
 ```
 
-For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it starts capture only after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; inaccessible canvas-only interfaces and broader multi-app planning remain future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
+For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; inaccessible canvas-only interfaces and broader multi-app planning remain future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
 
 ## Quick start
 
@@ -135,11 +143,11 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] GUI / DOM / COM / CLI / MCP / API execution interfaces and a keyless Rule baseline.
 - [x] Four defined Windows workflows, independent terminal verification, Hybrid / GUI Only paired experiments, and a Codex Hybrid pilot.
 - [x] Read-only website, curated experimental snapshot, real videos, and expandable execution steps.
-- [x] Experimental live model + Jev browser-to-VS-Code pilot with a separate factual acceptance check and recording.
-- [ ] Move beyond four fixed cases to parameterized task families, unseen instances, adequate repeated trials, failure cases, and confidence intervals.
+- [x] Experimental model + Jev browser-to-VS-Code task family with a five-source, 12-action case, window-only recording, and separate source-grounding check.
+- [ ] Evaluate unseen goals and sites with repeated trials, failure analysis, confidence intervals, and measured end-to-end latency and dollar cost. A completed case is not a benchmark.
 - [ ] Generalize task adapters across software and tasks, then explore macOS / Linux and more browser and office applications.
-- [ ] Add optional VLM/visual-perception fallback for interfaces that DOM, UIA, or COM cannot describe reliably, while retaining the VLM-free path.
-- [ ] Divide work with general CUA / LLM models: use them for open-ended goal interpretation and new capability construction, and Jev for frequent constrained choices; optimize jointly for success, latency, and cost.
+- [ ] Add optional screenshot/VLM perception and coordinate grounding for interfaces that DOM, UIA, or COM cannot describe reliably, while retaining the text-only path.
+- [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.
 - [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
 
 ## Safety and license

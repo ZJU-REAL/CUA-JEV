@@ -235,8 +235,9 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert "Four Windows workflows cases" in page.text
         assert "Hybrid vs GUI Only" in page.text
         assert "Jev vs Codex Computer Use" in page.text
-        assert "Model plans." in page.text
-        assert "media/open-workspace-python.mp4" in page.text
+        assert "Jev chooses how to execute it." in page.text
+        assert "media/open-workspace-research.mp4" in page.text
+        assert "VLM screenshot fallback" in page.text
         assert page.text.index('id="action-rows"') < page.text.index('id="agent-rows"')
         assert "43 ms" not in page.text
         assert ">REAL LAB<" not in page.text

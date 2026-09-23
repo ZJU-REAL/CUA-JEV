@@ -51,3 +51,5 @@ def test_pages_build_uses_relative_assets_and_snapshot(tmp_path):
         for path in bootstrap["demos"][task].values():
             assert (output / path).is_file()
     assert len(list((output / "data" / "steps").glob("*.json"))) == 12
+    assert (output / "static" / "open-task-loop.svg").is_file()
+    assert (output / "media" / "open-workspace-research.mp4").is_file()

@@ -15,16 +15,22 @@ The long-term design aims to call the planner less often than Jev by reusing a g
 
 ## Browser-to-VS-Code pilot
 
-`open-workspace` observes a live same-origin browser page and the state of one new `.md`/`.txt` output file plus its VS Code window. The model proposes a grounded browser link, a source-backed note, or opening the note; its output cannot contain arbitrary code, selectors, coordinates, commands, or another file path. The framework gates operations using live state and optional user-specified source clues. Jev chooses among browser DOM/physical GUI routes and, when available, file API/GUI routes. The note is read back before the episode succeeds. The separate [demo verifier](../scripts/verify_open_workspace_demo.py) visits the cited Python release page again and checks its facts independently; it does not participate in action selection.
+`open-workspace` observes a live same-origin browser page and the state of one new `.md`/`.txt` output file plus its VS Code window. The model proposes a grounded browser link, a browser-history return, an exact quote under a requested page heading, a source-backed note, or opening the note; its output cannot contain arbitrary code, selectors, coordinates, commands, or another file path. The framework gates operations using live state and optional user-specified source clues or research-topic headings. Jev chooses among browser DOM/physical GUI routes and, when available, file API/GUI routes. Quotes must occur in the live main-page text, and research sources must be distinct pages. The note is read back before the episode succeeds.
 
-The September 2026 pilot used three model plans and three Jev decisions; it does **not** demonstrate a planner-call reduction or a speed/cost advantage for open tasks. Campus gateway timeouts and occasional invalid model plans were observed in failed attempts. The released video is one successful, independently checked take, not a reliability statistic. No VLM is connected to this path.
+The new five-source research case starts at the official Python tutorial index with only the five desired chapter headings and a new output path. A model follows live links, records one quote per chapter, writes a guide, and opens it in VS Code. No chapter URL or click sequence is stored in the agent. One successful run completed **12 Jev decisions**: five DOM navigations, five evidence captures, one file write, and one VS Code launch. The [separate research verifier](../scripts/verify_research_demo.py) reopens every cited page in a fresh browser and checks headings, exact quotes, source URLs, and the Jev-only trace. It does **not** judge whether the synthesis is pedagogically excellent.
+
+The recorded `dashscope/qwen3.5-plus` run used 12 model plans and 12 Jev decisions in 155.9 seconds; its video is uniformly sped up 2.5×. A separate successful `DeepSeek-V4-Flash` run took 307 seconds, including 287 seconds waiting for model plans. Neither demonstrates planner-call reduction or an end-to-end speed/cost advantage for open tasks. Campus gateway timeouts and invalid plans were also observed in failed attempts. The published recording is one independently checked take, not a reliability statistic. No VLM is connected to this path. Future screenshot/VLM perception should feed the same typed candidate frontier, but broader arbitrary-task support still requires new adapters, safe executors, confirmation policies, and repeated evaluation.
 
 ```powershell
 $env:CUA_JEV_MODEL_API_KEY = "..."
-cua-jev open-workspace --goal "Find the latest stable Python 3 release and date; write a sourced note and open it in VS Code" `
-  --url "https://www.python.org/" --note "artifacts/open-workspace/new-note.md" `
+cua-jev open-workspace --goal "Study five official Python tutorial chapters and open a sourced guide in VS Code" `
+  --url "https://docs.python.org/3/tutorial/" --note "artifacts/open-workspace/new-guide.md" `
   --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_MODEL_ID" `
-  --required-source-text "Release date:" --policy jev
+  --research-topic "Whetting Your Appetite" `
+  --research-topic "Using the Python Interpreter" `
+  --research-topic "An Informal Introduction to Python" `
+  --research-topic "More Control Flow Tools" `
+  --research-topic "Data Structures" --max-steps 20 --policy jev
 ```
 
 For an HTTP-only campus gateway, add `--allow-insecure-model-http` only on a trusted network. The local `--trace` option may record full page and note content. Do not publish raw traces or credentials.

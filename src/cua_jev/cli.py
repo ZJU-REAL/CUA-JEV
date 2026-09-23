@@ -117,6 +117,10 @@ def _parser() -> argparse.ArgumentParser:
         "--required-source-text", action="append", default=[],
         help="Optional task acceptance clue that must appear in the live page before writing",
     )
+    workspace.add_argument(
+        "--research-topic", action="append", default=[],
+        help="Repeat for each source-page heading to research and cite in a distinct page",
+    )
     workspace.add_argument("--trace", help="Private local trace; includes page and note text")
     catalog = sub.add_parser("planner-models", help="List available IDs from a model gateway")
     catalog.add_argument("--model-base-url", required=True)
@@ -336,8 +340,9 @@ def main(argv: list[str] | None = None) -> int:
         planner = _chat_planner(args)
         try:
             environment = OpenWorkspaceTask(
-                goal=args.goal, start_url=args.url, note_path=Path(args.note), planner=planner,
-                required_source_texts=args.required_source_text,
+                  goal=args.goal, start_url=args.url, note_path=Path(args.note), planner=planner,
+                  required_source_texts=args.required_source_text,
+                  research_topics=args.research_topic,
             )
             result = _open_workspace_runner(args).run(environment)
         finally:

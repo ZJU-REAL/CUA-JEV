@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import time
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,45 @@ def _same_origin(url: str, base: str) -> bool:
         return False
 
 
+def _ground_quote(proposed: str, source: str) -> str | None:
+    """Return literal source text for a whitespace/typographic-normalized quote.
+
+    Models often replace a curly apostrophe with ASCII. We still require a
+    contiguous source substring, then store the *original* characters rather
+    than the model's rewritten text.
+    """
+
+    def normalized(value: str, *, offsets: bool = False):
+        chars: list[str] = []
+        spans: list[tuple[int, int]] = []
+        fold = {"’": "'", "‘": "'", "“": '"', "”": '"', "–": "-", "—": "-"}
+        for index, char in enumerate(value):
+            translated = unicodedata.normalize("NFKC", fold.get(char, char)).casefold()
+            for part in translated:
+                if part.isspace():
+                    if chars and chars[-1] == " ":
+                        spans[-1] = (spans[-1][0], index + 1)
+                        continue
+                    part = " "
+                chars.append(part)
+                spans.append((index, index + 1))
+        joined = "".join(chars).strip()
+        if not offsets:
+            return joined
+        left = len(chars) - len("".join(chars).lstrip())
+        right = left + len(joined)
+        return joined, spans[left:right]
+
+    target = normalized(proposed)
+    haystack, spans = normalized(source, offsets=True)
+    if not target:
+        return None
+    position = haystack.find(target)
+    if position < 0:
+        return None
+    return source[spans[position][0]:spans[position + len(target) - 1][1]]
+
+
 @dataclass(frozen=True)
 class WorkspaceSnapshot:
     browser: BrowserSnapshot
@@ -45,6 +85,10 @@ class WorkspaceSnapshot:
     editor_open: bool
     editor_title: str
     allowed_operations: tuple[str, ...] = ("browser_click", "open_note", "write_note")
+    source_text: str = ""
+    source_heading: str = ""
+    research_topics: tuple[str, ...] = ()
+    collected_evidence: tuple[dict[str, str], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         browser = self.browser.to_dict()
@@ -58,6 +102,10 @@ class WorkspaceSnapshot:
             "note_exists": self.note_exists, "note_text": self.note_text[:1200],
             "editor_open": self.editor_open, "editor_title": self.editor_title,
             "allowed_operations": list(self.allowed_operations),
+            "source_heading": self.source_heading,
+            "source_text": self.source_text[:4000],
+            "research_topics": list(self.research_topics),
+            "collected_evidence": list(self.collected_evidence),
         }
 
     def fingerprint(self) -> str:
@@ -70,6 +118,7 @@ class WorkspaceOption:
     ref: str = ""
     text: str = ""
     evidence: str = ""
+    topic: str = ""
 
 
 @dataclass(frozen=True)
@@ -95,14 +144,17 @@ class WorkspacePlan:
             ref = item.get("ref", "")
             text = item.get("text", "")
             evidence = item.get("evidence", "")
-            if operation not in {"browser_click", "open_note", "write_note"}:
+            topic = item.get("topic", "")
+            if operation not in {
+                "browser_click", "browser_back", "record_evidence", "open_note", "write_note"
+            }:
                 raise ValueError("unsupported workspace operation")
             if operation not in snapshot.allowed_operations:
                 raise ValueError(
                     f"operation {operation} is unavailable now; choose from "
                     + ", ".join(snapshot.allowed_operations)
                 )
-            if not all(isinstance(value, str) for value in (ref, text, evidence)):
+            if not all(isinstance(value, str) for value in (ref, text, evidence, topic)):
                 raise ValueError("workspace option fields must be strings")
             if operation == "browser_click":
                 element = known.get(ref)
@@ -110,17 +162,39 @@ class WorkspacePlan:
                     raise ValueError("browser click must reference a live link")
                 if _origin(element.href) != _origin(snapshot.browser.url):
                     raise ValueError("browser click must stay on the starting origin")
+            elif operation == "browser_back":
+                pass
+            elif operation == "record_evidence":
+                if topic not in snapshot.research_topics:
+                    raise ValueError("evidence topic is not requested")
+                if any(row["topic"] == topic for row in snapshot.collected_evidence):
+                    raise ValueError("evidence topic was already collected")
+                if any(row["url"] == snapshot.browser.url for row in snapshot.collected_evidence):
+                    raise ValueError("research evidence must come from distinct pages")
+                if topic.casefold() not in snapshot.source_heading.casefold():
+                    raise ValueError("source heading does not match the requested topic")
+                if not 8 <= len(evidence) <= 240:
+                    raise ValueError("evidence must quote current main-page text")
+                grounded = _ground_quote(evidence, snapshot.source_text or snapshot.browser.text)
+                if grounded is None:
+                    raise ValueError("evidence must quote current main-page text")
+                evidence = grounded
             elif operation == "open_note":
                 if snapshot.editor_open:
                     raise ValueError("editor is already open")
             else:
                 if snapshot.note_exists:
                     raise ValueError("note already exists; open it in VS Code")
-                if not 1 <= len(text) <= 4000 or not 4 <= len(evidence) <= 160:
+                if not 1 <= len(text) <= 4000:
                     raise ValueError("note text or source evidence is invalid")
-                if evidence.casefold() not in snapshot.browser.text.casefold():
+                if snapshot.research_topics:
+                    if len(snapshot.collected_evidence) != len(snapshot.research_topics):
+                        raise ValueError("all research topics need grounded evidence before writing")
+                elif not 4 <= len(evidence) <= 160 or evidence.casefold() not in (
+                    snapshot.browser.text.casefold()
+                ):
                     raise ValueError("evidence is not in the visible browser observation")
-            options.append(WorkspaceOption(operation, ref, text, evidence))
+            options.append(WorkspaceOption(operation, ref, text, evidence, topic))
         if len({item.operation for item in options}) != 1:
             raise ValueError("one plan must describe one next intent")
         if len(set(options)) != len(options):
@@ -144,6 +218,7 @@ class OpenWorkspaceTask:
         planner: WorkspaceGoalPlanner, screen: ScreenController | None = None,
         page: Any | None = None, editor_probe: Any | None = None,
         required_source_texts: Sequence[str] = (),
+        research_topics: Sequence[str] = (),
         maximize_editor: bool = False,
     ) -> None:
         if not goal.strip():
@@ -156,6 +231,13 @@ class OpenWorkspaceTask:
             raise ValueError("note must be a .md or .txt file")
         self.planner = planner
         self.required_source_texts = tuple(value.strip() for value in required_source_texts if value.strip())
+        self.research_topics = tuple(value.strip() for value in research_topics if value.strip())
+        if len(self.research_topics) > 10 or any(len(value) > 120 for value in self.research_topics):
+            raise ValueError("research mode supports at most ten short topic headings")
+        if len(self.research_topics) != len(set(self.research_topics)):
+            raise ValueError("research topics must be unique")
+        if self.research_topics and self.required_source_texts:
+            raise ValueError("use research topics or source text clues, not both")
         self.maximize_editor = maximize_editor
         self.screen = screen or ScreenController()
         self.page = page
@@ -169,12 +251,14 @@ class OpenWorkspaceTask:
         self._before: dict[str, WorkspaceSnapshot] = {}
         self._evidence = ""
         self._source_url = ""
+        self._research_evidence: list[dict[str, str]] = []
         self.planner_calls = 0
 
     def reset(self) -> None:
         if self.note_path.exists():
             raise ValueError("refusing to overwrite an existing note")
         self.note_path.parent.mkdir(parents=True, exist_ok=True)
+        self._research_evidence.clear()
         if self.page is None:
             try:
                 from playwright.sync_api import sync_playwright
@@ -183,9 +267,12 @@ class OpenWorkspaceTask:
             self._playwright = sync_playwright().start()
             self._browser = self._playwright.chromium.launch(
                 channel="msedge", headless=False,
-                args=["--disable-translate", "--disable-features=Translate,TranslateUI", "--lang=en-US"],
+                args=[
+                    "--start-maximized", "--disable-translate",
+                    "--disable-features=Translate,TranslateUI", "--lang=en-US",
+                ],
             )
-            self.page = self._browser.new_page()
+            self.page = self._browser.new_context(no_viewport=True, locale="en-US").new_page()
         self.page.route("**/*", self._route_request)
         self.page.goto(self.start_url, wait_until="domcontentloaded")
 
@@ -222,22 +309,51 @@ class OpenWorkspaceTask:
     def _capture(self) -> WorkspaceSnapshot:
         if self.page is None:
             raise RuntimeError("workspace task has not been reset")
-        for attempt in range(3):
+        for attempt in range(4):
             try:
                 browser = BrowserSnapshot.capture(self.page)
+                page_content = self.page.evaluate(
+                    """() => { const root = document.querySelector('main, article, div.body') ||
+                      document.body; if (!root) throw new Error('document body not ready');
+                      const heading = root.querySelector('h1') || document.querySelector('h1');
+                      return {url: location.href, heading: (heading?.innerText || '').trim(),
+                        text: (root.innerText || '').trim().slice(0, 6000)}; }"""
+                )
+                if page_content["url"] != browser.url:
+                    raise RuntimeError("browser navigation changed during observation")
                 break
             except Exception as exc:
-                if "Execution context was destroyed" not in str(exc) or attempt == 2:
+                transient = any(marker in str(exc) for marker in (
+                    "Execution context was destroyed", "document body not ready",
+                    "browser navigation changed during observation",
+                ))
+                if not transient or attempt == 3:
                     raise
                 self.page.wait_for_load_state("domcontentloaded", timeout=10000)
                 time.sleep(0.2)
         if _origin(browser.url) != self.allowed_origin:
             raise RuntimeError("browser left the allowed origin")
+        source_heading = str(page_content["heading"])[:240]
+        source_text = str(page_content["text"])[:6000]
         exists = self.note_path.is_file()
         note_text = self.note_path.read_text(encoding="utf-8") if exists else ""
         editor_title = self.editor_probe()
         if exists:
             allowed = ("open_note",) if not editor_title else ()
+        elif self.research_topics:
+            pending = set(self.research_topics) - {row["topic"] for row in self._research_evidence}
+            if not pending:
+                allowed = ("write_note",)
+            elif (
+                browser.url != self.start_url
+                and any(topic.casefold() in source_heading.casefold() for topic in pending)
+                and not any(row["url"] == browser.url for row in self._research_evidence)
+            ):
+                allowed = ("record_evidence",)
+            else:
+                allowed = ("browser_click", "browser_back") if browser.url != self.start_url else (
+                    "browser_click",
+                )
         elif self.required_source_texts and any(
             value.casefold() not in browser.text.casefold() for value in self.required_source_texts
         ):
@@ -247,7 +363,9 @@ class OpenWorkspaceTask:
         else:
             allowed = ("browser_click", "write_note")
         return WorkspaceSnapshot(
-            browser, str(self.note_path), exists, note_text, bool(editor_title), editor_title, allowed
+            browser, str(self.note_path), exists, note_text, bool(editor_title), editor_title,
+            allowed, source_text, source_heading, self.research_topics,
+            tuple(row.copy() for row in self._research_evidence),
         )
 
     def observe(self, history: Sequence[StepResult]) -> Observation:
@@ -258,6 +376,14 @@ class OpenWorkspaceTask:
         )
 
     def _satisfied(self, snapshot: WorkspaceSnapshot) -> bool:
+        if self.research_topics:
+            return (
+                snapshot.editor_open and snapshot.note_exists
+                and len(self._research_evidence) == len(self.research_topics)
+                and all(row["quote"].casefold() in snapshot.note_text.casefold()
+                        and row["url"] in snapshot.note_text
+                        for row in self._research_evidence)
+            )
         return (
             snapshot.editor_open and snapshot.note_exists and bool(self._evidence)
             and self._evidence.casefold() in snapshot.note_text.casefold()
@@ -278,6 +404,12 @@ class OpenWorkspaceTask:
                     planner_goal += (
                         " Before writing, the currently visible source page MUST contain: "
                         + ", ".join(self.required_source_texts)
+                    )
+                if self.research_topics:
+                    planner_goal += (
+                        " Collect one exact quote from a different official page for each "
+                        "requested topic heading, then synthesize one sourced note: "
+                        + ", ".join(self.research_topics)
                     )
                 self._plan = self.planner.plan(planner_goal, self._snapshot, recent)
                 if any(item.operation == "write_note" for item in self._plan.options):
@@ -326,6 +458,17 @@ class OpenWorkspaceTask:
                 routes = ((Channel.SCRIPT, "dom"), (Channel.GUI, "gui"))
                 label = f"Open {element.label or element.href}"
                 risk = Risk.READ_ONLY
+            elif option.operation == "browser_back":
+                args = {}
+                routes = ((Channel.SCRIPT, "history"), (Channel.GUI, "gui"))
+                label = "Return to the previous source page"
+                risk = Risk.READ_ONLY
+            elif option.operation == "record_evidence":
+                args = {"topic": option.topic, "quote": option.evidence,
+                        "source_url": self._snapshot.browser.url}
+                routes = ((Channel.API, "evidence"),)
+                label = f"Record a grounded quote for {option.topic}"
+                risk = Risk.READ_ONLY
             elif option.operation == "open_note":
                 args = {"file_path": str(self.note_path)}
                 routes = ((Channel.CLI, "vscode"),)
@@ -333,10 +476,19 @@ class OpenWorkspaceTask:
                 risk = Risk.READ_ONLY
             else:
                 note_text = option.text
-                if option.evidence.casefold() not in note_text.casefold():
-                    note_text = note_text.rstrip() + f"\n\nObserved: {option.evidence}\n"
-                if self._snapshot.browser.url not in note_text:
-                    note_text = note_text.rstrip() + f"\n\nSource: {self._snapshot.browser.url}\n"
+                if self.research_topics:
+                    source_lines = [
+                        f"- {row['topic']}: \"{row['quote']}\" — {row['url']}"
+                        for row in self._research_evidence
+                    ]
+                    note_text = note_text.rstrip() + "\n\n## Verified source excerpts\n" + (
+                        "\n".join(source_lines) + "\n"
+                    )
+                else:
+                    if option.evidence.casefold() not in note_text.casefold():
+                        note_text = note_text.rstrip() + f"\n\nObserved: {option.evidence}\n"
+                    if self._snapshot.browser.url not in note_text:
+                        note_text = note_text.rstrip() + f"\n\nSource: {self._snapshot.browser.url}\n"
                 args = {"file_path": str(self.note_path), "text": note_text,
                         "evidence": option.evidence, "source_url": self._snapshot.browser.url}
                 routes = ((Channel.API, "filesystem"),)
@@ -390,6 +542,32 @@ class OpenWorkspaceTask:
                 else:
                     self._physical_browser_click(handle)
                 return {"url": self.page.url}
+            if action == "browser_back":
+                if candidate.channel == Channel.SCRIPT:
+                    if self.page.go_back(wait_until="domcontentloaded", timeout=15000) is None:
+                        raise RuntimeError("browser has no previous page")
+                else:
+                    self.screen.focus(rf".*{re.escape(self.page.title())}.*", maximize=False)
+                    self.screen.hotkey("alt", "left")
+                    self.page.wait_for_load_state("domcontentloaded", timeout=15000)
+                return {"url": self.page.url}
+            if action == "record_evidence":
+                args = candidate.arguments
+                if args["topic"] not in self.research_topics:
+                    raise RuntimeError("unrequested research topic")
+                if any(row["topic"] == args["topic"] or row["url"] == before.browser.url
+                       for row in self._research_evidence):
+                    raise RuntimeError("topic or source page already recorded")
+                if args["topic"].casefold() not in before.source_heading.casefold():
+                    raise RuntimeError("requested heading is no longer visible")
+                if args["source_url"] != before.browser.url or args["quote"].casefold() not in (
+                    before.source_text.casefold()
+                ):
+                    raise RuntimeError("research quote or source changed")
+                self._research_evidence.append({
+                    "topic": args["topic"], "quote": args["quote"], "url": before.browser.url,
+                })
+                return {"topic": args["topic"], "source_url": before.browser.url}
             if action == "open_note":
                 if before.editor_open:
                     raise RuntimeError("editor already open")
@@ -411,10 +589,17 @@ class OpenWorkspaceTask:
                 args = candidate.arguments
                 if args["file_path"] != str(self.note_path) or before.note_exists:
                     raise RuntimeError("note target changed or already exists")
-                if args["evidence"].casefold() not in before.browser.text.casefold():
-                    raise RuntimeError("source evidence no longer visible")
-                if args["source_url"] != before.browser.url:
-                    raise RuntimeError("browser source changed since observation")
+                if self.research_topics:
+                    if len(self._research_evidence) != len(self.research_topics) or not all(
+                        row["quote"].casefold() in args["text"].casefold()
+                        and row["url"] in args["text"] for row in self._research_evidence
+                    ):
+                        raise RuntimeError("note does not cite every collected source")
+                else:
+                    if args["evidence"].casefold() not in before.browser.text.casefold():
+                        raise RuntimeError("source evidence no longer visible")
+                    if args["source_url"] != before.browser.url:
+                        raise RuntimeError("browser source changed since observation")
                 if candidate.channel == Channel.API:
                     self.note_path.write_text(args["text"], encoding="utf-8")
                 else:
@@ -452,8 +637,14 @@ class OpenWorkspaceTask:
             return Verification(False, "workspace.effect", {"error": "missing pre-action snapshot"})
         after = self._capture()
         action = candidate.capability.removeprefix("workspace.")
-        if action == "browser_click":
+        if action in {"browser_click", "browser_back"}:
             passed = after.browser.fingerprint() != before.browser.fingerprint()
+        elif action == "record_evidence":
+            args = candidate.arguments
+            passed = any(
+                row["topic"] == args["topic"] and row["quote"] == args["quote"]
+                and row["url"] == args["source_url"] for row in after.collected_evidence
+            ) and len(after.collected_evidence) == len(before.collected_evidence) + 1
         elif action == "open_note":
             passed = after.editor_open
         else:

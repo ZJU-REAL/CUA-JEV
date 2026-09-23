@@ -151,31 +151,53 @@
 
     <section class="section open-task-section" id="open-task">
       <div class="open-task-shell">
-        <div class="open-task-copy">
-          <p class="eyebrow">EXPERIMENTAL · UNSEEN GOAL</p>
-          <h2>Model plans.<br>Jev chooses.<br><em>Two apps, one result.</em></h2>
-          <p>A live planner read Python.org, proposed grounded actions, and wrote a release note. Jev selected the execution route at each step; the runtime opened the result in VS Code and a separate check compared it with the source page.</p>
-          <div class="open-task-facts" aria-label="Pilot result">
-            <div><strong>3</strong><span>Jev decisions</span></div>
-            <div><strong>DOM → API → CLI</strong><span>Executed channels</span></div>
-            <div><strong>49.8 s</strong><span>Measured wall time</span></div>
+        <header class="open-task-heading">
+          <p class="eyebrow">OPEN-TASK PILOT · REAL EXECUTION</p>
+          <h2>A model finds the next move.<br><em>Jev chooses how to execute it.</em></h2>
+          <p>The model interprets live application state and proposes a grounded intent. The framework turns that intent into safe, typed GUI and structured-tool routes; Jev selects one. Execution and independent state checks close the loop.</p>
+        </header>
+        <img class="open-task-diagram" src="static/open-task-loop.svg" width="1200" height="350" alt="Live state feeds a model planner; the framework builds legal routes; Jev selects one; the runtime executes, verifies, and reobserves.">
+        <ol class="open-task-mobile-flow" aria-label="Model and Jev workflow">
+          <li><b>Observe</b><span>Read live DOM, accessibility, and file state.</span></li>
+          <li><b>Model plans</b><span>Propose the next intent using current evidence.</span></li>
+          <li><b>Framework builds routes</b><span>Offer only legal GUI and structured-tool actions.</span></li>
+          <li><b>Jev chooses</b><span>Select one typed candidate for execution.</span></li>
+          <li><b>Act and verify</b><span>Check the changed state, then repeat.</span></li>
+        </ol>
+        <div class="open-task-status">
+          <p><strong>Working today</strong> Text-model planning over live DOM; Jev selection across real execution channels.</p>
+          <p><strong>Next</strong> VLM screenshot fallback when DOM or accessibility data is insufficient. Broad arbitrary-task support is a research goal, not a current result.</p>
+        </div>
+        <div class="open-task-case-head">
+          <div><p class="eyebrow">ONE VERIFIED CROSS-APP CASE</p><h3>Five source pages. One study guide.</h3><p>Starting from the official Python tutorial index, the model found five chapter pages, collected one exact quote per page, then wrote a sourced note and opened it in VS Code. No chapter URL or click sequence was encoded in the agent.</p></div>
+          <div class="open-task-facts" aria-label="Recorded case facts">
+            <div><strong>12</strong><span>Jev decisions</span></div>
+            <div><strong>5</strong><span>Live source pages</span></div>
+            <div><strong>2</strong><span>Windows apps</span></div>
           </div>
-          <p class="open-task-scope">One verified browser-to-editor pilot—not a claim of arbitrary Windows task support. A task acceptance clue gated note creation; no site-specific click sequence was coded.</p>
-          <a href="https://github.com/ZJU-REAL/CUA-JEV#open-task-pilot" class="open-task-link">See the implementation and limits <span aria-hidden="true">↗</span></a>
         </div>
         <div class="open-task-media">
           <div class="open-task-video-frame">
-            <video controls playsinline preload="metadata" poster="media/open-workspace-python-poster.jpg" aria-label="Real model and Jev run from Python.org to VS Code">
-              <source src="media/open-workspace-python.mp4" type="video/mp4">
+            <video controls playsinline preload="none" poster="media/open-workspace-research-poster.jpg" aria-label="Recorded twelve-step model and Jev research task in Edge and VS Code">
+              <source src="media/open-workspace-research.mp4" type="video/mp4">
               Your browser does not support this video.
             </video>
           </div>
-          <div class="open-task-path" aria-label="Executed workflow">
-            <span>01 <b>Edge</b> · source page</span>
-            <span>02 <b>File API</b> · grounded note</span>
-            <span>03 <b>VS Code</b> · opened result</span>
-          </div>
+          <p class="open-task-video-note">Real Windows execution · 155.9 s wall time · video played at 2.5× speed.</p>
         </div>
+        <details class="open-task-trace">
+          <summary>Explore the 12 verified actions <span aria-hidden="true">↗</span></summary>
+          <ol>
+            <li><b>Edge</b> Open “Whetting Your Appetite”.</li><li><b>API</b> Save a source quote.</li>
+            <li><b>Edge</b> Open “Using the Python Interpreter”.</li><li><b>API</b> Save a source quote.</li>
+            <li><b>Edge</b> Open “An Informal Introduction to Python”.</li><li><b>API</b> Save a source quote.</li>
+            <li><b>Edge</b> Open “More Control Flow Tools”.</li><li><b>API</b> Save a source quote.</li>
+            <li><b>Edge</b> Open “Data Structures”.</li><li><b>API</b> Save a source quote.</li>
+            <li><b>File API</b> Write the cited study guide.</li><li><b>VS Code CLI</b> Open the verified result.</li>
+          </ol>
+        </details>
+        <p class="open-task-scope">This is one successful case, not a repeated benchmark. A separate checker revisited all five source pages and confirmed the quoted text, URLs, Jev decisions, and output file. It did not grade the quality of the written synthesis. Broader tasks, VLM integration, reliability, latency, and cost remain to be evaluated.</p>
+        <a href="https://github.com/ZJU-REAL/CUA-JEV#open-task-pilot" class="open-task-link">Implementation, reproduction, and limits <span aria-hidden="true">↗</span></a>
       </div>
     </section>
 
