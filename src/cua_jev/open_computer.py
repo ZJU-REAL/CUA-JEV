@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+from .artifact_surface import ArtifactState, ArtifactSurface
 from .episode import Evaluation
 from .local_tools import ScopedReadOnlyTools, ToolOffer
 from .mcp_surface import McpCallOffer, McpToolSurface
@@ -35,26 +36,31 @@ MAX_OPTIONS = 16
 @dataclass(frozen=True)
 class ComputerSnapshot:
     browser: BrowserSnapshot
-    desktop: DesktopSnapshot
+    desktop: DesktopSnapshot | None
     tool_offers: tuple[ToolOffer, ...]
     tool_results: tuple[dict[str, Any], ...]
     requirements: dict[str, Any]
     mcp_offers: tuple[McpCallOffer, ...] = ()
+    artifact: ArtifactState | None = None
+    source_records: tuple[dict[str, str], ...] = ()
     providers: dict[str, ActionSurface] = field(default_factory=dict, repr=False, compare=False)
 
     def state_for(self, namespace: str) -> Any:
-        return {
-            "b": self.browser, "d": self.desktop, "t": self.tool_offers,
-            "m": self.mcp_offers,
-        }[namespace]
+        states = {"b": self.browser, "t": self.tool_offers, "m": self.mcp_offers}
+        if self.desktop is not None:
+            states["d"] = self.desktop
+        if self.artifact is not None:
+            states["a"] = self.artifact
+        return states[namespace]
 
     def to_dict(self) -> dict[str, Any]:
         browser = self.browser.to_dict()
-        desktop = self.desktop.to_dict()
+        desktop = self.desktop.to_dict() if self.desktop is not None else None
         for key in ("elements", "visual_targets"):
             browser[key] = [{**item, "ref": f"b:{item['ref']}"} for item in browser[key]]
-        for key in ("controls", "visual_targets"):
-            desktop[key] = [{**item, "ref": f"d:{item['ref']}"} for item in desktop[key]]
+        if desktop is not None:
+            for key in ("controls", "visual_targets"):
+                desktop[key] = [{**item, "ref": f"d:{item['ref']}"} for item in desktop[key]]
         return {
             "browser": browser, "desktop": desktop,
             "tool_offers": [
@@ -63,6 +69,9 @@ class ComputerSnapshot:
             "mcp_offers": [
                 {**offer.to_dict(), "ref": f"m:{offer.ref}"} for offer in self.mcp_offers
             ],
+            "artifact": {**self.artifact.to_dict(), "ref": f"a:{self.artifact.ref}"}
+            if self.artifact is not None else None,
+            "source_records": list(self.source_records),
             "tool_results": list(self.tool_results),
             "requirements": self.requirements,
         }
@@ -80,16 +89,19 @@ class ComputerSnapshot:
         for key in ("visual_image_hash", "visual_viewport"):
             browser.pop(key, None)
         desktop = state["desktop"]
-        desktop["controls"] = [{
-            key: value for key, value in control.items()
-            if key in {"ref", "name", "control_type", "enabled", "can_invoke", "can_set_text"}
-        } for control in desktop["controls"]]
-        for key in ("window_handle", "visual_region", "visual_image_hash"):
-            desktop.pop(key, None)
+        if desktop is not None:
+            desktop["controls"] = [{
+                key: value for key, value in control.items()
+                if key in {"ref", "name", "control_type", "enabled", "can_invoke", "can_set_text"}
+            } for control in desktop["controls"]]
+            for key in ("window_handle", "visual_region", "visual_image_hash"):
+                desktop.pop(key, None)
         return state
 
     def fingerprint(self) -> str:
-        state = {**self.to_dict(), "desktop_private_fingerprint": self.desktop.fingerprint()}
+        state = {**self.to_dict(), "desktop_private_fingerprint": (
+            self.desktop.fingerprint() if self.desktop is not None else None
+        )}
         return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
 
@@ -111,25 +123,35 @@ class ComputerPlan:
         if not isinstance(data, dict) or not isinstance(data.get("options"), list):
             raise ValueError("computer planner must return an options list")
         subgoal = data.get("subgoal")
-        if not isinstance(subgoal, str) or not subgoal.strip() or len(subgoal) > 240:
-            raise ValueError("computer planner subgoal is invalid")
+        if not isinstance(subgoal, str) or not subgoal.strip():
+            subgoal = "Advance the remaining task requirements"
         if not 1 <= len(data["options"]) <= MAX_OPTIONS:
             raise ValueError("computer planner must return 1-16 options")
         options: list[ComputerOption] = []
+        rejected: list[str] = []
         for item in data["options"]:
             if not isinstance(item, dict) or not isinstance(item.get("ref"), str):
-                raise ValueError("computer option must reference one live target")
+                rejected.append("option has no live target ref")
+                continue
             namespace, separator, ref = item["ref"].partition(":")
             provider = snapshot.providers.get(namespace)
             if not separator or provider is None:
-                raise ValueError("computer option must use a registered namespaced ref")
-            checked = provider.validate(
-                snapshot.state_for(namespace), ref, item.get("operation"), item.get("value", "")
-            )
-            options.append(ComputerOption(namespace, *checked))
-        if len({(o.source, o.ref, o.operation, o.value) for o in options}) != len(options):
-            raise ValueError("computer planner returned duplicate options")
-        return cls(subgoal.strip(), tuple(options))
+                rejected.append(f"{item['ref']}: unregistered namespace")
+                continue
+            try:
+                checked = provider.validate(
+                    snapshot.state_for(namespace), ref, item.get("operation"), item.get("value", "")
+                )
+            except ValueError as exc:
+                rejected.append(f"{item['ref']} ({item.get('operation')}): {exc}")
+                continue
+            option = ComputerOption(namespace, *checked)
+            if option not in options:
+                options.append(option)
+        if not options:
+            detail = "; ".join(rejected[:3])
+            raise ValueError(f"computer planner offered no valid action: {detail}")
+        return cls(subgoal.strip()[:240], tuple(options))
 
 
 class ComputerGoalPlanner(Protocol):
@@ -148,11 +170,16 @@ class OpenComputerTask:
         *,
         goal: str,
         browser: OpenBrowserTask,
-        desktop: OpenDesktopTask | None,
+        desktop: OpenDesktopTask | None = None,
         desktop_surface: ActionSurface | None = None,
         planner: ComputerGoalPlanner,
         local_tool_root: Path | None = None,
         mcp_surface: McpToolSurface | None = None,
+        artifact_surface: ArtifactSurface | None = None,
+        mcp_current_page_only: bool = False,
+        mcp_read_for_visits: bool = False,
+        required_visits: Sequence[str] = (),
+        required_artifact_contains: Sequence[str] = (),
         required_url_contains: str = "",
         required_window_title_contains: str = "",
         required_window_text_contains: str = "",
@@ -162,26 +189,52 @@ class OpenComputerTask:
             desktop is not None and desktop.goal != goal.strip()
         ):
             raise ValueError("the composite goal must match both observers")
-        if desktop_surface is None and desktop is None:
-            raise ValueError("a desktop surface provider is required")
         if desktop_surface is not None and desktop_surface.namespace != "d":
             raise ValueError("replacement desktop surface must use the d namespace")
+        if desktop_surface is None and desktop is None and (
+            required_window_title_contains or required_window_text_contains
+        ):
+            raise ValueError("window-state gates require a desktop surface provider")
         if not any((required_url_contains, required_window_title_contains,
-                    required_window_text_contains)):
+                    required_window_text_contains, required_visits, artifact_surface)):
             raise ValueError("at least one caller-supplied observable state gate is required")
+        if required_artifact_contains and artifact_surface is None:
+            raise ValueError("artifact text gates require an artifact surface")
+        if mcp_current_page_only and (
+            mcp_surface is None or not mcp_surface.offers
+            or any("href" not in (offer.parameters or {}) for offer in mcp_surface.offers)
+        ):
+            raise ValueError("current-page MCP mode needs registered href parameter offers")
+        visits = tuple(item.strip() for item in required_visits if item.strip())
+        if len(visits) > 12 or len(visits) != len(set(visits)) or any(
+            len(item) > 160 for item in visits
+        ):
+            raise ValueError("required visits must be at most 12 unique short URL clues")
+        if mcp_read_for_visits and (not mcp_current_page_only or not visits):
+            raise ValueError("per-visit MCP evidence requires current-page mode and visits")
         self.goal = goal.strip()
         self.browser = browser
         self.desktop = desktop
         self.planner = planner
         self.local_tools = ScopedReadOnlyTools(local_tool_root) if local_tool_root else None
-        self.providers: dict[str, ActionSurface] = {
-            "b": BrowserSurface(browser),
-            "d": desktop_surface or WindowsUiaSurface(desktop),
-        }
+        self.providers: dict[str, ActionSurface] = {"b": BrowserSurface(browser)}
+        if desktop_surface is not None:
+            self.providers["d"] = desktop_surface
+        elif desktop is not None:
+            self.providers["d"] = WindowsUiaSurface(desktop)
         if self.local_tools is not None:
             self.providers["t"] = ReadOnlyToolSurface(self.local_tools)
         if mcp_surface is not None:
             self.providers["m"] = mcp_surface
+        if artifact_surface is not None:
+            self.providers["a"] = artifact_surface
+        self.artifact_surface = artifact_surface
+        self.mcp_current_page_only = mcp_current_page_only
+        self.mcp_read_for_visits = mcp_read_for_visits
+        self._mcp_pages_read: set[str] = set()
+        self.required_visits = visits
+        self.required_artifact_contains = tuple(required_artifact_contains)
+        self._visits: dict[str, dict[str, str]] = {}
         self.required_url_contains = required_url_contains
         self.required_window_title_contains = required_window_title_contains
         self.required_window_text_contains = required_window_text_contains
@@ -207,41 +260,97 @@ class OpenComputerTask:
         self._used.clear()
         self._completed_capabilities.clear()
         self._tool_results.clear()
+        self._visits.clear()
+        self._mcp_pages_read.clear()
+        if self.artifact_surface is not None:
+            self.artifact_surface.set_acceptance(ready=not self.required_visits, citations=())
+
+    def _record_visit(self, browser: BrowserSnapshot) -> None:
+        for clue in self.required_visits:
+            if clue not in self._visits and clue.casefold() in browser.url.casefold():
+                self._visits[clue] = {
+                    "clue": clue, "url": browser.url,
+                    "title": browser.title, "excerpt": browser.text[:500],
+                }
+        if self.artifact_surface is not None:
+            self.artifact_surface.set_acceptance(
+                ready=(len(self._visits) == len(self.required_visits) and (
+                    not self.mcp_read_for_visits or all(
+                        record["url"] in self._mcp_pages_read
+                        for record in self._visits.values()
+                    )
+                )),
+                citations=[record["url"] for record in self._visits.values()],
+            )
+
+    def _requirements(self) -> dict[str, Any]:
+        return {
+            "url_contains": self.required_url_contains,
+            "window_title_contains": self.required_window_title_contains,
+            "window_text_contains": self.required_window_text_contains,
+            "capabilities": list(self.required_capabilities),
+            "completed_capabilities": sorted(self._completed_capabilities),
+            "required_visits": list(self.required_visits),
+            "pending_visits": [clue for clue in self.required_visits if clue not in self._visits],
+            "artifact_contains": list(self.required_artifact_contains),
+            "mcp_current_page_only": self.mcp_current_page_only,
+            "mcp_pages_read": sorted(self._mcp_pages_read),
+            "pending_mcp_visits": [
+                clue for clue, record in self._visits.items()
+                if self.mcp_read_for_visits and record["url"] not in self._mcp_pages_read
+            ],
+        }
 
     def close(self) -> None:
         for provider in reversed(tuple(self.providers.values())):
             provider.close()
 
+    def _active_tool_offers(self) -> tuple[ToolOffer, ...]:
+        if "t" not in self.providers:
+            return ()
+        return tuple(
+            offer for offer in self.providers["t"].capture()
+            if offer.capability not in self._completed_capabilities
+        )
+
+    def _active_mcp_offers(self, browser: BrowserSnapshot) -> tuple[McpCallOffer, ...]:
+        if "m" not in self.providers:
+            return ()
+        if self.mcp_read_for_visits and not any(
+            record["url"] == browser.url for record in self._visits.values()
+        ):
+            return ()
+        if self.mcp_current_page_only and browser.url in self._mcp_pages_read:
+            return ()
+        return self.providers["m"].capture()
+
     def _capture(self) -> ComputerSnapshot:
+        browser = self.providers["b"].capture()
+        self._record_visit(browser)
         return ComputerSnapshot(
-            browser=self.providers["b"].capture(), desktop=self.providers["d"].capture(),
-            tool_offers=self.providers["t"].capture() if "t" in self.providers else (),
-            mcp_offers=self.providers["m"].capture() if "m" in self.providers else (),
+            browser=browser,
+            desktop=self.providers["d"].capture() if "d" in self.providers else None,
+            tool_offers=self._active_tool_offers(),
+            mcp_offers=self._active_mcp_offers(browser),
+            artifact=self.providers["a"].capture() if "a" in self.providers else None,
+            source_records=tuple(self._visits.values()),
             tool_results=tuple(self._tool_results[-6:]),
-            requirements={
-                "url_contains": self.required_url_contains,
-                "window_title_contains": self.required_window_title_contains,
-                "window_text_contains": self.required_window_text_contains,
-                "capabilities": list(self.required_capabilities),
-                "completed_capabilities": sorted(self._completed_capabilities),
-            },
+            requirements=self._requirements(),
             providers=self.providers,
         )
 
     def observe(self, history: Sequence[StepResult]) -> Observation:
+        browser = self.providers["b"].observe(history)
+        self._record_visit(browser)
         self._snapshot = ComputerSnapshot(
-            browser=self.providers["b"].observe(history),
-            desktop=self.providers["d"].observe(history),
-            tool_offers=self.providers["t"].observe(history) if "t" in self.providers else (),
-            mcp_offers=self.providers["m"].observe(history) if "m" in self.providers else (),
+            browser=browser,
+            desktop=self.providers["d"].observe(history) if "d" in self.providers else None,
+            tool_offers=self._active_tool_offers(),
+            mcp_offers=self._active_mcp_offers(browser),
+            artifact=self.providers["a"].observe(history) if "a" in self.providers else None,
+            source_records=tuple(self._visits.values()),
             tool_results=tuple(self._tool_results[-6:]),
-            requirements={
-                "url_contains": self.required_url_contains,
-                "window_title_contains": self.required_window_title_contains,
-                "window_text_contains": self.required_window_text_contains,
-                "capabilities": list(self.required_capabilities),
-                "completed_capabilities": sorted(self._completed_capabilities),
-            },
+            requirements=self._requirements(),
             providers=self.providers,
         )
         return Observation(
@@ -251,39 +360,59 @@ class OpenComputerTask:
         )
 
     def _satisfied(self, snapshot: ComputerSnapshot) -> bool:
+        desktop = snapshot.desktop
         requirements = (
             not self.required_url_contains or
             self.required_url_contains.casefold() in snapshot.browser.url.casefold(),
-            not self.required_window_title_contains or
+            not self.required_window_title_contains or (
+                desktop is not None and
             self.required_window_title_contains.casefold()
-            in snapshot.desktop.window_title.casefold(),
-            not self.required_window_text_contains or
+            in desktop.window_title.casefold()),
+            not self.required_window_text_contains or (
+                desktop is not None and
             self.required_window_text_contains.casefold() in (
-                snapshot.desktop.text + "\n" + "\n".join(
-                    item.name for item in snapshot.desktop.controls
-                ) + "\n" + "\n".join(snapshot.desktop.edit_values)
-            ).casefold(),
+                desktop.text + "\n" + "\n".join(
+                    item.name for item in desktop.controls
+                ) + "\n" + "\n".join(desktop.edit_values)
+            ).casefold()),
             all(item in self._completed_capabilities for item in self.required_capabilities),
+            all(item in self._visits for item in self.required_visits),
+            not self.mcp_read_for_visits or all(
+                record["url"] in self._mcp_pages_read
+                for record in self._visits.values()
+            ),
+            self.artifact_surface is None or (
+                snapshot.artifact is not None and snapshot.artifact.exists
+                and all(item in snapshot.artifact.text for item in self.required_artifact_contains)
+                and all(
+                    record["url"] in snapshot.artifact.text for record in self._visits.values()
+                )
+            ),
         )
         return all(requirements)
 
-    def _call_planner(self, history: Sequence[StepResult]) -> None:
+    def _call_planner(
+        self, history: Sequence[StepResult], *, feedback: str = ""
+    ) -> None:
         assert self._snapshot is not None
         recent = [
             {"candidate_id": step.decision.candidate_id, "verified": step.verification.passed}
             for step in history[-6:]
         ]
+        if feedback:
+            recent.append({"planner_feedback": feedback})
         for attempt in range(2):
             self.planner_calls += 1
             try:
                 self._plan = self.planner.plan(self.goal, self._snapshot, recent)
                 break
-            except ValueError:
+            except ValueError as exc:
                 if attempt:
                     raise
                 recent.append({
-                    "planner_feedback": "Previous plan failed validation. Reuse only current refs "
-                    "and supported operations; no action was executed."
+                    "planner_feedback": f"Previous plan failed validation: {exc}. "
+                    "Use only refs listed in the current snapshot with their supported "
+                    "operations; no action was executed."
                 })
         self._plan_fingerprint = self._snapshot.fingerprint()
         self._used.clear()
@@ -301,8 +430,18 @@ class OpenComputerTask:
             self._call_planner(history)
         result = self._build_candidates()
         if not result:
-            self._call_planner(history)
+            self._call_planner(
+                history,
+                feedback=(
+                    "The last plan compiled to zero legal actions. Do not choose a completed "
+                    "tool, a self-link, or an action outside the configured origin. Choose a "
+                    "different live ref that advances pending_visits or other unmet requirements."
+                ),
+            )
             result = self._build_candidates()
+        if not result:
+            offered = [(option.source, option.ref, option.operation) for option in self._plan.options]
+            raise ValueError(f"planner offered no executable actions: {offered}")
         return result
 
     def _build_candidates(self) -> tuple[ActionCandidate, ...]:
@@ -311,11 +450,22 @@ class OpenComputerTask:
         for index, option in enumerate(self._plan.options):
             if index in self._used:
                 continue
+            if self.mcp_read_for_visits and option.source == "b" and any(
+                record["url"] == self._snapshot.browser.url
+                and record["url"] not in self._mcp_pages_read
+                for record in self._visits.values()
+            ):
+                continue
             provider = self.providers[option.source]
             candidates = provider.compile(
                 self._snapshot.state_for(option.source), option.ref,
                 option.operation, option.value, self._plan.subgoal, index,
             )
+            if option.source == "m" and self.mcp_current_page_only and candidates and (
+                candidates[0].arguments.get("arguments", {}).get("href")
+                != self._snapshot.browser.url
+            ):
+                continue
             if option.source == "t" and candidates and (
                 candidates[0].capability in self._completed_capabilities
             ):
@@ -360,6 +510,8 @@ class OpenComputerTask:
             server = candidate.arguments["server"]
             tool = candidate.arguments["tool"]
             self._completed_capabilities.add(f"mcp.{server}.{tool}")
+            if self.mcp_current_page_only:
+                self._mcp_pages_read.add(candidate.arguments["arguments"]["href"])
         if self._plan is not None and self._plan.options[index].source in {"t", "m"}:
             output = receipt.output
             summary = output.get(

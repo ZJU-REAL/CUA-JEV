@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -99,6 +100,11 @@ class StdioMcpExecutor:
             server_name = candidate.arguments["server"]
             tool_name = candidate.arguments["tool"]
             arguments = candidate.arguments.get("arguments", {})
-            return asyncio.run(self._call(server_name, tool_name, arguments))
+            # Playwright's synchronous API owns a running event loop on this
+            # thread. Keep the MCP SDK's async stdio session on a worker loop.
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(
+                    asyncio.run, self._call(server_name, tool_name, arguments)
+                ).result()
 
         return execute_with_receipt(candidate, observation_id, decision_id, operation)

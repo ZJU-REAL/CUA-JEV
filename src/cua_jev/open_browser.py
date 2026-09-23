@@ -147,9 +147,11 @@ class BrowserSnapshot:
                   ]
                 };
               }).filter(Boolean).slice(0, 60);
+              const contentRoot = document.querySelector('main, [role="main"], article') ||
+                document.body;
               return {
                 url: location.href, title: document.title,
-                text: (document.body?.innerText || '').slice(0, 1600), elements
+                text: (contentRoot?.innerText || '').slice(0, 1600), elements
               };
             }""",
             SELECTOR,
@@ -353,7 +355,7 @@ class PublicDecisionPolicy:
             }
         if observation.source == "open-computer":
             browser = public_state.get("browser", {})
-            desktop = public_state.get("desktop", {})
+            desktop = public_state.get("desktop") or {}
             public_state = {
                 "browser": {
                     "url": browser.get("url"), "title": browser.get("title"),
@@ -373,6 +375,7 @@ class PublicDecisionPolicy:
                 },
                 "tool_offers": public_state.get("tool_offers", []),
                 "mcp_offers": public_state.get("mcp_offers", []),
+                "artifact": public_state.get("artifact"),
                 "requirements": public_state.get("requirements", {}),
             }
         return self.inner.choose(replace(observation, state=public_state), public)
@@ -494,6 +497,19 @@ class OpenBrowserTask:
         if self.page is None:
             raise RuntimeError("browser task has not been reset")
         snapshot = BrowserSnapshot.capture(self.page)
+        if not snapshot.elements and hasattr(self.page, "wait_for_load_state"):
+            # A navigation can expose its new URL before the document's
+            # interactive controls are ready. Retry a bounded number of times
+            # rather than asking the planner to act on an empty transient DOM.
+            try:
+                self.page.wait_for_load_state("domcontentloaded", timeout=5000)
+            except Exception:
+                pass
+            for _ in range(3):
+                snapshot = BrowserSnapshot.capture(self.page)
+                if snapshot.elements:
+                    break
+                self.page.wait_for_timeout(250)
         if _origin(snapshot.url) != self.allowed_origin:
             raise RuntimeError("browser left the allowed origin")
         if vision and self.vision_grounder is not None:

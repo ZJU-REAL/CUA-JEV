@@ -171,6 +171,25 @@ def test_namespaced_refs_reject_unregistered_operations_and_paths(tmp_path):
     task.close()
 
 
+def test_mixed_plan_keeps_grounded_options_and_drops_invalid_ones(tmp_path):
+    task = environment(tmp_path)
+    task.reset()
+    task.observe(())
+    assert task._snapshot is not None
+    plan = ComputerPlan.from_dict({
+        "subgoal": "Open the result",
+        "options": [
+            {"ref": "b:e999", "operation": "click"},
+            {"ref": "b:e0", "operation": "click"},
+            {"ref": "b:e0", "operation": "click"},
+        ],
+    }, task._snapshot)
+    assert [(option.source, option.ref, option.operation) for option in plan.options] == [
+        ("b", "e0", "click")
+    ]
+    task.close()
+
+
 def test_uia_invoke_word_normalizes_to_typed_desktop_click(tmp_path):
     task = environment(tmp_path)
     task.reset()

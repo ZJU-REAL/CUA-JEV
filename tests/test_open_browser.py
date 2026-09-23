@@ -91,6 +91,34 @@ class FakePage:
         return FakeLocator(self)
 
 
+def test_empty_transient_dom_waits_for_document_controls():
+    class LoadingPage(FakePage):
+        def __init__(self):
+            super().__init__()
+            self.ready = False
+            self.waited = False
+
+        def evaluate(self, script, selector):
+            state = super().evaluate(script, selector)
+            return state if self.ready else {**state, "elements": []}
+
+        def wait_for_load_state(self, state, *, timeout):
+            assert state == "domcontentloaded" and timeout <= 5000
+            self.ready = True
+            self.waited = True
+
+        def wait_for_timeout(self, _delay):
+            pass
+
+    page = LoadingPage()
+    task = OpenBrowserTask(
+        goal="Open the result", start_url=page.url, planner=FakePlanner(), page=page,
+    )
+    snapshot = task._capture()
+    assert page.waited
+    assert snapshot.elements[0].ref == "e0"
+
+
 class FakeVisualPage(FakePage):
     def __init__(self):
         super().__init__()

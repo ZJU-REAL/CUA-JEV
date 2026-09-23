@@ -7,6 +7,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
+from .artifact_surface import ArtifactSurface
 from .config import load_local_env
 from .demo import filesystem_routing_demo
 from .doctor import doctor
@@ -143,7 +144,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     computer.add_argument("--goal", required=True)
     computer.add_argument("--url", required=True)
-    computer.add_argument("--window-title", required=True, help="Regex matching one visible window")
+    computer.add_argument("--window-title", help="Optional regex matching one visible window")
     computer.add_argument("--model-base-url", required=True)
     computer.add_argument("--model", required=True)
     computer.add_argument("--allow-insecure-model-http", action="store_true")
@@ -163,6 +164,17 @@ def _parser() -> argparse.ArgumentParser:
     computer.add_argument("--local-tool-root", type=Path)
     computer.add_argument("--mcp-profile", type=Path, help="Trusted local MCP server/tool profile")
     computer.add_argument("--allow-mcp-actions", action="store_true")
+    computer.add_argument(
+        "--mcp-current-page-only", action="store_true",
+        help="MCP href calls may read only the current browser page, once per page",
+    )
+    computer.add_argument(
+        "--mcp-read-for-visits", action="store_true",
+        help="Require one verified current-page MCP read for each required browser visit",
+    )
+    computer.add_argument("--require-visit-url-contains", action="append", default=[])
+    computer.add_argument("--artifact-path", type=Path, help="New scoped .md/.txt artifact")
+    computer.add_argument("--artifact-contains", action="append", default=[])
     computer.add_argument("--require-url-contains", default="")
     computer.add_argument("--require-window-title-contains", default="")
     computer.add_argument("--require-window-text-contains", default="")
@@ -291,8 +303,13 @@ def _open_computer_runner(args: argparse.Namespace) -> EpisodeRunner:
         return AgentRuntime(
             policy=PublicDecisionPolicy(inner),
             guard=ActionGuard(
-                allowed_roots=[environment.local_tools.root] if environment.local_tools else (),
-                allow_writes=args.allow_form_input or args.allow_window_text_input,
+                allowed_roots=[
+                    *([environment.local_tools.root] if environment.local_tools else []),
+                    *([environment.artifact_surface.path.parent]
+                      if environment.artifact_surface else []),
+                ],
+                allow_writes=(args.allow_form_input or args.allow_window_text_input
+                              or bool(args.artifact_path)),
                 allow_destructive=(
                     args.allow_browser_actions or args.allow_window_actions
                     or args.allow_mcp_actions
@@ -473,10 +490,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "open-computer":
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
+        if not args.window_title and (
+            args.require_window_title_contains or args.require_window_text_contains
+            or args.allow_window_text_input or args.allow_window_actions
+            or args.desktop_vision_model or args.allow_desktop_visual_clicks
+        ):
+            raise SystemExit("desktop options and window gates require --window-title")
         if args.mcp_profile and not args.allow_mcp_actions:
             raise SystemExit("MCP profile requires explicit --allow-mcp-actions")
         if args.allow_mcp_actions and not args.mcp_profile:
             raise SystemExit("--allow-mcp-actions requires --mcp-profile")
+        if args.artifact_contains and not args.artifact_path:
+            raise SystemExit("--artifact-contains requires --artifact-path")
         if (args.browser_vision_model or args.desktop_vision_model) and not args.allow_screenshot_upload:
             raise SystemExit("vision models require --allow-screenshot-upload")
         if args.allow_browser_visual_clicks and not (
@@ -515,12 +540,18 @@ def main(argv: list[str] | None = None) -> int:
                 vision_mode="always" if desktop_vision else "fallback",
                 allow_screenshot_upload=args.allow_screenshot_upload,
                 allow_visual_clicks=args.allow_desktop_visual_clicks,
-            )
+            ) if args.window_title else None
             environment = OpenComputerTask(
                 goal=args.goal, browser=browser, desktop=desktop, planner=planner,
                 local_tool_root=args.local_tool_root,
                 mcp_surface=McpToolSurface.from_profile(args.mcp_profile)
                 if args.mcp_profile else None,
+                artifact_surface=ArtifactSurface(args.artifact_path)
+                if args.artifact_path else None,
+                mcp_current_page_only=args.mcp_current_page_only,
+                mcp_read_for_visits=args.mcp_read_for_visits,
+                required_visits=args.require_visit_url_contains,
+                required_artifact_contains=args.artifact_contains,
                 required_url_contains=args.require_url_contains,
                 required_window_title_contains=args.require_window_title_contains,
                 required_window_text_contains=args.require_window_text_contains,
@@ -538,7 +569,7 @@ def main(argv: list[str] | None = None) -> int:
         summary["planner_wall_ms"] = planner.planning_wall_ms
         summary["planner_model_usage"] = planner.usage_totals
         summary["browser_vision_failures"] = browser.vision_failures
-        summary["desktop_vision_failures"] = desktop.vision_failures
+        summary["desktop_vision_failures"] = desktop.vision_failures if desktop else 0
         summary["browser_vision_calls"] = browser_vision.vision_calls if browser_vision else 0
         summary["desktop_vision_calls"] = desktop_vision.vision_calls if desktop_vision else 0
         summary["browser_vision_wall_ms"] = browser_vision.vision_wall_ms if browser_vision else 0
@@ -551,7 +582,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         summary["vision_attempts"] = sum(
             item.vision_calls for item in (browser_vision, desktop_vision) if item
-        ) + browser.vision_failures + desktop.vision_failures
+        ) + browser.vision_failures + (desktop.vision_failures if desktop else 0)
         summary["policy"] = args.policy
         summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
         print(json.dumps(summary, indent=2, ensure_ascii=False))

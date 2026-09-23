@@ -3,12 +3,12 @@ import json
 import httpx
 import pytest
 from test_open_browser import FakePage
-from test_open_computer import environment
+from test_open_computer import BrowserPage, environment
 from test_open_desktop import FakeWindow
 
 from cua_jev.model_planner import ChatModelPlanner
-from cua_jev.open_browser import BrowserPlan, BrowserSnapshot
-from cua_jev.open_computer import ComputerPlan
+from cua_jev.open_browser import BrowserPlan, BrowserSnapshot, OpenBrowserTask
+from cua_jev.open_computer import ComputerPlan, OpenComputerTask
 from cua_jev.open_desktop import DesktopPlan, DesktopSnapshot
 from cua_jev.vision import WindowImage
 
@@ -100,6 +100,39 @@ def test_cross_app_planner_sends_compact_refs_not_runtime_handles(tmp_path):
     result = planner.plan(task.goal, task._snapshot, [])
     assert isinstance(result, ComputerPlan)
     assert result.options[0].source == "b"
+    task.close()
+
+
+def test_no_desktop_model_request_offers_only_available_surfaces():
+    def handler(request):
+        body = json.loads(request.content)
+        assert "d:cN" not in body["messages"][0]["content"]
+        state = json.loads(body["messages"][1]["content"])["snapshot"]
+        assert state["desktop"] is None
+        assert state["browser"]["elements"][0]["ref"] == "b:e0"
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": json.dumps({
+                "subgoal": "Open result", "options": [{"ref": "b:e0", "operation": "click"}],
+            })}}],
+        })
+
+    planner = ChatModelPlanner(
+        "https://model.example/v1", "text-model", api_key="fake",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    goal = "Open the result page"
+    task = OpenComputerTask(
+        goal=goal, planner=planner,
+        browser=OpenBrowserTask(
+            goal=goal, start_url="https://example.test/start", planner=planner,
+            page=BrowserPage(),
+        ),
+        required_url_contains="/done",
+    )
+    task.reset()
+    task.observe(())
+    assert task._snapshot is not None
+    assert isinstance(planner.plan(goal, task._snapshot, []), ComputerPlan)
     task.close()
 
 

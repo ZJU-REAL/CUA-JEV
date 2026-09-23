@@ -86,6 +86,14 @@ class BrowserSurface:
     def validate(
         self, state: BrowserSnapshot, ref: str, operation: Any, value: Any
     ) -> tuple[str, str, str]:
+        live_refs = {
+            item.ref for item in (*state.elements, *state.visual_targets, *state.tool_offers)
+        }
+        if ref not in live_refs:
+            raise ValueError(
+                f"browser ref {ref!r} is not live; first live refs are "
+                f"{sorted(live_refs)[:12]}"
+            )
         checked = BrowserPlan.from_dict({
             "subgoal": "Ground one action", "options": [{
                 "ref": ref, "operation": operation, "value": value,
