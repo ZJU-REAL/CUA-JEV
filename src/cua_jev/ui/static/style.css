@@ -233,7 +233,6 @@ main { overflow: hidden; }
 .open-task-trace summary { padding: 16px 20px; color: var(--navy); font: 800 17px/1.4 var(--sans); cursor: pointer; }
 .open-task-trace summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .open-task-trace summary span { margin-left: 6px; }
-.open-task-trace-note { margin: 0; padding: 0 27px 10px; color: var(--muted); font: 15px/1.5 var(--sans); }
 .open-task-trace ol { display: grid; grid-template-columns: 1fr 1fr; column-gap: 38px; row-gap: 0; margin: 0; padding: 0 27px 21px 51px; }
 .open-task-trace li { padding: 7px 4px; color: var(--muted); font: 16px/1.45 var(--sans); }
 .open-task-trace li::marker { color: var(--accent); font-weight: 800; }
