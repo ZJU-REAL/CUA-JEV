@@ -255,6 +255,13 @@ class PublicDecisionPolicy:
     def choose(self, observation: Observation, candidates: Sequence[ActionCandidate]) -> Decision:
         public = tuple(replace(item, arguments={}, expected={}) for item in candidates)
         public_state = {key: value for key, value in observation.state.items() if key != "text"}
+        if observation.source == "open-workspace":
+            browser = public_state.get("browser", {})
+            public_state = {
+                "browser": {key: browser.get(key) for key in ("url", "title")},
+                "note_exists": public_state.get("note_exists"),
+                "editor_open": public_state.get("editor_open"),
+            }
         return self.inner.choose(replace(observation, state=public_state), public)
 
 

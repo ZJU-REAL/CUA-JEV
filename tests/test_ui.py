@@ -225,9 +225,9 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert page.status_code == 200
         assert "CUA-JEV" in page.text
         assert "How Jev powers computer use" in page.text
-        assert "Four task-specific workflows today" in page.text
-        assert "without a VLM" in page.text
-        assert "New tasks need their own state, actions, and success checks" in page.text
+        assert "Four curated workflows and one experimental open-task pilot" in page.text
+        assert "Structured state, no VLM" in page.text
+        assert "arbitrary Windows tasks are not yet supported" in page.text
         assert "Adapter observes" in page.text
         assert "Jev chooses" in page.text
         assert "Runtime acts &amp; checks" in page.text
@@ -235,6 +235,8 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert "Four Windows workflows cases" in page.text
         assert "Hybrid vs GUI Only" in page.text
         assert "Jev vs Codex Computer Use" in page.text
+        assert "Model plans." in page.text
+        assert "media/open-workspace-python.mp4" in page.text
         assert page.text.index('id="action-rows"') < page.text.index('id="agent-rows"')
         assert "43 ms" not in page.text
         assert ">REAL LAB<" not in page.text

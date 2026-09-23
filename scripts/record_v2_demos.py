@@ -39,7 +39,7 @@ def _draw_hud(frame, state: dict[str, Any], image, image_draw, image_font):
     draw = image_draw.Draw(overlay)
     width, height = frame.size
     panel_width = min(590, width - 48)
-    x0, y0, x1, y1 = 24, height - 102, 24 + panel_width, height - 24
+    x0, y0, x1, y1 = 24, height - 142, 24 + panel_width, height - 64
     draw.rounded_rectangle((x0, y0, x1, y1), radius=14, fill=(24, 24, 23, 225))
 
     label_font = _font(image_font, 14, mono=True)
@@ -55,7 +55,8 @@ def _draw_hud(frame, state: dict[str, Any], image, image_draw, image_font):
     task = str(state.get("task", "")).upper()
     step = int(state.get("step", 0))
     total = int(state.get("total", 0))
-    draw.text((x0 + 16, y0 + 43), f"{task}  ·  STEP {step:02d} / {total:02d}", font=body_font, fill="white")
+    progress = f"STEP {step:02d} / {total:02d}" if total else f"STEP {step:02d}"
+    draw.text((x0 + 16, y0 + 43), f"{task}  ·  {progress}", font=body_font, fill="white")
 
     channel = str(state.get("channel", "—")).upper()
     status = str(state.get("status", "starting")).upper()

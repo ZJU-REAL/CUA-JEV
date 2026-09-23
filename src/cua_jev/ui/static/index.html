@@ -18,6 +18,7 @@
       <a href="#framework">Framework</a>
       <a href="#cases">Cases</a>
       <a href="#results">Results</a>
+      <a href="#open-task">Open task</a>
     </nav>
     <a class="github-link" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
   </header>
@@ -32,7 +33,7 @@
           <a class="button primary" href="#cases">Watch the cases</a>
           <a class="button secondary" href="#framework">See the framework</a>
         </div>
-        <p class="hero-note">Four task-specific workflows today, using structured state without a VLM. New tasks need their own state, actions, and success checks.</p>
+        <p class="hero-note">Four curated workflows and one experimental open-task pilot. Structured state, no VLM; arbitrary Windows tasks are not yet supported.</p>
       </div>
 
       <div class="decision-card" aria-label="How CUA and Jev work together">
@@ -145,6 +146,36 @@
             <p class="cost-note">Published Jev API and Codex Enterprise token rates; actual bills may differ.</p>
           </section>
         </article>
+      </div>
+    </section>
+
+    <section class="section open-task-section" id="open-task">
+      <div class="open-task-shell">
+        <div class="open-task-copy">
+          <p class="eyebrow">EXPERIMENTAL · UNSEEN GOAL</p>
+          <h2>Model plans.<br>Jev chooses.<br><em>Two apps, one result.</em></h2>
+          <p>A live planner read Python.org, proposed grounded actions, and wrote a release note. Jev selected the execution route at each step; the runtime opened the result in VS Code and a separate check compared it with the source page.</p>
+          <div class="open-task-facts" aria-label="Pilot result">
+            <div><strong>3</strong><span>Jev decisions</span></div>
+            <div><strong>DOM → API → CLI</strong><span>Executed channels</span></div>
+            <div><strong>49.8 s</strong><span>Measured wall time</span></div>
+          </div>
+          <p class="open-task-scope">One verified browser-to-editor pilot—not a claim of arbitrary Windows task support. A task acceptance clue gated note creation; no site-specific click sequence was coded.</p>
+          <a href="https://github.com/ZJU-REAL/CUA-JEV#open-task-pilot" class="open-task-link">See the implementation and limits <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="open-task-media">
+          <div class="open-task-video-frame">
+            <video controls playsinline preload="metadata" poster="media/open-workspace-python-poster.jpg" aria-label="Real model and Jev run from Python.org to VS Code">
+              <source src="media/open-workspace-python.mp4" type="video/mp4">
+              Your browser does not support this video.
+            </video>
+          </div>
+          <div class="open-task-path" aria-label="Executed workflow">
+            <span>01 <b>Edge</b> · source page</span>
+            <span>02 <b>File API</b> · grounded note</span>
+            <span>03 <b>VS Code</b> · opened result</span>
+          </div>
+        </div>
       </div>
     </section>
 

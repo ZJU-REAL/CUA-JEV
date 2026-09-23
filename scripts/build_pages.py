@@ -130,6 +130,11 @@ def build(output: Path = ROOT / "dist-pages") -> None:
                 raise ValueError(f"Missing curated demo: {source}")
             shutil.copy2(source, target / "media" / name)
             demos[task]["gui_only" if mode == "gui-only" else mode] = f"media/{name}"
+    for name in ("open-workspace-python.mp4", "open-workspace-python-poster.jpg"):
+        source = MEDIA / name
+        if not source.is_file():
+            raise ValueError(f"Missing curated open-task media: {source}")
+        shutil.copy2(source, target / "media" / name)
     _write_json(
         target / "data" / "bootstrap.json",
         {"tasks": snapshot["tasks"], "demos": demos, "captured_on": snapshot["captured_on"]},

@@ -32,6 +32,9 @@ def create_app(root: str | Path | None = None, data: str | Path | None = None):
     app.state.csrf_token = token
     app.mount("/static", StaticFiles(directory=static), name="static")
     app.mount("/demos", StaticFiles(directory=demos), name="demos")
+    curated_media = project_root / "website" / "media"
+    if curated_media.is_dir():
+        app.mount("/media", StaticFiles(directory=curated_media), name="media")
 
     @app.middleware("http")
     async def local_only(request: Request, call_next):

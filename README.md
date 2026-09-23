@@ -8,7 +8,7 @@ Jev's fast, typed decisions are a promising fit for downstream systems that must
 
 > **Scope:** This is not a general agent that can operate any Windows application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
 
-The [experimental open-task paths](docs/OPEN_TASKS.md) separate a low-frequency model planner from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific workflow. An OpenAI-compatible gateway and one short live browser task with Jev are available, but **arbitrary-task generalization is not claimed**.
+The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. A browser-to-VS-Code pilot now runs end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
 
 ![CUA-JEV architecture: task adapters, Jev selection, guarded execution, and independent verification](assets/architecture.svg)
 
@@ -59,6 +59,24 @@ Initial v2 records from 2026-09-23 are shown below in seconds. Jev values are me
 VS Code and Explorer illustrate how structured routes can avoid long sequences of GUI actions. **In these Edge and Excel Hybrid runs, however, Jev still chose GUI routes; Excel was slightly slower than GUI Only.** These results do not show that Jev is faster on every task. Codex is a general-purpose tool agent, while Jev uses prebuilt task capability packs; the samples are too small for a general performance ranking. The dollar figures on the website are **model-cost estimates, not billed charges**, derived from [TypeSafe public pricing](https://docs.typesafe.ai/models) and the [OpenAI public rate card](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing). Token accounting and caveats are in [`benchmarks/v2-cost-pilot-2026-09-23.json`](benchmarks/v2-cost-pilot-2026-09-23.json).
 
 The public site is a read-only experimental snapshot. It neither calls the Jev API nor runs tasks on a visitor's computer. Video durations are not the benchmark wall times. Jev step lists come from representative run traces; Codex entries summarize recorded tool calls by phase and are not presented as equivalent atomic GUI steps. The curated publication data lives in [`website/snapshot.json`](website/snapshot.json).
+
+## Open-task pilot
+
+The [new cross-app video](https://zjureal.com/CUA-JEV/#open-task) shows an instruction that is **not one of the four encoded workflows**: inspect the official Python site, find the latest stable Python 3 release and date, create a sourced note, and open it in VS Code. No Python.org selector or click sequence is stored in the task. The planner reads live DOM text and link refs and proposes one grounded next intent; Jev chooses among real routes; the normal guard, executor, and effect verifier close the loop. The scoped note target and a required source clue (`Release date:`) are supplied as acceptance constraints, not as navigation steps.
+
+One recorded run on 2026-09-23 used `DeepSeek-V4-Flash` for three planner calls and Jev for three decisions, executing **DOM → file API → VS Code CLI** in **49.8 s**. A [separate acceptance check](scripts/verify_open_workspace_demo.py) revisited the source page in a fresh browser and confirmed that the note's `Python 3.14.7` and `Aug. 5, 2026` matched it. This is a single verified pilot, **not** a performance benchmark or evidence that the agent can handle arbitrary sites, dialogs, or Windows apps. The [curated recording](website/media/open-workspace-python.mp4) is cropped to the task windows; its playback length is not wall time.
+
+To reproduce this task family on Windows, use an existing HTTPS model gateway (or explicitly opt in to trusted local-network HTTP), a new `.md` output path, and a private model key. The command never overwrites an existing note:
+
+```powershell
+$env:CUA_JEV_MODEL_API_KEY = "..."  # keep local; do not commit
+cua-jev open-workspace --goal "Find the latest stable Python 3 release and date on Python.org; write a sourced note and open it in VS Code" `
+  --url "https://www.python.org/" --note "artifacts/open-workspace/my-note.md" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_MODEL_ID" `
+  --required-source-text "Release date:" --policy jev
+```
+
+For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it starts capture only after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; inaccessible canvas-only interfaces and broader multi-app planning remain future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
 
 ## Quick start
 
@@ -117,6 +135,7 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] GUI / DOM / COM / CLI / MCP / API execution interfaces and a keyless Rule baseline.
 - [x] Four defined Windows workflows, independent terminal verification, Hybrid / GUI Only paired experiments, and a Codex Hybrid pilot.
 - [x] Read-only website, curated experimental snapshot, real videos, and expandable execution steps.
+- [x] Experimental live model + Jev browser-to-VS-Code pilot with a separate factual acceptance check and recording.
 - [ ] Move beyond four fixed cases to parameterized task families, unseen instances, adequate repeated trials, failure cases, and confidence intervals.
 - [ ] Generalize task adapters across software and tasks, then explore macOS / Linux and more browser and office applications.
 - [ ] Add optional VLM/visual-perception fallback for interfaces that DOM, UIA, or COM cannot describe reliably, while retaining the VLM-free path.

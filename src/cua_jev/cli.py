@@ -19,6 +19,7 @@ from .model_planner import ChatModelPlanner
 from .models import Channel
 from .open_browser import HttpJsonPlanner, OpenBrowserTask, PublicDecisionPolicy
 from .open_desktop import OpenDesktopTask
+from .open_workspace import OpenWorkspaceTask
 from .policy import JevPolicy, RulePolicy
 from .registry import ExecutorRegistry
 from .runtime import AgentRuntime
@@ -100,6 +101,23 @@ def _parser() -> argparse.ArgumentParser:
     open_desktop.add_argument("--allow-button-actions", action="store_true")
     open_desktop.add_argument("--max-steps", type=int, default=20)
     open_desktop.add_argument("--trace", help="Opt-in local trace; may contain window data")
+    workspace = sub.add_parser(
+        "open-workspace", help="Model + Jev browser-to-VS-Code note task family"
+    )
+    workspace.add_argument("--goal", required=True)
+    workspace.add_argument("--url", required=True)
+    workspace.add_argument("--note", required=True, help="New .md or .txt path; never overwrites")
+    workspace.add_argument("--model-base-url", required=True)
+    workspace.add_argument("--model", required=True)
+    workspace.add_argument("--allow-insecure-model-http", action="store_true")
+    workspace.add_argument("--use-env-proxy", action="store_true")
+    workspace.add_argument("--policy", choices=("rule", "jev"), default="jev")
+    workspace.add_argument("--max-steps", type=int, default=12)
+    workspace.add_argument(
+        "--required-source-text", action="append", default=[],
+        help="Optional task acceptance clue that must appear in the live page before writing",
+    )
+    workspace.add_argument("--trace", help="Private local trace; includes page and note text")
     catalog = sub.add_parser("planner-models", help="List available IDs from a model gateway")
     catalog.add_argument("--model-base-url", required=True)
     catalog.add_argument("--allow-insecure-model-http", action="store_true")
@@ -186,6 +204,24 @@ def _open_desktop_runner(args: argparse.Namespace) -> EpisodeRunner:
         )
 
     return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=600))
+
+
+def _open_workspace_runner(args: argparse.Namespace) -> EpisodeRunner:
+    def runtime_factory(environment: OpenWorkspaceTask) -> AgentRuntime:
+        executors = ExecutorRegistry()
+        for channel, executor in environment.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        environment.register_verifiers(verifiers)
+        inner = JevPolicy(retries=2) if args.policy == "jev" else RulePolicy()
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(inner),
+            guard=ActionGuard(allowed_roots=[environment.note_path.parent], allow_writes=True),
+            executors=executors, verifiers=verifiers, trace=JsonlTrace(args.trace),
+        )
+
+    return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=900))
 
 
 def _chat_planner(args: argparse.Namespace, *, model: str | None = None) -> ChatModelPlanner:
@@ -284,6 +320,26 @@ def main(argv: list[str] | None = None) -> int:
                 allow_button_actions=args.allow_button_actions,
             )
             result = _open_desktop_runner(args).run(environment)
+        finally:
+            planner.close()
+        summary = result.to_dict()
+        summary["planner_calls"] = environment.planner_calls
+        summary["planner_wall_ms"] = planner.planning_wall_ms
+        summary["planner_model_usage"] = planner.usage_totals
+        summary["policy"] = args.policy
+        summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0 if result.success else 1
+    if args.command == "open-workspace":
+        if args.max_steps < 1:
+            raise SystemExit("--max-steps must be positive")
+        planner = _chat_planner(args)
+        try:
+            environment = OpenWorkspaceTask(
+                goal=args.goal, start_url=args.url, note_path=Path(args.note), planner=planner,
+                required_source_texts=args.required_source_text,
+            )
+            result = _open_workspace_runner(args).run(environment)
         finally:
             planner.close()
         summary = result.to_dict()

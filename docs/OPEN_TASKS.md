@@ -1,8 +1,8 @@
 # Experimental open-task paths
 
-The original four Windows workflows remain curated, reproducible capability packs. `open-browser` and `open-desktop` are separate experimental paths for tasks **not encoded as one of those four workflows**. Neither contains site- or app-specific selectors or scripts.
+The original four Windows workflows remain curated, reproducible capability packs. `open-browser`, `open-desktop`, and `open-workspace` are experimental paths for tasks **not encoded as one of those four workflows**. They do not contain site- or app-specific click sequences.
 
-This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **accessible UI Automation controls in one explicitly selected Windows window**. Neither handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. A short read-only browser task has run with a live model and Jev; broader model quality and task generalization remain untested.
+This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **accessible UI Automation controls in one explicitly selected Windows window**. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. Broader model quality and task generalization remain untested.
 
 ## Division of labor
 
@@ -11,7 +11,23 @@ This is an integration scaffold, not a claim of general computer-use capability.
 3. The framework turns each legal browser option into DOM and (when headed) physical GUI routes. Desktop options can use UIA `invoke`/`set_edit_text` or physical GUI. Jev chooses a typed option/channel at each step. Candidate arguments and snapshot text are withheld from the Jev request, though the goal, titles, and element labels are still sent.
 4. The normal `ActionGuard`, executor, and verifier run. A failed effect check or exhausted options triggers another planner call. A model-proposed completion condition is checked against live state, but **is not independent semantic proof** that the user's original goal was achieved.
 
-The planner is intentionally called less often than Jev. This is an architectural hypothesis to test, not yet a measured speed/cost result for open tasks. The four published benchmark cases are unchanged.
+The long-term design aims to call the planner less often than Jev by reusing a grounded subgoal across several constrained decisions. The current pilot called both once per step, so this is still an architectural hypothesis, not a measured speed/cost result for open tasks. The four published benchmark cases are unchanged.
+
+## Browser-to-VS-Code pilot
+
+`open-workspace` observes a live same-origin browser page and the state of one new `.md`/`.txt` output file plus its VS Code window. The model proposes a grounded browser link, a source-backed note, or opening the note; its output cannot contain arbitrary code, selectors, coordinates, commands, or another file path. The framework gates operations using live state and optional user-specified source clues. Jev chooses among browser DOM/physical GUI routes and, when available, file API/GUI routes. The note is read back before the episode succeeds. The separate [demo verifier](../scripts/verify_open_workspace_demo.py) visits the cited Python release page again and checks its facts independently; it does not participate in action selection.
+
+The September 2026 pilot used three model plans and three Jev decisions; it does **not** demonstrate a planner-call reduction or a speed/cost advantage for open tasks. Campus gateway timeouts and occasional invalid model plans were observed in failed attempts. The released video is one successful, independently checked take, not a reliability statistic. No VLM is connected to this path.
+
+```powershell
+$env:CUA_JEV_MODEL_API_KEY = "..."
+cua-jev open-workspace --goal "Find the latest stable Python 3 release and date; write a sourced note and open it in VS Code" `
+  --url "https://www.python.org/" --note "artifacts/open-workspace/new-note.md" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_MODEL_ID" `
+  --required-source-text "Release date:" --policy jev
+```
+
+For an HTTP-only campus gateway, add `--allow-insecure-model-http` only on a trusted network. The local `--trace` option may record full page and note content. Do not publish raw traces or credentials.
 
 ## Direct model gateway
 
@@ -89,5 +105,5 @@ By default only same-origin link navigation is eligible. Even a same-origin GET 
 
 - Evaluate the short-listed text planner and vision-capable model on held-out goals with repeated runs, cost/latency measurement, and failure analysis. No broad model quality or generalization claim is made yet.
 - Add a screenshot/VLM fallback for inaccessible UIs and multi-window navigation; single-window UIA is not desktop generality.
-- Expose safe, typed CLI/MCP capabilities within the same open-task frontier; today the open paths offer DOM/UIA/GUI, while the curated workflows contain CLI/MCP.
+- Expose a broader registry of safe, typed CLI/MCP capabilities within the same open-task frontier; `open-workspace` currently adds only a scoped VS Code launch and note write, while the curated workflows contain richer CLI/MCP actions.
 - Make completion verification independent of the planner, add human confirmation for sensitive actions, and quantify planner calls, Jev decisions, success, latency, and cost on held-out tasks.

@@ -250,6 +250,16 @@ async function boot() {
     await Promise.all([renderBenchmark(), renderHeadlineMetrics()]);
   } catch (error) {
     $("#case-grid").innerHTML = `<div class="empty-results"><b>Project data unavailable</b><span>${escapeHTML(error.message)}</span></div>`;
+  } finally {
+    const id = location.hash.slice(1);
+    const target = id && document.getElementById(id);
+    if (target) requestAnimationFrame(() => {
+      const root = document.documentElement;
+      const previous = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      target.scrollIntoView({ block: "start" });
+      root.style.scrollBehavior = previous;
+    });
   }
 }
 
