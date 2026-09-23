@@ -290,6 +290,7 @@ class OpenBrowserTask:
         self._browser = None
         self._plan: BrowserPlan | None = None
         self._plan_url = ""
+        self._plan_fingerprint = ""
         self._used: set[int] = set()
         self._snapshot: BrowserSnapshot | None = None
         self._before: dict[str, BrowserSnapshot] = {}
@@ -371,6 +372,7 @@ class OpenBrowserTask:
         ]
         self._plan = self.planner.plan(self.goal, self._snapshot, recent)
         self._plan_url = self._snapshot.url
+        self._plan_fingerprint = self._snapshot.fingerprint()
         self._used.clear()
         self.planner_calls += 1
 
@@ -379,7 +381,11 @@ class OpenBrowserTask:
     ) -> Sequence[ActionCandidate]:
         if self._snapshot is None:
             raise RuntimeError("observe before candidate generation")
-        if self._plan is None or self._plan_url != self._snapshot.url:
+        if (
+            self._plan is None
+            or self._plan_url != self._snapshot.url
+            or self._plan_fingerprint != self._snapshot.fingerprint()
+        ):
             self._call_planner(history)
         if self._satisfied(self._snapshot):
             return (

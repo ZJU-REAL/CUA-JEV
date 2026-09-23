@@ -15,8 +15,10 @@ from .executors import ControlExecutor, FileSystemExecutor
 from .experiment import ExperimentRunner
 from .frozen import builtin_task_specs
 from .guard import ActionGuard
+from .model_planner import ChatModelPlanner
 from .models import Channel
 from .open_browser import HttpJsonPlanner, OpenBrowserTask, PublicDecisionPolicy
+from .open_desktop import OpenDesktopTask
 from .policy import JevPolicy, RulePolicy
 from .registry import ExecutorRegistry
 from .runtime import AgentRuntime
@@ -72,13 +74,33 @@ def _parser() -> argparse.ArgumentParser:
     )
     open_browser.add_argument("--goal", required=True)
     open_browser.add_argument("--url", required=True)
-    open_browser.add_argument("--planner-endpoint", required=True)
+    browser_planner = open_browser.add_mutually_exclusive_group(required=True)
+    browser_planner.add_argument("--planner-endpoint")
+    browser_planner.add_argument("--model-base-url")
+    open_browser.add_argument("--model")
+    open_browser.add_argument("--allow-insecure-model-http", action="store_true")
     open_browser.add_argument("--policy", choices=("rule", "jev"), default="jev")
     open_browser.add_argument("--headed", action="store_true")
     open_browser.add_argument("--allow-form-input", action="store_true")
     open_browser.add_argument("--allow-external-actions", action="store_true")
     open_browser.add_argument("--max-steps", type=int, default=20)
     open_browser.add_argument("--trace", help="Opt-in local trace; may contain task data")
+    open_desktop = sub.add_parser(
+        "open-desktop", help="Experimental open-goal loop for one Windows UIA window"
+    )
+    open_desktop.add_argument("--goal", required=True)
+    open_desktop.add_argument("--window-title", required=True, help="Regex matching one visible window")
+    open_desktop.add_argument("--model-base-url", required=True)
+    open_desktop.add_argument("--model", required=True)
+    open_desktop.add_argument("--allow-insecure-model-http", action="store_true")
+    open_desktop.add_argument("--policy", choices=("rule", "jev"), default="jev")
+    open_desktop.add_argument("--allow-text-input", action="store_true")
+    open_desktop.add_argument("--allow-button-actions", action="store_true")
+    open_desktop.add_argument("--max-steps", type=int, default=20)
+    open_desktop.add_argument("--trace", help="Opt-in local trace; may contain window data")
+    catalog = sub.add_parser("planner-models", help="List available IDs from a model gateway")
+    catalog.add_argument("--model-base-url", required=True)
+    catalog.add_argument("--allow-insecure-model-http", action="store_true")
     return parser
 
 
@@ -142,6 +164,38 @@ def _open_browser_runner(args: argparse.Namespace) -> EpisodeRunner:
     return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=600))
 
 
+def _open_desktop_runner(args: argparse.Namespace) -> EpisodeRunner:
+    def runtime_factory(environment: OpenDesktopTask) -> AgentRuntime:
+        executors = ExecutorRegistry()
+        for channel, executor in environment.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        environment.register_verifiers(verifiers)
+        inner = JevPolicy(retries=2) if args.policy == "jev" else RulePolicy()
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(inner),
+            guard=ActionGuard(
+                allow_writes=args.allow_text_input,
+                allow_destructive=args.allow_button_actions,
+            ),
+            executors=executors, verifiers=verifiers, trace=JsonlTrace(args.trace),
+        )
+
+    return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=600))
+
+
+def _chat_planner(args: argparse.Namespace, *, model: str | None = None) -> ChatModelPlanner:
+    model_id = model or getattr(args, "model", None)
+    if not model_id:
+        raise SystemExit("--model is required with --model-base-url")
+    return ChatModelPlanner(
+        args.model_base_url, model_id,
+        api_key=os.getenv("CUA_JEV_MODEL_API_KEY") or os.getenv("CUA_JEV_PLANNER_API_KEY"),
+        allow_insecure_http=args.allow_insecure_model_http,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     load_local_env()
     args = _parser().parse_args(argv)
@@ -181,11 +235,19 @@ def main(argv: list[str] | None = None) -> int:
             policy.close()
         print(json.dumps(decision.to_dict(), indent=2, ensure_ascii=False))
         return 0
+    if args.command == "planner-models":
+        planner = _chat_planner(args, model="catalog-only")
+        try:
+            print(json.dumps(planner.list_models(), indent=2, ensure_ascii=False))
+        finally:
+            planner.close()
+        return 0
     if args.command == "open-browser":
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
-        planner = HttpJsonPlanner(
-            args.planner_endpoint, api_key=os.getenv("CUA_JEV_PLANNER_API_KEY")
+        planner = (
+            HttpJsonPlanner(args.planner_endpoint, api_key=os.getenv("CUA_JEV_PLANNER_API_KEY"))
+            if args.planner_endpoint else _chat_planner(args)
         )
         try:
             environment = OpenBrowserTask(
@@ -199,7 +261,32 @@ def main(argv: list[str] | None = None) -> int:
             result = _open_browser_runner(args).run(environment)
         finally:
             planner.close()
-        print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+        summary = result.to_dict()
+        summary["planner_calls"] = environment.planner_calls
+        summary["planner_wall_ms"] = getattr(planner, "planning_wall_ms", None)
+        summary["planner_model_usage"] = getattr(planner, "usage_totals", None)
+        summary["jev_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0 if result.success else 1
+    if args.command == "open-desktop":
+        if args.max_steps < 1:
+            raise SystemExit("--max-steps must be positive")
+        planner = _chat_planner(args)
+        try:
+            environment = OpenDesktopTask(
+                goal=args.goal, window_title_re=args.window_title, planner=planner,
+                allow_text_input=args.allow_text_input,
+                allow_button_actions=args.allow_button_actions,
+            )
+            result = _open_desktop_runner(args).run(environment)
+        finally:
+            planner.close()
+        summary = result.to_dict()
+        summary["planner_calls"] = environment.planner_calls
+        summary["planner_wall_ms"] = planner.planning_wall_ms
+        summary["planner_model_usage"] = planner.usage_totals
+        summary["jev_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 0 if result.success else 1
     if args.command in {"episode-demo", "experiment"}:
         workspace = Path(args.workspace).resolve()

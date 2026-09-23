@@ -8,7 +8,7 @@ Jev's fast, typed decisions are a promising fit for downstream systems that must
 
 > **Scope:** This is not a general agent that can operate any Windows application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
 
-An [experimental open-task browser path](docs/OPEN_TASKS.md) now separates a replaceable, low-frequency goal planner from Jev's typed action selection. It discovers page elements dynamically and can execute grounded DOM or physical GUI actions without a site-specific workflow. **A planner model has not yet been connected or benchmarked, and this does not generalize the four desktop cases to arbitrary tasks.**
+The [experimental open-task paths](docs/OPEN_TASKS.md) separate a low-frequency model planner from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific workflow. An OpenAI-compatible model gateway adapter is available, but **the supplied campus service was unreachable during implementation; no real-model success or arbitrary-task generalization is claimed**.
 
 ![CUA-JEV architecture: task adapters, Jev selection, guarded execution, and independent verification](assets/architecture.svg)
 

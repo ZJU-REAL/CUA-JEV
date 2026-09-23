@@ -157,6 +157,20 @@ def test_candidate_generation_filters_external_and_button_actions():
     environment.close()
 
 
+def test_changed_browser_element_invalidates_old_plan():
+    page = FakePage()
+    planner = FakePlanner()
+    environment = task(page=page, planner=planner)
+    environment.reset()
+    first = environment.observe(())
+    environment.candidates(first, ())
+    page.elements[0]["label"] = "New target"
+    second = environment.observe(())
+    environment.candidates(second, ())
+    assert planner.calls == 2
+    environment.close()
+
+
 def test_one_plan_can_cover_multiple_form_actions():
     page = FakePage()
     page.elements.extend(
