@@ -216,8 +216,7 @@ main { overflow: hidden; }
 .open-task-status p { margin: 0; padding: 17px 20px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: var(--surface); font: 16px/1.5 var(--sans); }
 .open-task-status strong { display: block; margin-bottom: 5px; color: var(--navy); font-size: 17px; }
 .open-task-case-head { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 28px; margin: 72px 0 24px; }
-.open-task-case-head h3 { margin: 0 0 12px; font-size: clamp(28px,3vw,40px); line-height: 1.2; }
-.open-task-app-badge { display: inline-block; margin-left: 8px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--navy); background: var(--surface); font: 700 13px/1.2 var(--sans); white-space: nowrap; vertical-align: middle; }
+.open-task-case-head h3 { margin: 0 0 12px; font-size: clamp(28px,3vw,40px); line-height: 1.2; text-wrap: balance; }
 .open-task-case-head p:not(.eyebrow) { max-width: 660px; margin: 0; color: var(--muted); font: 17px/1.6 var(--sans); }
 .open-task-facts { display: grid; grid-template-columns: repeat(2,minmax(100px,1fr)); gap: 8px; min-width: 240px; }
 .open-task-facts div { display: grid; align-content: center; justify-items: center; gap: 4px; min-height: 95px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); text-align: center; }
