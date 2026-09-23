@@ -1,3 +1,4 @@
+import json
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -5,11 +6,12 @@ import pytest
 
 from cua_jev.episode import EpisodeConfig, EpisodeRunner, EpisodeStatus
 from cua_jev.executors import ControlExecutor
+from cua_jev.executors.common import execute_with_receipt
 from cua_jev.guard import ActionGuard
-from cua_jev.models import ActionCandidate, Channel, Observation
+from cua_jev.models import ActionCandidate, Channel, Observation, Verification
 from cua_jev.open_browser import OpenBrowserTask, PublicDecisionPolicy
 from cua_jev.open_computer import ComputerPlan, OpenComputerTask
-from cua_jev.open_desktop import OpenDesktopTask
+from cua_jev.open_desktop import DesktopSnapshot, OpenDesktopTask
 from cua_jev.policy import RulePolicy
 from cua_jev.registry import ExecutorRegistry
 from cua_jev.runtime import AgentRuntime
@@ -259,4 +261,108 @@ def test_system_chrome_control_is_not_a_computer_action(tmp_path):
             "subgoal": "Close window",
             "options": [{"ref": "d:c0", "operation": "click"}],
         }, task._snapshot)
+    task.close()
+
+
+def test_replacement_accessibility_surface_uses_same_runtime_contract():
+    class AlternateAccessibilitySurface:
+        namespace = "d"
+        supported_capabilities = frozenset({"desktop.click"})
+
+        def __init__(self):
+            self.window = DesktopWindow()
+
+        def reset(self):
+            pass
+
+        def close(self):
+            pass
+
+        def observe(self, _history):
+            return self.capture()
+
+        def capture(self):
+            return DesktopSnapshot.capture(self.window)[0]
+
+        def validate(self, state, ref, operation, value):
+            if ref != "c0" or operation != "click" or value:
+                raise ValueError("unsupported accessibility ref")
+            return ref, operation, ""
+
+        def compile(self, state, ref, operation, value, subgoal, index):
+            return (ActionCandidate(
+                f"option_{index}_accessibility", Channel.API, "desktop.click",
+                "Invoke Finish through alternate accessibility backend",
+                {"ref": ref}, verifier="alternate.effect", intent=f"option_{index}",
+            ),)
+
+        def owns(self, candidate):
+            return candidate.capability == "desktop.click"
+
+        def execute(self, candidate, observation_id, decision_id):
+            return execute_with_receipt(
+                candidate, observation_id, decision_id,
+                lambda: (self.window.control.invoke(), {"window_title": self.window.title})[1],
+            )
+
+        def register_verifiers(self, registry):
+            registry.register("alternate.effect", lambda _candidate, receipt: Verification(
+                receipt.success and self.window.title == "Done", "alternate.effect",
+            ))
+
+    class Planner:
+        def plan(self, _goal, snapshot, _recent):
+            options = []
+            if "/done" not in snapshot.browser.url:
+                options.append({"ref": "b:e0", "operation": "click"})
+            if snapshot.desktop.window_title != "Done":
+                options.append({"ref": "d:c0", "operation": "click"})
+            return ComputerPlan.from_dict({"subgoal": "Finish both", "options": options}, snapshot)
+
+    goal = "Finish both surfaces"
+    planner = Planner()
+    alternate = AlternateAccessibilitySurface()
+    task = OpenComputerTask(
+        goal=goal, planner=planner,
+        browser=OpenBrowserTask(
+            goal=goal, start_url="https://example.test/start",
+            planner=planner, page=BrowserPage(),
+        ),
+        desktop=None, desktop_surface=alternate,
+        required_url_contains="/done", required_window_title_contains="Done",
+        required_capabilities=("desktop.click",),
+    )
+
+    def factory(item):
+        executors = ExecutorRegistry()
+        for channel, executor in item.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        item.register_verifiers(verifiers)
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(RulePolicy()), guard=ActionGuard(),
+            executors=executors, verifiers=verifiers,
+        )
+
+    result = EpisodeRunner(factory, EpisodeConfig(max_steps=4)).run(task)
+    assert result.status == EpisodeStatus.SUCCESS, result.reason
+    assert {step.receipt.capability for step in result.steps} == {"browser.click", "desktop.click"}
+
+
+def test_model_projection_keeps_grounded_refs_without_runtime_handles(tmp_path):
+    task = environment(tmp_path)
+    task.reset()
+    task.observe(())
+    assert task._snapshot is not None
+    raw = task._snapshot.to_dict()
+    compact = task._snapshot.for_model()
+    assert raw["desktop"]["window_handle"] == 42
+    assert compact["browser"]["elements"][0]["ref"] == "b:e0"
+    assert compact["desktop"]["controls"][0]["ref"] == "d:c0"
+    assert compact["tool_offers"][0]["ref"] == "t:t0"
+    wire = json.dumps(compact)
+    for runtime_only in ("window_handle", "automation_id", "rectangle", '"index"'):
+        assert runtime_only not in wire
+    assert len(wire) < len(json.dumps(raw))
     task.close()

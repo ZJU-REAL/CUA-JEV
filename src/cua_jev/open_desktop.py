@@ -309,6 +309,29 @@ class OpenDesktopTask:
             state=self._snapshot.to_dict(), source=self.name,
         )
 
+    def observe_state(self, history: Sequence[StepResult]) -> DesktopSnapshot:
+        self.observe(history)
+        assert self._snapshot is not None
+        return self._snapshot
+
+    def capture_state(self) -> DesktopSnapshot:
+        return self._capture()
+
+    def compile_option(
+        self, snapshot: DesktopSnapshot, option: DesktopOption, subgoal: str
+    ) -> tuple[ActionCandidate, ...]:
+        """Compile one validated option without exposing planner internals to a host."""
+        previous_plan, previous_used = self._plan, self._used
+        self._snapshot = snapshot
+        self._plan = DesktopPlan(
+            subgoal, (option,), "window_title_contains", "__not_a_terminal_check__"
+        )
+        self._used = set()
+        try:
+            return self._build_candidates()
+        finally:
+            self._plan, self._used = previous_plan, previous_used
+
     def _satisfied(self, snapshot: DesktopSnapshot) -> bool:
         if self._plan is None:
             return False

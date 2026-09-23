@@ -6,10 +6,11 @@ model-chosen path. Every offer is re-created from the scoped filesystem state.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .models import ActionCandidate, Channel, Risk
+from .models import ActionCandidate, ActionReceipt, Channel, Risk, Verification
 
 
 @dataclass(frozen=True)
@@ -73,3 +74,31 @@ class ScopedReadOnlyTools:
                 f"Read scoped text file {path.name}", str(path.resolve()),
             ))
         return tuple(offers)
+
+
+def verify_readonly_tool_result(
+    candidate: ActionCandidate, receipt: ActionReceipt
+) -> Verification:
+    """Check typed output and re-read scoped files instead of trusting model text."""
+    if not receipt.success:
+        return Verification(False, "tool.result", {"error": receipt.error})
+    output = receipt.output
+    capability = candidate.capability
+    if capability == "filesystem.list":
+        passed = (
+            output.get("path") == candidate.arguments["path"]
+            and isinstance(output.get("entries"), list)
+        )
+    elif capability == "filesystem.read_text":
+        path = Path(candidate.arguments["path"])
+        passed = (
+            output.get("path") == str(path) and isinstance(output.get("text"), str)
+            and path.is_file() and output["text"] == path.read_text(encoding="utf-8")[:16_000]
+        )
+    elif capability == "cli.python_version":
+        passed = bool(re.match(r"^Python \d+\.\d+", output.get("stdout", "")))
+    elif capability == "cli.git_status":
+        passed = output.get("returncode") == 0 and isinstance(output.get("stdout"), str)
+    else:
+        passed = False
+    return Verification(passed, "tool.result", {"capability": capability})

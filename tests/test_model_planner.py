@@ -3,10 +3,12 @@ import json
 import httpx
 import pytest
 from test_open_browser import FakePage
+from test_open_computer import environment
 from test_open_desktop import FakeWindow
 
 from cua_jev.model_planner import ChatModelPlanner
 from cua_jev.open_browser import BrowserPlan, BrowserSnapshot
+from cua_jev.open_computer import ComputerPlan
 from cua_jev.open_desktop import DesktopPlan, DesktopSnapshot
 from cua_jev.vision import WindowImage
 
@@ -69,6 +71,36 @@ def test_desktop_plan_is_grounded_and_model_cannot_return_arbitrary_code():
     assert result.options[0].ref == "c1"
     with pytest.raises(ValueError, match="insecure-HTTP"):
         ChatModelPlanner("http://model.example/v1", "model")
+
+
+def test_cross_app_planner_sends_compact_refs_not_runtime_handles(tmp_path):
+    task = environment(tmp_path)
+    task.reset()
+    task.observe(())
+    assert task._snapshot is not None
+
+    def handler(request):
+        body = json.loads(request.content)
+        state = json.loads(body["messages"][1]["content"])["snapshot"]
+        assert state["browser"]["elements"][0]["ref"] == "b:e0"
+        assert state["desktop"]["controls"][0]["ref"] == "d:c0"
+        assert "window_handle" not in state["desktop"]
+        assert "rectangle" not in state["desktop"]["controls"][0]
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": json.dumps({
+                "subgoal": "Finish in the browser",
+                "options": [{"ref": "b:e0", "operation": "click"}],
+            })}}],
+        })
+
+    planner = ChatModelPlanner(
+        "https://model.example/v1", "text-model", api_key="fake",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    result = planner.plan(task.goal, task._snapshot, [])
+    assert isinstance(result, ComputerPlan)
+    assert result.options[0].source == "b"
+    task.close()
 
 
 def test_bad_model_response_fails_closed():

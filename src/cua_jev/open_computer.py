@@ -10,18 +10,22 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
 from .episode import Evaluation
-from .executors.cli import RegisteredCliExecutor
-from .executors.filesystem import FileSystemExecutor
 from .local_tools import ScopedReadOnlyTools, ToolOffer
 from .models import ActionCandidate, ActionReceipt, Channel, Observation, Verification
-from .open_browser import BrowserPlan, BrowserSnapshot, OpenBrowserTask, PlannedOption
-from .open_desktop import DesktopOption, DesktopPlan, DesktopSnapshot, OpenDesktopTask
+from .open_browser import BrowserSnapshot, OpenBrowserTask
+from .open_desktop import DesktopSnapshot, OpenDesktopTask
 from .runtime import StepResult
+from .surface_providers import (
+    ActionSurface,
+    BrowserSurface,
+    ReadOnlyToolSurface,
+    WindowsUiaSurface,
+)
 from .verify import VerifierRegistry
 
 MAX_OPTIONS = 16
@@ -34,6 +38,12 @@ class ComputerSnapshot:
     tool_offers: tuple[ToolOffer, ...]
     tool_results: tuple[dict[str, Any], ...]
     requirements: dict[str, Any]
+    providers: dict[str, ActionSurface] = field(default_factory=dict, repr=False, compare=False)
+
+    def state_for(self, namespace: str) -> Any:
+        return {
+            "b": self.browser, "d": self.desktop, "t": self.tool_offers,
+        }[namespace]
 
     def to_dict(self) -> dict[str, Any]:
         browser = self.browser.to_dict()
@@ -50,6 +60,27 @@ class ComputerSnapshot:
             "tool_results": list(self.tool_results),
             "requirements": self.requirements,
         }
+
+    def for_model(self) -> dict[str, Any]:
+        """Keep planning refs and semantics, omit runtime-only handles/geometry."""
+        state = self.to_dict()
+        browser = state["browser"]
+        browser["elements"] = [{
+            key: value for key, value in element.items()
+            if key in {"ref", "tag", "role", "label", "input_type", "disabled", "href"}
+        } for element in browser["elements"]]
+        for element in browser["elements"]:
+            element["href"] = element.get("href", "")[:240]
+        for key in ("visual_image_hash", "visual_viewport"):
+            browser.pop(key, None)
+        desktop = state["desktop"]
+        desktop["controls"] = [{
+            key: value for key, value in control.items()
+            if key in {"ref", "name", "control_type", "enabled", "can_invoke", "can_set_text"}
+        } for control in desktop["controls"]]
+        for key in ("window_handle", "visual_region", "visual_image_hash"):
+            desktop.pop(key, None)
+        return state
 
     def fingerprint(self) -> str:
         return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
@@ -77,52 +108,18 @@ class ComputerPlan:
             raise ValueError("computer planner subgoal is invalid")
         if not 1 <= len(data["options"]) <= MAX_OPTIONS:
             raise ValueError("computer planner must return 1-16 options")
-        offers = {item.ref for item in snapshot.tool_offers}
         options: list[ComputerOption] = []
         for item in data["options"]:
             if not isinstance(item, dict) or not isinstance(item.get("ref"), str):
                 raise ValueError("computer option must reference one live target")
             namespace, separator, ref = item["ref"].partition(":")
-            if not separator or namespace not in {"b", "d", "t"}:
-                raise ValueError("computer option must use a b:/d:/t: ref")
-            normalized = {**item, "ref": ref}
-            if namespace == "b":
-                checked = BrowserPlan.from_dict({
-                    "subgoal": subgoal, "options": [normalized],
-                    "success": {"kind": "url_contains", "value": "__not_a_terminal_check__"},
-                }, snapshot.browser).options[0]
-                options.append(ComputerOption("browser", checked.ref, checked.operation, checked.value))
-            elif namespace == "d":
-                control = next(
-                    (control for control in snapshot.desktop.controls if control.ref == ref), None
-                )
-                visual = next(
-                    (target for target in snapshot.desktop.visual_targets if target.ref == ref), None
-                )
-                if control is None and visual is None:
-                    raise ValueError("desktop ref is not present in the selected window")
-                if control is not None and (
-                    control.control_type not in {
-                        "Button", "Edit", "CheckBox", "ComboBox", "MenuItem", "ListItem"
-                    }
-                    or any(token in control.name.casefold() for token in (
-                        "close", "minimize", "maximize", "关闭", "最小化", "最大化"
-                    ))
-                ):
-                    raise ValueError("desktop target is system chrome or not an app control")
-                if normalized.get("operation") == "invoke" and control is not None and control.can_invoke:
-                    normalized["operation"] = "click"
-                if normalized.get("value") is None and normalized.get("operation") == "click":
-                    normalized["value"] = ""
-                checked = DesktopPlan.from_dict({
-                    "subgoal": subgoal, "options": [normalized],
-                    "success": {"kind": "window_title_contains", "value": "__not_a_terminal_check__"},
-                }, snapshot.desktop).options[0]
-                options.append(ComputerOption("desktop", checked.ref, checked.operation, checked.value))
-            else:
-                if ref not in offers or item.get("operation") != "invoke" or item.get("value"):
-                    raise ValueError("local tool option must invoke one offered t: ref")
-                options.append(ComputerOption("tool", ref, "invoke"))
+            provider = snapshot.providers.get(namespace)
+            if not separator or provider is None:
+                raise ValueError("computer option must use a registered namespaced ref")
+            checked = provider.validate(
+                snapshot.state_for(namespace), ref, item.get("operation"), item.get("value", "")
+            )
+            options.append(ComputerOption(namespace, *checked))
         if len({(o.source, o.ref, o.operation, o.value) for o in options}) != len(options):
             raise ValueError("computer planner returned duplicate options")
         return cls(subgoal.strip(), tuple(options))
@@ -144,7 +141,8 @@ class OpenComputerTask:
         *,
         goal: str,
         browser: OpenBrowserTask,
-        desktop: OpenDesktopTask,
+        desktop: OpenDesktopTask | None,
+        desktop_surface: ActionSurface | None = None,
         planner: ComputerGoalPlanner,
         local_tool_root: Path | None = None,
         required_url_contains: str = "",
@@ -152,8 +150,14 @@ class OpenComputerTask:
         required_window_text_contains: str = "",
         required_capabilities: Sequence[str] = (),
     ) -> None:
-        if not goal.strip() or browser.goal != goal.strip() or desktop.goal != goal.strip():
+        if not goal.strip() or browser.goal != goal.strip() or (
+            desktop is not None and desktop.goal != goal.strip()
+        ):
             raise ValueError("the composite goal must match both observers")
+        if desktop_surface is None and desktop is None:
+            raise ValueError("a desktop surface provider is required")
+        if desktop_surface is not None and desktop_surface.namespace != "d":
+            raise ValueError("replacement desktop surface must use the d namespace")
         if not any((required_url_contains, required_window_title_contains,
                     required_window_text_contains)):
             raise ValueError("at least one caller-supplied observable state gate is required")
@@ -162,20 +166,21 @@ class OpenComputerTask:
         self.desktop = desktop
         self.planner = planner
         self.local_tools = ScopedReadOnlyTools(local_tool_root) if local_tool_root else None
+        self.providers: dict[str, ActionSurface] = {
+            "b": BrowserSurface(browser),
+            "d": desktop_surface or WindowsUiaSurface(desktop),
+        }
+        if self.local_tools is not None:
+            self.providers["t"] = ReadOnlyToolSurface(self.local_tools)
         self.required_url_contains = required_url_contains
         self.required_window_title_contains = required_window_title_contains
         self.required_window_text_contains = required_window_text_contains
         self.required_capabilities = tuple(required_capabilities)
-        supported_actions = {
-            "browser.click", "browser.fill", "browser.select", "browser.visual_click",
-            "desktop.click", "desktop.fill", "desktop.visual_click",
-        }
+        supported_actions = set().union(
+            *(provider.supported_capabilities for provider in self.providers.values())
+        )
         for capability in self.required_capabilities:
-            if capability not in supported_actions and (
-                self.local_tools is None or capability not in {
-                    offer.capability for offer in self.local_tools.offers()
-                }
-            ):
+            if capability not in supported_actions:
                 raise ValueError("required capability is not registered in this task")
         self._snapshot: ComputerSnapshot | None = None
         self._plan: ComputerPlan | None = None
@@ -183,26 +188,24 @@ class OpenComputerTask:
         self._used: set[int] = set()
         self._completed_capabilities: set[str] = set()
         self._tool_results: list[dict[str, Any]] = []
-        self._file_executor = FileSystemExecutor()
-        self._cli_executor = RegisteredCliExecutor()
         self.planner_calls = 0
 
     def reset(self) -> None:
-        self.browser.reset()
-        self.desktop.reset()
+        for provider in self.providers.values():
+            provider.reset()
         self._plan = None
         self._used.clear()
         self._completed_capabilities.clear()
         self._tool_results.clear()
 
     def close(self) -> None:
-        self.desktop.close()
-        self.browser.close()
+        for provider in reversed(tuple(self.providers.values())):
+            provider.close()
 
     def _capture(self) -> ComputerSnapshot:
         return ComputerSnapshot(
-            browser=self.browser._capture(), desktop=self.desktop._capture(),
-            tool_offers=self.local_tools.offers() if self.local_tools else (),
+            browser=self.providers["b"].capture(), desktop=self.providers["d"].capture(),
+            tool_offers=self.providers["t"].capture() if "t" in self.providers else (),
             tool_results=tuple(self._tool_results[-6:]),
             requirements={
                 "url_contains": self.required_url_contains,
@@ -211,15 +214,14 @@ class OpenComputerTask:
                 "capabilities": list(self.required_capabilities),
                 "completed_capabilities": sorted(self._completed_capabilities),
             },
+            providers=self.providers,
         )
 
     def observe(self, history: Sequence[StepResult]) -> Observation:
-        self.browser.observe(history)
-        self.desktop.observe(history)
-        assert self.browser._snapshot is not None and self.desktop._snapshot is not None
         self._snapshot = ComputerSnapshot(
-            browser=self.browser._snapshot, desktop=self.desktop._snapshot,
-            tool_offers=self.local_tools.offers() if self.local_tools else (),
+            browser=self.providers["b"].observe(history),
+            desktop=self.providers["d"].observe(history),
+            tool_offers=self.providers["t"].observe(history) if "t" in self.providers else (),
             tool_results=tuple(self._tool_results[-6:]),
             requirements={
                 "url_contains": self.required_url_contains,
@@ -228,6 +230,7 @@ class OpenComputerTask:
                 "capabilities": list(self.required_capabilities),
                 "completed_capabilities": sorted(self._completed_capabilities),
             },
+            providers=self.providers,
         )
         return Observation(
             task=self.goal,
@@ -292,62 +295,36 @@ class OpenComputerTask:
 
     def _build_candidates(self) -> tuple[ActionCandidate, ...]:
         assert self._snapshot is not None and self._plan is not None
-        tools = {offer.ref: offer for offer in self._snapshot.tool_offers}
         result: list[ActionCandidate] = []
         for index, option in enumerate(self._plan.options):
             if index in self._used:
                 continue
-            if option.source == "tool":
-                tool = tools.get(option.ref)
-                if tool is not None and tool.capability not in self._completed_capabilities:
-                    result.append(tool.candidate(index))
+            provider = self.providers[option.source]
+            candidates = provider.compile(
+                self._snapshot.state_for(option.source), option.ref,
+                option.operation, option.value, self._plan.subgoal, index,
+            )
+            if option.source == "t" and candidates and (
+                candidates[0].capability in self._completed_capabilities
+            ):
                 continue
-            if option.source == "browser":
-                self.browser._snapshot = self._snapshot.browser
-                self.browser._plan = BrowserPlan(
-                    self._plan.subgoal, (PlannedOption(option.ref, option.operation, option.value),),
-                    "url_contains", "__not_a_terminal_check__",
-                )
-                self.browser._used.clear()
-                candidates = self.browser._build_candidates()
-            else:
-                self.desktop._snapshot = self._snapshot.desktop
-                self.desktop._plan = DesktopPlan(
-                    self._plan.subgoal, (DesktopOption(option.ref, option.operation, option.value),),
-                    "window_title_contains", "__not_a_terminal_check__",
-                )
-                self.desktop._used.clear()
-                candidates = self.desktop._build_candidates()
-            for candidate in candidates:
-                suffix = candidate.id.removeprefix("option_0_")
-                result.append(replace(
-                    candidate, id=f"option_{index}_{suffix}", intent=f"option_{index}",
-                ))
+            result.extend(candidates)
         return tuple(result)
 
     def executor_bindings(self) -> dict[Channel, Any]:
         return {channel: self for channel in (Channel.API, Channel.CLI, Channel.SCRIPT, Channel.GUI)}
 
     def register_verifiers(self, registry: VerifierRegistry) -> None:
-        self.browser.register_verifiers(registry)
-        self.desktop.register_verifiers(registry)
-        registry.register("tool.result", self.browser._verify_tool_result)
+        for provider in self.providers.values():
+            provider.register_verifiers(registry)
 
     def __call__(
         self, candidate: ActionCandidate, observation_id: str, decision_id: str
     ) -> ActionReceipt:
-        if candidate.capability.startswith("browser."):
-            return self.browser(candidate, observation_id, decision_id)
-        if candidate.capability.startswith("desktop."):
-            if candidate.channel == Channel.GUI:
-                assert self.desktop._snapshot is not None
-                self.desktop.screen.focus_handle(self.desktop._snapshot.window_handle, maximize=False)
-            return self.desktop(candidate, observation_id, decision_id)
-        if candidate.capability.startswith("filesystem.") and self.local_tools is not None:
-            return self._file_executor(candidate, observation_id, decision_id)
-        if candidate.capability.startswith("cli.") and self.local_tools is not None:
-            return self._cli_executor(candidate, observation_id, decision_id)
-        raise ValueError("no registered executor for the selected capability")
+        matches = [provider for provider in self.providers.values() if provider.owns(candidate)]
+        if len(matches) != 1:
+            raise ValueError("selected capability has no unique surface provider")
+        return matches[0].execute(candidate, observation_id, decision_id)
 
     def evaluate(
         self,
@@ -362,9 +339,10 @@ class OpenComputerTask:
         if not verification.passed:
             self._plan = None
             return Evaluation(False, False, "action_unverified_replan")
-        self._used.add(int(candidate.intent.removeprefix("option_")))
+        index = int(candidate.intent.removeprefix("option_"))
+        self._used.add(index)
         self._completed_capabilities.add(candidate.capability)
-        if candidate.capability.startswith(("filesystem.", "cli.")):
+        if self._plan is not None and self._plan.options[index].source == "t":
             output = receipt.output
             summary = output.get("text", output.get("stdout", output.get("entries", "")))
             self._tool_results.append({

@@ -22,7 +22,7 @@ from .episode import Evaluation
 from .errors import CapabilityUnavailable
 from .executors.common import execute_with_receipt
 from .executors.screen import ScreenController
-from .local_tools import ScopedReadOnlyTools, ToolOffer
+from .local_tools import ScopedReadOnlyTools, ToolOffer, verify_readonly_tool_result
 from .models import ActionCandidate, ActionReceipt, Channel, Decision, Observation, Risk, Verification
 from .policy import DecisionPolicy
 from .runtime import StepResult
@@ -355,12 +355,22 @@ class PublicDecisionPolicy:
             browser = public_state.get("browser", {})
             desktop = public_state.get("desktop", {})
             public_state = {
-                "browser": {key: browser.get(key) for key in (
-                    "url", "title", "elements", "visual_summary", "visual_targets"
-                )},
-                "desktop": {key: desktop.get(key) for key in (
-                    "window_title", "controls", "visual_summary", "visual_targets"
-                )},
+                "browser": {
+                    "url": browser.get("url"), "title": browser.get("title"),
+                    "elements": [{
+                        key: item.get(key) for key in ("ref", "label", "tag", "disabled")
+                    } for item in browser.get("elements", [])],
+                    "visual_summary": browser.get("visual_summary"),
+                    "visual_targets": browser.get("visual_targets", []),
+                },
+                "desktop": {
+                    "window_title": desktop.get("window_title"),
+                    "controls": [{
+                        key: item.get(key) for key in ("ref", "name", "control_type", "enabled")
+                    } for item in desktop.get("controls", [])],
+                    "visual_summary": desktop.get("visual_summary"),
+                    "visual_targets": desktop.get("visual_targets", []),
+                },
                 "tool_offers": public_state.get("tool_offers", []),
                 "requirements": public_state.get("requirements", {}),
             }
@@ -527,6 +537,27 @@ class OpenBrowserTask:
             state=snapshot.to_dict(),
             source=self.name,
         )
+
+    def observe_state(self, history: Sequence[StepResult]) -> BrowserSnapshot:
+        self.observe(history)
+        assert self._snapshot is not None
+        return self._snapshot
+
+    def capture_state(self) -> BrowserSnapshot:
+        return self._capture()
+
+    def compile_option(
+        self, snapshot: BrowserSnapshot, option: PlannedOption, subgoal: str
+    ) -> tuple[ActionCandidate, ...]:
+        """Compile one validated option without exposing planner internals to a host."""
+        previous_plan, previous_used = self._plan, self._used
+        self._snapshot = snapshot
+        self._plan = BrowserPlan(subgoal, (option,), "url_contains", "__not_a_terminal_check__")
+        self._used = set()
+        try:
+            return self._build_candidates()
+        finally:
+            self._plan, self._used = previous_plan, previous_used
 
     def _satisfied(self, snapshot: BrowserSnapshot) -> bool:
         if self._plan is None:
@@ -699,31 +730,7 @@ class OpenBrowserTask:
 
     def register_verifiers(self, registry: VerifierRegistry) -> None:
         registry.register("browser.effect", self._verify_effect)
-        registry.register("tool.result", self._verify_tool_result)
-
-    def _verify_tool_result(self, candidate: ActionCandidate, receipt: ActionReceipt) -> Verification:
-        if not receipt.success:
-            return Verification(False, "tool.result", {"error": receipt.error})
-        output = receipt.output
-        capability = candidate.capability
-        if capability == "filesystem.list":
-            passed = (
-                output.get("path") == candidate.arguments["path"]
-                and isinstance(output.get("entries"), list)
-            )
-        elif capability == "filesystem.read_text":
-            path = Path(candidate.arguments["path"])
-            passed = (
-                output.get("path") == str(path) and isinstance(output.get("text"), str)
-                and path.is_file() and output["text"] == path.read_text(encoding="utf-8")[:16_000]
-            )
-        elif capability == "cli.python_version":
-            passed = bool(re.match(r"^Python \d+\.\d+", output.get("stdout", "")))
-        elif capability == "cli.git_status":
-            passed = output.get("returncode") == 0 and isinstance(output.get("stdout"), str)
-        else:
-            passed = False
-        return Verification(passed, "tool.result", {"capability": capability})
+        registry.register("tool.result", verify_readonly_tool_result)
 
     def __call__(
         self, candidate: ActionCandidate, observation_id: str, decision_id: str

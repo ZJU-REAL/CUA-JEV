@@ -115,7 +115,9 @@ One real, unrecorded pilot used official Python documentation, the installed Pyt
 
 A separate run enabled **Calculator-window VLM scene grounding** in the same three-action task. All three screenshot interpretations were valid; the task passed in **48.5 s**, including **28.2 s** of VLM requests and **14.2 s** of planner requests. The planner still chose the structured “七” control, and Jev selected UIA over GUI (0.89 vs 0.11); no visual-coordinate click was selected. These are integration runs, **not** a paired speed or success-rate benchmark, and they do not show that vision improved the task.
 
-The implementation is [open_computer.py](src/cua_jev/open_computer.py). It is currently **Windows-only for the desktop surface**, limited to one browser origin, one selected window, and registered tools—not an arbitrary-application agent.
+The host now talks to typed [action-surface providers](src/cua_jev/surface_providers.py) through `observe → validate → compile → execute → verify`. The browser, Windows UIA window, and scoped tools implement this contract; a test replaces the Windows desktop provider without changing the planner or Jev/runtime loop. A compact model-facing snapshot preserves live refs and labels while omitting runtime handles and geometry; the full snapshot remains available for freshness and execution checks. In a second live CLI → DOM → UIA task (Python version, a different documentation chapter, and Calculator “8”), all caller-supplied gates passed in **15.4 s** over three Jev decisions. The text planner reported **15,930 tokens** across three calls. This one run is a regression smoke test, **not** evidence of cost or speed improvement.
+
+The host is [open_computer.py](src/cua_jev/open_computer.py). Its shipped desktop provider is still **Windows UIA-only**; the replacement-provider test does not establish macOS support. It remains limited to one browser origin, one selected window, and registered tools—not an arbitrary-application agent.
 
 ### Browser DOM + VLM + Jev pilot (experimental)
 
@@ -212,9 +214,10 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] Fuse DOM and viewport vision in the open-browser path, add grounded visual-mouse alternatives, and complete a real single-step VLM + text model + Jev browser pilot (with failed attempts recorded).
 - [x] Add an opt-in scoped read-only local capability pack to open-browser and complete one real browser + CLI goal with independent tool/URL acceptance gates.
 - [x] Compose browser DOM, one selected Windows UIA window, and scoped CLI/API tools in a bounded open-computer loop; complete one real three-channel task with caller-supplied terminal gates.
+- [x] Extract an action-surface provider contract, test a replacement accessibility backend, compact model-facing state, and rerun a distinct live CLI → DOM → UIA goal.
 - [x] Complete one live cross-app VLM-scene-fusion run; the selected desktop action remained UIA, so visually grounded action selection is still unproven.
 - [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.
-- [ ] Replace one-window/task-family constraints with a portable scene and capability-provider contract (DOM, Windows UIA, macOS Accessibility, vision, CLI/MCP/file tools), then validate real unfamiliar cross-app tasks on both operating systems.
+- [ ] Extend the initial provider contract to macOS Accessibility, dynamic MCP, and additional apps; replace one-window/task-family constraints and validate unfamiliar cross-app tasks on both operating systems.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.
 - [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
 

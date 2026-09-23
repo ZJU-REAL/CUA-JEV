@@ -300,7 +300,12 @@ class ChatModelPlanner:
                 {
                     "role": "user",
                     "content": json.dumps(
-                        {"goal": goal, "snapshot": snapshot.to_dict(), "recent_actions": recent_actions},
+                        {
+                            "goal": goal,
+                            "snapshot": snapshot.for_model()
+                            if isinstance(snapshot, ComputerSnapshot) else snapshot.to_dict(),
+                            "recent_actions": recent_actions,
+                        },
                         ensure_ascii=False,
                     ),
                 },

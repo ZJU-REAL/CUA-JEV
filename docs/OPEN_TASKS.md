@@ -73,6 +73,8 @@ A second real CLI + DOM run enabled `dashscope/qwen3-vl-32b-instruct` in `always
 
 `open-computer` composes the existing browser and Windows UIA adapters with the scoped local-tool pack. The planner sees namespaced live refs (`b:eN`, `b:vN`, `d:cN`, `d:vN`, `t:tN`), not selectors, handles, paths, or commands. Each accepted option is recompiled by its original adapter into real DOM, browser mouse, UIA, physical GUI, CLI, or file API candidates. Jev selects one candidate, the normal guard executes it, and the originating adapter verifies the effect. Browser navigation remains on one origin; the desktop regex must match exactly one visible window. Common English/Chinese Close/Minimize/Maximize labels are filtered, but this is not a universal safety classifier. Terminal success uses **caller-supplied** URL/window/capability gates; at least one observable URL or window-state gate is mandatory.
 
+The host now uses the `ActionSurface` contract in [`surface_providers.py`](../src/cua_jev/surface_providers.py): each provider declares its namespace and capabilities, observes/captures state, validates model refs, compiles typed executable candidates, owns and executes its candidates, and registers independent effect verifiers. `BrowserSurface`, `WindowsUiaSurface`, and `ReadOnlyToolSurface` implement it. A replacement desktop provider can be supplied under `d`; a fake accessibility backend passes an end-to-end test without altering the planner or Jev loop. This is an **extension point**, not a working macOS backend. `ComputerSnapshot.for_model()` omits runtime handles/geometry from the model request but keeps refs and semantic labels. Freshness and execution still use the full live snapshot; raw trace files may contain sensitive page/window data and remain local.
+
 For example, on a Chinese-localized Windows system with Calculator already open:
 
 ```powershell
@@ -86,6 +88,8 @@ cua-jev open-computer --goal "Check Python version, open More Control Flow Tools
 ```
 
 Use a window-title regex matching **your system locale**. `--allow-window-actions` authorizes model-proposed clicks within that selected app; test only in a disposable, non-sensitive window. Optional browser and desktop vision models require `--allow-screenshot-upload`. A real three-action CLI → DOM → UIA pilot finished in 8.5 s with live URL and Calculator display checks. An earlier attempt stopped at an invalid desktop plan; the planner's UIA `invoke` wording is now normalized to a typed `click` only for a currently invokable control. A separate run enabled Calculator-window VLM grounding: three valid visual scenes, the same three selected channels, 48.5 s wall time, 28.2 s in VLM requests, and 14.2 s in planner requests. The planner chose the structured “七” control and Jev preferred UIA to GUI (0.89 vs 0.11); it did not select a visual-coordinate target. These are single-case integration checks, not evidence of arbitrary cross-app capability or a speed advantage.
+
+After the provider refactor, a different live goal (Python version, the Data Structures tutorial chapter, Calculator “8”) passed three caller-supplied gates via CLI → DOM → UIA in 15.4 s. Three text-planner calls reported 15,930 tokens. The run had no VLM and was not paired with the previous goal; it is a regression smoke test, not evidence that prompt compaction saved tokens or money.
 
 ### Optional browser viewport vision
 
