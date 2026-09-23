@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import ctypes
+import io
 import re
 import time
 from dataclasses import dataclass
 from typing import Any
 
 from ..errors import CapabilityUnavailable
+from ..vision import WindowImage
 
 
 @dataclass
@@ -70,6 +73,26 @@ class ScreenController:
         pyautogui.moveTo(round(x), round(y), duration=self.move_s)
         pyautogui.click()
         time.sleep(self.pause_s)
+
+    def capture_region(self, region: tuple[int, int, int, int]) -> WindowImage:
+        """Capture only the selected window; image bytes stay in memory."""
+        left, top, width, height = region
+        if width < 40 or height < 40 or width * height > 16_000_000:
+            raise ValueError("window screenshot region is outside safe size bounds")
+        pyautogui, _ = self._modules()
+        image = pyautogui.screenshot(region=(left, top, width, height)).convert("RGB")
+        sample = image.convert("L").resize((64, 64)).tobytes()
+        image.thumbnail((1280, 1280))
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=72)
+        return WindowImage(buffer.getvalue(), sample, region)
+
+    @staticmethod
+    def ensure_foreground(handle: int) -> None:
+        """Fail closed if another window has focus before a visual capture/click."""
+        foreground = int(ctypes.windll.user32.GetForegroundWindow())
+        if foreground != int(handle):
+            raise RuntimeError("selected window is not foreground")
 
     def move_point(self, x: float, y: float) -> None:
         pyautogui, _ = self._modules()

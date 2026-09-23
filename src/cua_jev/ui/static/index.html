@@ -33,7 +33,7 @@
           <a class="button primary" href="#cases">Watch the cases</a>
           <a class="button secondary" href="#framework">See the framework</a>
         </div>
-        <p class="hero-note">Four curated workflows and one experimental open-task pilot. Structured state, no VLM; arbitrary Windows tasks are not yet supported.</p>
+        <p class="hero-note">Four curated workflows and one experimental open-task pilot. The recorded pilot uses text and DOM; optional one-window screenshot/VLM grounding is now integrated but not live-validated. Arbitrary Windows tasks are not yet supported.</p>
       </div>
 
       <div class="decision-card" aria-label="How CUA and Jev work together">
@@ -158,15 +158,15 @@
         </header>
         <img class="open-task-diagram" src="static/open-task-loop.svg" width="1200" height="350" alt="Live state feeds a model planner; the framework builds legal routes; Jev selects one; the runtime executes, verifies, and reobserves.">
         <ol class="open-task-mobile-flow" aria-label="Model and Jev workflow">
-          <li><b>Observe</b><span>Read live DOM, accessibility, and file state.</span></li>
+          <li><b>Observe</b><span>Read live DOM, accessibility, and file state; optional one-window VLM targets.</span></li>
           <li><b>Model plans</b><span>Propose the next intent using current evidence.</span></li>
           <li><b>Framework builds routes</b><span>Offer only legal GUI and structured-tool actions.</span></li>
           <li><b>Jev chooses</b><span>Select one typed candidate for execution.</span></li>
           <li><b>Act and verify</b><span>Check the changed state, then repeat.</span></li>
         </ol>
         <div class="open-task-status">
-          <p><strong>Working today</strong> Text-model planning over live DOM; Jev selection across real execution channels.</p>
-          <p><strong>Next</strong> VLM screenshot fallback when DOM or accessibility data is insufficient. Broad arbitrary-task support is a research goal, not a current result.</p>
+          <p><strong>Recorded case</strong> Text-model planning over live DOM; Jev selection across real execution channels. The video below does not use a VLM.</p>
+          <p><strong>New · experimental</strong> In one selected Windows window, an optional VLM can turn a screenshot into bounded GUI targets when UI Automation is weak. Jev chooses from the guarded candidates; offline tests pass, but no completed live VLM task or broad generalization is claimed.</p>
         </div>
         <div class="open-task-case-head">
           <div><p class="eyebrow">ONE VERIFIED CASE</p><h3>Model + Jev: a successful multi-app workflow.</h3><p>Starting from the official Python tutorial index, the text model proposed the next intent at each step; Jev selected its execution route. The run found five chapter pages, collected one exact quote per page, wrote a sourced note, and opened it in VS Code. No chapter URL or click sequence was encoded in the agent.</p></div>
@@ -195,7 +195,7 @@
             <li><b>File API · local</b> Write the cited study guide.</li><li><b>CLI · VS Code</b> Open the verified result.</li>
           </ol>
         </details>
-        <p class="open-task-scope">This is one successful case, not a repeated benchmark. A separate checker revisited all five source pages and confirmed the quoted text, URLs, Jev decisions, and output file. It did not grade the quality of the written synthesis. Future experiments will test broader, eventually open-ended tasks, along with VLM integration, reliability, latency, and cost.</p>
+        <p class="open-task-scope">This is one successful text-and-DOM case, not a repeated benchmark or a vision demo. A separate checker revisited all five source pages and confirmed the quoted text, URLs, Jev decisions, and output file; it did not grade the written synthesis. Future work includes live VLM task evaluation, broader tasks, reliability, latency, and cost.</p>
         <a href="https://github.com/ZJU-REAL/CUA-JEV#open-task-pilot" class="open-task-link">Implementation, reproduction, and limits <span aria-hidden="true">↗</span></a>
       </div>
     </section>

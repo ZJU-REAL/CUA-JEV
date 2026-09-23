@@ -1,7 +1,7 @@
 """Experimental task-agnostic Windows UIA observer and grounded action loop.
 
-This covers accessible controls in one explicitly selected window. It is not
-visual grounding, application-level reasoning, or arbitrary Windows automation.
+This covers one explicitly selected window, with UIA and optional visual
+grounding. It is not arbitrary Windows automation.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from .episode import Evaluation
@@ -19,6 +19,7 @@ from .executors.screen import ScreenController
 from .models import ActionCandidate, ActionReceipt, Channel, Observation, Risk, Verification
 from .runtime import StepResult
 from .verify import VerifierRegistry
+from .vision import VisualTarget, WindowImage, changed_fraction
 
 MAX_CONTROLS = 80
 MAX_OPTIONS = 16
@@ -46,6 +47,9 @@ class DesktopSnapshot:
     window_handle: int
     text: str
     controls: tuple[DesktopControl, ...]
+    visual_targets: tuple[VisualTarget, ...] = ()
+    visual_region: tuple[int, int, int, int] | None = None
+    visual_image_hash: str = ""
 
     @classmethod
     def capture(cls, window: Any) -> tuple[DesktopSnapshot, dict[str, Any]]:
@@ -98,7 +102,16 @@ class DesktopSnapshot:
         return {
             "window_title": self.window_title, "window_handle": self.window_handle,
             "text": self.text, "controls": [item.to_dict() for item in self.controls],
+            "visual_targets": [item.to_dict() for item in self.visual_targets],
+            "visual_region": self.visual_region, "visual_image_hash": self.visual_image_hash,
         }
+
+    def uia_fingerprint(self) -> str:
+        state = {
+            "window_title": self.window_title, "window_handle": self.window_handle,
+            "text": self.text, "controls": [item.to_dict() for item in self.controls],
+        }
+        return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
     def fingerprint(self) -> str:
         return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
@@ -124,7 +137,7 @@ class DesktopPlan:
             raise ValueError("desktop planner must return an options list")
         if not 1 <= len(data["options"]) <= MAX_OPTIONS:
             raise ValueError("desktop planner must return 1-16 options")
-        known = {item.ref: item for item in snapshot.controls}
+        known = {item.ref: item for item in (*snapshot.controls, *snapshot.visual_targets)}
         options: list[DesktopOption] = []
         for item in data["options"]:
             if not isinstance(item, dict):
@@ -133,10 +146,12 @@ class DesktopPlan:
             if not isinstance(ref, str) or ref not in known or operation not in {"click", "fill"}:
                 raise ValueError("desktop planner referenced an unavailable control or operation")
             control = known[ref]
-            if not control.enabled:
+            if isinstance(control, DesktopControl) and not control.enabled:
                 raise ValueError("desktop planner referenced a disabled control")
             if not isinstance(value, str) or len(value) > 1000:
                 raise ValueError("desktop planner value is invalid")
+            if isinstance(control, VisualTarget) and (operation != "click" or value):
+                raise ValueError("visual targets support click only")
             if operation == "fill" and (not value or not control.can_set_text):
                 raise ValueError("fill requires an editable control and nonempty value")
             options.append(DesktopOption(ref, operation, value))
@@ -162,6 +177,12 @@ class DesktopGoalPlanner(Protocol):
     ) -> DesktopPlan: ...
 
 
+class WindowVisionGrounder(Protocol):
+    def perceive_window(
+        self, goal: str, window_title: str, ui_text: str, image: WindowImage
+    ) -> tuple[VisualTarget, ...]: ...
+
+
 class OpenDesktopTask:
     """One-window UIA task with dynamic model-proposed control refs and two routes."""
 
@@ -177,9 +198,17 @@ class OpenDesktopTask:
         screen: ScreenController | None = None,
         allow_text_input: bool = False,
         allow_button_actions: bool = False,
+        vision_grounder: WindowVisionGrounder | None = None,
+        vision_mode: str = "fallback",
+        allow_screenshot_upload: bool = False,
+        allow_visual_clicks: bool = False,
     ) -> None:
         if not goal.strip() or not window_title_re.strip():
             raise ValueError("goal and window title regex are required")
+        if vision_mode not in {"fallback", "always"}:
+            raise ValueError("vision mode must be fallback or always")
+        if vision_grounder is not None and not allow_screenshot_upload:
+            raise ValueError("vision requires explicit screenshot-upload consent")
         self.goal = goal.strip()
         self.window_title_re = window_title_re
         self.planner = planner
@@ -187,12 +216,17 @@ class OpenDesktopTask:
         self.screen = screen or ScreenController()
         self.allow_text_input = allow_text_input
         self.allow_button_actions = allow_button_actions
+        self.vision_grounder = vision_grounder
+        self.vision_mode = vision_mode
+        self.allow_visual_clicks = allow_visual_clicks
         self._snapshot: DesktopSnapshot | None = None
         self._handles: dict[str, Any] = {}
         self._plan: DesktopPlan | None = None
         self._plan_fingerprint = ""
         self._used: set[int] = set()
         self._before: dict[str, DesktopSnapshot] = {}
+        self._before_images: dict[str, WindowImage] = {}
+        self._visual_image: WindowImage | None = None
         self.planner_calls = 0
 
     def reset(self) -> None:
@@ -211,19 +245,43 @@ class OpenDesktopTask:
             self.window = self.screen.focus_handle(matches[0].handle, maximize=False)
         self._plan = None
         self._used.clear()
+        self._visual_image = None
 
     def close(self) -> None:
         self.window = None
 
-    def _capture(self) -> DesktopSnapshot:
+    def _capture(self, *, vision: bool = False) -> DesktopSnapshot:
         if self.window is None:
             raise RuntimeError("desktop task has not been reset")
         snapshot, handles = DesktopSnapshot.capture(self.window)
         self._handles = handles
+        if vision and self.vision_grounder is not None:
+            actionable = any(
+                control.enabled and (control.can_invoke or control.can_set_text)
+                for control in snapshot.controls
+            )
+            if self.vision_mode == "always" or not actionable:
+                self.screen.ensure_foreground(snapshot.window_handle)
+                rect = self.window.rectangle()
+                region = (
+                    int(rect.left), int(rect.top),
+                    int(rect.right - rect.left), int(rect.bottom - rect.top),
+                )
+                image = self.screen.capture_region(region)
+                targets = self.vision_grounder.perceive_window(
+                    self.goal, snapshot.window_title, snapshot.text, image
+                )
+                self._visual_image = image
+                snapshot = replace(
+                    snapshot, visual_targets=targets, visual_region=region,
+                    visual_image_hash=hashlib.sha256(image.sample).hexdigest(),
+                )
+            else:
+                self._visual_image = None
         return snapshot
 
     def observe(self, history: Sequence[StepResult]) -> Observation:
-        self._snapshot = self._capture()
+        self._snapshot = self._capture(vision=True)
         return Observation(
             task=self.goal,
             subgoal=self._plan.subgoal if self._plan else "Discover the next desktop subgoal",
@@ -275,6 +333,26 @@ class OpenDesktopTask:
         for index, option in enumerate(self._plan.options):
             if index in self._used:
                 continue
+            visual = next(
+                (item for item in self._snapshot.visual_targets if item.ref == option.ref), None
+            )
+            if visual is not None:
+                if not (self.allow_button_actions and self.allow_visual_clicks):
+                    continue
+                result.append(ActionCandidate(
+                    id=f"option_{index}_visual", channel=Channel.GUI,
+                    capability="desktop.visual_click",
+                    description=f"Click visually grounded {visual.label} using GUI",
+                    arguments={
+                        "ref": visual.ref, "label": visual.label, "box": list(visual.box),
+                        "visual_region": self._snapshot.visual_region,
+                        "visual_image_hash": self._snapshot.visual_image_hash,
+                        "operation": "visual_click",
+                    },
+                    risk=Risk.EXTERNAL_SIDE_EFFECT, verifier="desktop.effect",
+                    intent=f"option_{index}",
+                ))
+                continue
             control = known.get(option.ref)
             if control is None or not control.enabled:
                 continue
@@ -316,6 +394,43 @@ class OpenDesktopTask:
             before = self._capture()
             self._before[decision_id] = before
             ref = candidate.arguments["ref"]
+            if candidate.capability == "desktop.visual_click":
+                if self._snapshot is None or self._visual_image is None:
+                    raise RuntimeError("visual observation is unavailable")
+                target = next(
+                    (item for item in self._snapshot.visual_targets if item.ref == ref), None
+                )
+                if target is None or target.label != candidate.arguments["label"] or (
+                    list(target.box) != candidate.arguments["box"]
+                ):
+                    raise RuntimeError("visual target changed since observation")
+                observed = self._visual_image
+                region = observed.region
+                if (
+                    before.uia_fingerprint() != self._snapshot.uia_fingerprint()
+                    or candidate.arguments["visual_region"] != region
+                    or candidate.arguments["visual_image_hash"]
+                    != hashlib.sha256(observed.sample).hexdigest()
+                ):
+                    raise RuntimeError("visual window changed since observation")
+                rect = self.window.rectangle()
+                actual_region = (
+                    int(rect.left), int(rect.top),
+                    int(rect.right - rect.left), int(rect.bottom - rect.top),
+                )
+                if actual_region != region:
+                    raise RuntimeError("visual window moved or resized")
+                self.screen.ensure_foreground(before.window_handle)
+                current = self.screen.capture_region(region)
+                if changed_fraction(observed.sample, current.sample) > 0.08:
+                    raise RuntimeError("visual screenshot became stale")
+                self._before_images[decision_id] = current
+                left, top, width, height = region
+                x0, y0, x1, y1 = target.box
+                x = left + (x0 + x1) * width / 2000
+                y = top + (y0 + y1) * height / 2000
+                self.screen.click_point(x, y)
+                return {"visual_target": ref, "label": target.label}
             control = next((item for item in before.controls if item.ref == ref), None)
             if control is None or any(
                 getattr(control, field) != candidate.arguments[field]
@@ -348,12 +463,23 @@ class OpenDesktopTask:
         if before is None:
             return Verification(False, "desktop.effect", {"error": "missing pre-action snapshot"})
         after = self._capture()
+        if candidate.capability == "desktop.visual_click":
+            image = self._before_images.get(receipt.decision_id)
+            if image is None:
+                return Verification(False, "desktop.effect", {"error": "missing visual before image"})
+            current = self.screen.capture_region(image.region)
+            fraction = changed_fraction(image.sample, current.sample)
+            passed = fraction >= 0.01 or after.uia_fingerprint() != before.uia_fingerprint()
+            return Verification(bool(passed), "desktop.effect", {
+                "visual_changed_fraction": round(fraction, 4),
+                "uia_changed": after.uia_fingerprint() != before.uia_fingerprint(),
+            })
         if candidate.arguments["operation"] == "fill":
             wrapper = self._handles.get(candidate.arguments["ref"])
             read_value = getattr(wrapper, "get_value", None)
             passed = callable(read_value) and read_value() == candidate.arguments["value"]
         else:
-            passed = after.fingerprint() != before.fingerprint()
+            passed = after.uia_fingerprint() != before.uia_fingerprint()
         return Verification(bool(passed), "desktop.effect", {"state_changed": bool(passed)})
 
     def evaluate(

@@ -2,13 +2,13 @@
 
 The original four Windows workflows remain curated, reproducible capability packs. `open-browser`, `open-desktop`, and `open-workspace` are experimental paths for tasks **not encoded as one of those four workflows**. They do not contain site- or app-specific click sequences.
 
-This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **accessible UI Automation controls in one explicitly selected Windows window**. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. Broader model quality and task generalization remain untested.
+This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **one explicitly selected Windows window**, using UI Automation and an optional screenshot/VLM target grounder. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. Broader model quality and task generalization remain untested.
 
 ## Division of labor
 
-1. Playwright observes a browser page (URL, title, short visible text, up to 60 interactive elements with temporary `eN` refs). UI Automation observes a selected desktop window (title, visible named controls, up to 80 `cN` refs). Password controls are excluded.
-2. A low-frequency planner proposes a subgoal, up to 16 grounded options, and an observable completion condition. The OpenAI-compatible chat adapter calls `/v1/chat/completions`; the original provider-neutral JSON endpoint is also supported for browsers. Neither accepts model-proposed code, selectors, coordinates, shell commands, or arbitrary tool calls.
-3. The framework turns each legal browser option into DOM and (when headed) physical GUI routes. Desktop options can use UIA `invoke`/`set_edit_text` or physical GUI. Jev chooses a typed option/channel at each step. Candidate arguments and snapshot text are withheld from the Jev request, though the goal, titles, and element labels are still sent.
+1. Playwright observes a browser page (URL, title, short visible text, up to 60 interactive elements with temporary `eN` refs). UI Automation observes a selected desktop window (title, visible named controls, up to 80 `cN` refs). Password controls are excluded from UIA observations. With explicit opt-in, `open-desktop` can additionally upload a cropped-window JPEG to a vision model, which returns up to 12 labeled `vN` boxes; visual boxes are **not** a reliable secret-field detector.
+2. A low-frequency planner proposes a subgoal, up to 16 grounded options, and an observable completion condition. The OpenAI-compatible chat adapter calls `/v1/chat/completions`; the original provider-neutral JSON endpoint is also supported for browsers. Text plans cannot propose code, selectors, coordinates, shell commands, or arbitrary tool calls. The separate VLM can propose normalized visual boxes only, which are validated and converted to click-only GUI refs.
+3. The framework turns each legal browser option into DOM and (when headed) physical GUI routes. Desktop options can use UIA `invoke`/`set_edit_text` or physical GUI; VLM targets offer GUI clicks only. Jev chooses a typed option/channel at each step. Candidate arguments, screenshot bytes, and snapshot text are withheld from the Jev request, though the goal, titles, and element labels are still sent.
 4. The normal `ActionGuard`, executor, and verifier run. A failed effect check or exhausted options triggers another planner call. A model-proposed completion condition is checked against live state, but **is not independent semantic proof** that the user's original goal was achieved.
 
 The long-term design aims to call the planner less often than Jev by reusing a grounded subgoal across several constrained decisions. The current pilot called both once per step, so this is still an architectural hypothesis, not a measured speed/cost result for open tasks. The four published benchmark cases are unchanged.
@@ -19,7 +19,7 @@ The long-term design aims to call the planner less often than Jev by reusing a g
 
 The new five-source research case starts at the official Python tutorial index with only the five desired chapter headings and a new output path. A model follows live links, records one quote per chapter, writes a guide, and opens it in VS Code. No chapter URL or click sequence is stored in the agent. One successful run completed **12 Jev decisions**: five DOM navigations, five evidence captures, one file write, and one VS Code launch. The [separate research verifier](../scripts/verify_research_demo.py) reopens every cited page in a fresh browser and checks headings, exact quotes, source URLs, and the Jev-only trace. It does **not** judge whether the synthesis is pedagogically excellent.
 
-The recorded `dashscope/qwen3.5-plus` run used 12 model plans and 12 Jev decisions in 155.9 seconds; its video is uniformly sped up 2.5×. A separate successful `DeepSeek-V4-Flash` run took 307 seconds, including 287 seconds waiting for model plans. Neither demonstrates planner-call reduction or an end-to-end speed/cost advantage for open tasks. Campus gateway timeouts and invalid plans were also observed in failed attempts. The published recording is one independently checked take, not a reliability statistic. No VLM is connected to this path. Future screenshot/VLM perception should feed the same typed candidate frontier, but broader arbitrary-task support still requires new adapters, safe executors, confirmation policies, and repeated evaluation.
+The recorded `dashscope/qwen3.5-plus` run used 12 model plans and 12 Jev decisions in 155.9 seconds; its video is uniformly sped up 2.5×. A separate successful `DeepSeek-V4-Flash` run took 307 seconds, including 287 seconds waiting for model plans. Neither demonstrates planner-call reduction or an end-to-end speed/cost advantage for open tasks. Campus gateway timeouts and invalid plans were also observed in failed attempts. The published recording is one independently checked take, not a reliability statistic. **That recording used text + DOM, not the new VLM path.** Broader arbitrary-task support still requires new adapters, safe executors, confirmation policies, and repeated evaluation.
 
 ```powershell
 $env:CUA_JEV_MODEL_API_KEY = "..."
@@ -50,6 +50,19 @@ The insecure-HTTP flag is required because this endpoint is plain HTTP. It expos
 
 The model adapter connects directly by default, ignoring OS/environment proxies. This matters on Windows when a system proxy intercepts campus HTTP requests. Pass `--use-env-proxy` only if your model gateway actually requires that proxy.
 
+### Optional one-window screenshot/VLM grounding
+
+`open-desktop` accepts a separate `--vision-model` alongside the text planner. `fallback` sends a screenshot only when UIA reports no actionable control; `always` sends it every observation. The image is a resized JPEG of the selected window rectangle, held in memory and omitted from trace/Jev choices. The VLM returns visible labels and bounded `0..1000` boxes. The planner may reference these as `vN`; the framework permits click only, then checks the current window geometry, UIA state, and image freshness before a physical GUI click. After the click, UIA or pixel change checks **effect**, not semantic task completion; completion still needs a live UIA-observable condition.
+
+```powershell
+cua-jev open-desktop --goal "Complete a controlled window task" --window-title "^Your Test Window$" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "TEXT_MODEL_ID" `
+  --vision-model "VISION_MODEL_ID" --vision-mode fallback `
+  --allow-screenshot-upload --allow-visual-clicks --allow-button-actions --policy jev
+```
+
+Both upload and visual clicks are deliberate opt-ins; clicking is also gated by `--allow-button-actions`. Use only a non-sensitive controlled window. An unrelated overlay inside the window rectangle could also appear in the uploaded screenshot. Unit and mocked integration tests pass, but a current 90-second campus-gateway image request timed out: **no completed live VLM task or arbitrary-task success is claimed**. The provider-neutral browser endpoint and `open-workspace` do not use this VLM route.
+
 ### Provisional model shortlist
 
 The accessible gateway advertised these IDs, and minimal live calls established the following—not benchmark rankings:
@@ -57,7 +70,7 @@ The accessible gateway advertised these IDs, and minimal live calls established 
 | Model ID | Initial role | Evidence |
 |---|---|---|
 | `dashscope/qwen-flash` | Default structured-state planner candidate | Returned a valid grounded browser plan; a short public-site task completed with Jev. |
-| `dashscope/qwen3-vl-32b-instruct` | Potential screenshot/VLM fallback | Accepted an image input and correctly answered a trivial color question; not yet wired to the observer. |
+| `dashscope/qwen3-vl-32b-instruct` | Experimental screenshot/VLM grounder | Previously accepted a trivial image test and is now wired to the optional desktop observer; current live grounding probe timed out. |
 | `dashscope/qwen-plus`, `dashscope/qwen3.5-plus` | Escalation candidates | Returned valid plans on the same tiny prompt, but were slower in one-shot calls. |
 
 The [Qwen Flash model page](https://help.aliyun.com/en/model-studio/qwen-flash) and [visual-model documentation](https://help.aliyun.com/en/model-studio/vision-model/) describe provider capabilities, but the campus gateway's actual behavior must be evaluated separately. One prompt and one image do not establish reliability, latency distributions, or cost under real CUA workloads.
@@ -110,6 +123,6 @@ By default only same-origin link navigation is eligible. Even a same-origin GET 
 ## What remains
 
 - Evaluate the short-listed text planner and vision-capable model on held-out goals with repeated runs, cost/latency measurement, and failure analysis. No broad model quality or generalization claim is made yet.
-- Add a screenshot/VLM fallback for inaccessible UIs and multi-window navigation; single-window UIA is not desktop generality.
+- Run and independently verify a live VLM-grounded desktop task; evaluate screenshot safety, box quality, success, latency, and cost on repeated held-out tasks. The current code path is single-window only, not multi-window desktop generality.
 - Expose a broader registry of safe, typed CLI/MCP capabilities within the same open-task frontier; `open-workspace` currently adds only a scoped VS Code launch and note write, while the curated workflows contain richer CLI/MCP actions.
 - Make completion verification independent of the planner, add human confirmation for sensitive actions, and quantify planner calls, Jev decisions, success, latency, and cost on held-out tasks.

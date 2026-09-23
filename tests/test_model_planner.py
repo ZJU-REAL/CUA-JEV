@@ -8,6 +8,7 @@ from test_open_desktop import FakeWindow
 from cua_jev.model_planner import ChatModelPlanner
 from cua_jev.open_browser import BrowserPlan, BrowserSnapshot
 from cua_jev.open_desktop import DesktopPlan, DesktopSnapshot
+from cua_jev.vision import WindowImage
 
 
 def test_model_catalog_and_browser_plan_use_compatible_wire_shape():
@@ -96,3 +97,44 @@ def test_model_gateway_bypasses_system_proxy_unless_opted_in(monkeypatch):
     assert options == [False, True]
     direct.close()
     proxied.close()
+
+
+def test_vision_request_sends_window_jpeg_and_validates_grounded_boxes():
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["model"] == "vision-model"
+        content = body["messages"][1]["content"]
+        assert content[0]["type"] == "text"
+        assert content[1]["type"] == "image_url"
+        assert content[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": json.dumps({
+                "targets": [{"label": "Finish", "box": [400, 400, 600, 600]}],
+            })}}],
+            "usage": {"prompt_tokens": 300, "completion_tokens": 40},
+        })
+
+    planner = ChatModelPlanner(
+        "https://model.example/v1", "vision-model",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    image = WindowImage(b"\xff\xd8\xff\xd9", bytes(64 * 64), (20, 30, 200, 200))
+    targets = planner.perceive_window("Finish", "Example", "", image)
+    assert targets[0].ref == "v0"
+    assert targets[0].box == (400, 400, 600, 600)
+    assert planner.vision_calls == 1
+    assert planner.usage_totals["prompt_tokens"] == 300
+
+
+def test_vision_model_cannot_return_out_of_window_coordinates():
+    planner = ChatModelPlanner(
+        "https://model.example/v1", "vision-model",
+        client=httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps({
+                "targets": [{"label": "Outside", "box": [900, 100, 1200, 200]}],
+            })}}]},
+        ))),
+    )
+    image = WindowImage(b"\xff\xd8\xff\xd9", bytes(64 * 64), (0, 0, 200, 200))
+    with pytest.raises(ValueError, match="invalid targets"):
+        planner.perceive_window("Finish", "Example", "", image)

@@ -99,6 +99,18 @@ def _parser() -> argparse.ArgumentParser:
     open_desktop.add_argument("--policy", choices=("rule", "jev"), default="jev")
     open_desktop.add_argument("--allow-text-input", action="store_true")
     open_desktop.add_argument("--allow-button-actions", action="store_true")
+    open_desktop.add_argument(
+        "--vision-model", help="Optional vision-capable model ID for window screenshot grounding"
+    )
+    open_desktop.add_argument("--vision-mode", choices=("fallback", "always"), default="fallback")
+    open_desktop.add_argument(
+        "--allow-screenshot-upload", action="store_true",
+        help="Explicitly permit sending the selected window image to the VLM",
+    )
+    open_desktop.add_argument(
+        "--allow-visual-clicks", action="store_true",
+        help="Offer screenshot-grounded GUI click targets (also requires --allow-button-actions)",
+    )
     open_desktop.add_argument("--max-steps", type=int, default=20)
     open_desktop.add_argument("--trace", help="Opt-in local trace; may contain window data")
     workspace = sub.add_parser(
@@ -316,20 +328,35 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "open-desktop":
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
+        if args.vision_model and not args.allow_screenshot_upload:
+            raise SystemExit("--vision-model requires --allow-screenshot-upload")
+        if args.allow_visual_clicks and not (args.vision_model and args.allow_button_actions):
+            raise SystemExit(
+                "--allow-visual-clicks requires --vision-model and --allow-button-actions"
+            )
         planner = _chat_planner(args)
+        vision_planner = _chat_planner(args, model=args.vision_model) if args.vision_model else None
         try:
             environment = OpenDesktopTask(
                 goal=args.goal, window_title_re=args.window_title, planner=planner,
                 allow_text_input=args.allow_text_input,
                 allow_button_actions=args.allow_button_actions,
+                vision_grounder=vision_planner, vision_mode=args.vision_mode,
+                allow_screenshot_upload=args.allow_screenshot_upload,
+                allow_visual_clicks=args.allow_visual_clicks,
             )
             result = _open_desktop_runner(args).run(environment)
         finally:
             planner.close()
+            if vision_planner is not None:
+                vision_planner.close()
         summary = result.to_dict()
         summary["planner_calls"] = environment.planner_calls
         summary["planner_wall_ms"] = planner.planning_wall_ms
         summary["planner_model_usage"] = planner.usage_totals
+        summary["vision_calls"] = vision_planner.vision_calls if vision_planner else 0
+        summary["vision_wall_ms"] = vision_planner.vision_wall_ms if vision_planner else 0
+        summary["vision_model_usage"] = vision_planner.usage_totals if vision_planner else None
         summary["policy"] = args.policy
         summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
         print(json.dumps(summary, indent=2, ensure_ascii=False))

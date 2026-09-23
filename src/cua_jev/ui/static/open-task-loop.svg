@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 350" role="img" aria-labelledby="title desc">
   <title id="title">Model and Jev collaboration in CUA-JEV</title>
-  <desc id="desc">Live computer state goes to a general model for grounded intent planning. The framework expands legal execution routes. Jev selects one typed action. A guard executes it, verifies the changed state, and repeats. Screenshot-based VLM perception is planned but not part of the recorded pilot.</desc>
+  <desc id="desc">Live computer state goes to a general model for grounded intent planning. An optional experimental VLM can ground visual targets from one Windows window screenshot. The framework expands legal execution routes. Jev selects one typed action. A guard executes it, verifies the changed state, and repeats. The recorded cross-app pilot remains text and DOM only.</desc>
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#a3b7c5"/></marker>
     <marker id="loop" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#4d7862"/></marker>
@@ -8,7 +8,7 @@
   <rect x="1" y="1" width="1198" height="348" rx="20" fill="#f5f9fa" stroke="#ced8dd"/>
   <g font-family="Segoe UI, Arial, sans-serif">
     <text x="34" y="39" fill="#1e476d" font-size="17" font-weight="800">ONE CLOSED LOOP</text>
-    <text x="1166" y="39" text-anchor="end" fill="#5e7180" font-size="15">Text + DOM: validated pilot · VLM screenshot fallback: planned</text>
+    <text x="1166" y="39" text-anchor="end" fill="#5e7180" font-size="15">Text + DOM: recorded · VLM + window screenshot: experimental</text>
     <g stroke="#a3b7c5" stroke-width="2" marker-end="url(#arrow)">
       <path d="M224 164H244"/><path d="M452 164H472"/><path d="M680 164H700"/><path d="M908 164H928"/>
     </g>
@@ -16,7 +16,7 @@
       <rect x="30" y="82" width="194" height="166" rx="15" fill="#ffffff" stroke="#ced8dd"/>
       <text x="48" y="112" fill="#b96843" font-size="15" font-weight="800">01 · OBSERVE</text>
       <text x="48" y="147" fill="#24364b" font-size="24" font-family="Georgia, serif" font-weight="700">Live state</text>
-      <text x="48" y="181" fill="#465b6c" font-size="15">DOM · UIA · files</text>
+      <text x="48" y="181" fill="#465b6c" font-size="15">DOM · UIA · image</text>
       <text x="48" y="207" fill="#465b6c" font-size="15">Current app only</text>
     </g>
     <g>

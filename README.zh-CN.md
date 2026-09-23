@@ -64,9 +64,24 @@ VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**E
 
 ![开放任务架构：实时状态、模型提出意图、框架构建候选、Jev 选路、执行验证循环](src/cua_jev/ui/static/open-task-loop.svg)
 
-[跨软件案例视频](https://zjureal.com/CUA-JEV/#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。其中 5 次通过 DOM 操作 Edge，5 次在框架内部记录引文，1 次通过文件 API 写入，1 次通过 CLI 打开 VS Code；内部记录不等同于外部计算机操作。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；视觉模型尚未接入，重复成功率与成本效果也尚未评测。
+[跨软件案例视频](https://zjureal.com/CUA-JEV/#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。其中 5 次通过 DOM 操作 Edge，5 次在框架内部记录引文，1 次通过文件 API 写入，1 次通过 CLI 打开 VS Code；内部记录不等同于外部计算机操作。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；这段公开录制只使用文本模型和 DOM，未使用 VLM，重复成功率与成本效果也尚未评测。
 
 公开录制的单次运行实测 155.9 秒，视频为观看方便统一加速 2.5 倍；另一次成功运行耗时 307 秒，其中 287 秒等待规划模型。也出现过网关超时和模型输出不合规的失败尝试，因此目前不能以该案例宣称开放任务模式在端到端速度或可靠性上已经占优。
+
+### 可选窗口截图 / VLM 路径（实验性）
+
+`open-desktop` 现在可以截取**明确指定的单个 Windows 窗口**，将缩放后的 JPEG 发给单独指定的视觉模型。VLM 只返回可见控件的文字标签和归一化位置；框架校验位置、生成 GUI 点击候选，再由 Jev 在当前合法候选中选择。点击前检查窗口位置与截图是否过期，点击后读取 UIA 或像素变化；**画面变化不等于任务成功**，终态仍需 UIA 中可观察的证据。默认 `fallback` 仅在 UIA 没有可操作控件时调用 VLM；`always` 则允许有 UIA 控件时也调用。
+
+上传截图和视觉点击都需要显式开关。请只在非敏感、可控的窗口中使用：截图可能包含私人内容，`--allow-button-actions` 也可能允许具有外部副作用的点击。该路径通过了模拟网关及窗口的离线集成测试，但校园网关真实图像请求超时，**尚无完成的真实 VLM 任务，也不能宣称任意软件/任务已泛化**。上述 12 步公开视频依旧是文本 + DOM 案例。
+
+```powershell
+cua-jev open-desktop --goal "完成可控窗口内的任务" --window-title "^Your Test Window$" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "TEXT_MODEL_ID" `
+  --vision-model "VISION_MODEL_ID" --vision-mode fallback `
+  --allow-screenshot-upload --allow-visual-clicks --allow-button-actions --policy jev
+```
+
+模型密钥从本机 `CUA_JEV_MODEL_API_KEY` 读取；HTTP 校园网关需要额外加 `--allow-insecure-model-http`，应优先使用 HTTPS 或可信隧道。具体范围与限制见[开放任务说明](docs/OPEN_TASKS.md)。
 
 ## 快速开始
 
@@ -128,13 +143,14 @@ python scripts/record_v2_demos.py --task all --profile both --policy jev
 - [x] 实验性模型 + Jev 跨软件任务族，五来源、12 动作案例及独立来源核验。
 - [ ] 用未见目标和网站进行足量重复试验；公布失败案例、置信区间、端到端延迟与美元成本，不能用单次成功案例代替基准。
 - [ ] 把任务适配器做得更通用：跨软件、跨任务，逐步扩展到 macOS / Linux 与更多浏览器/办公应用。
-- [ ] 增加可选的截图/VLM 感知与坐标锚定回退，用于 DOM、UIA、COM 不能可靠描述的界面；保持当前无 VLM 路径可用。
+- [x] 在实验性单窗口桌面路径中加入可选的截图/VLM 目标锚定；保留无 VLM 路径，并通过离线集成测试。
+- [ ] 完成真实 VLM 任务及未见 Windows 任务的重复评测，报告定位、安全性、成功率、延迟和成本。
 - [ ] 缓存或复用较慢的规划模型调用；让通用 CUA / LLM 模型处理陌生目标，Jev 承担高频受约束选择，以成功率、延迟和成本共同优化。
 - [ ] 完善跨通道失败恢复、动态 MCP 服务接入、安全确认与长期回归基准。
 
 ## 安全与许可
 
-`ActionGuard` 对候选身份、过期观察、允许根目录、写入和外部副作用执行 fail-closed 检查。Excel 不运行 VBA；MCP 只能调用已注册的类型化工具。成功回执不是终态成功，必须由任务验证器确认。API 密钥只用于本地 HTTPS 请求，不写入 trace、网页快照或 Git 仓库。
+`ActionGuard` 对候选身份、过期观察、允许根目录、写入和外部副作用执行 fail-closed 检查。Excel 不运行 VBA；MCP 只能调用已注册的类型化工具。成功回执不是终态成功，必须由任务验证器确认。API 密钥不写入 trace、网页快照或 Git 仓库；模型请求默认要求 HTTPS，只有显式允许时才会使用不安全的 HTTP。
 
 代码以 [Apache-2.0](LICENSE) 发布。ZJU-REAL 标识用于表明实验室项目身份，不改变第三方品牌素材的权利归属；应用图标的来源见 [`ATTRIBUTION.md`](src/cua_jev/ui/static/icons/ATTRIBUTION.md)。
 

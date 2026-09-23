@@ -62,7 +62,7 @@ The public site is a read-only experimental snapshot. It neither calls the Jev A
 
 ## Open-task pilot
 
-An open goal requires two different kinds of decisions. A general model can interpret unfamiliar state and propose a *grounded next intent*; Jev can quickly choose among already-typed, legal execution routes. The framework sits between them: it reads the live DOM/UI Automation/file state, validates the proposed intent against that observation, expands it into executable GUI/DOM/API/CLI candidates, guards the selected action, and checks the resulting state before repeating. Jev does **not** interpret a screenshot or generate shell commands. A future VLM adapter could turn otherwise inaccessible screenshots into grounded UI targets; this **has not been integrated or tested** in the recorded case.
+An open goal requires two different kinds of decisions. A general model can interpret unfamiliar state and propose a *grounded next intent*; Jev can quickly choose among already-typed, legal execution routes. The framework sits between them: it reads the live DOM/UI Automation/file state, validates the proposed intent against that observation, expands it into executable GUI/DOM/API/CLI candidates, guards the selected action, and checks the resulting state before repeating. Jev does **not** interpret screenshots or generate shell commands. An optional screenshot/VLM grounding path is now integrated into `open-desktop`, but it was **not used in the recorded cross-app case**.
 
 ![CUA-JEV open-task loop: live state, model intent, typed route construction, highlighted Jev choice, execution and verification](src/cua_jev/ui/static/open-task-loop.svg)
 
@@ -84,7 +84,20 @@ cua-jev open-workspace --goal "Study the first five official Python tutorial cha
   --research-topic "Data Structures" --max-steps 20 --policy jev
 ```
 
-For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; inaccessible canvas-only interfaces and broader multi-app planning remain future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
+For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; broader multi-app planning remains future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
+
+### Optional window-screenshot/VLM path (experimental)
+
+`open-desktop` can now capture **only one explicitly selected Windows window** and send its resized JPEG to a separately chosen vision-capable model. The VLM returns visible labels and normalized boxes, not code or commands. The framework validates the boxes, creates GUI-only click candidates, and Jev selects among currently legal candidates. Before clicking, the runtime checks the window geometry and screenshot freshness; after clicking, it checks live UIA or pixel change. UIA-derived completion checks remain required—an image change alone is **not proof of task completion**. The default `fallback` mode calls the VLM only when UIA exposes no actionable controls; `always` mode enables it even when UIA controls exist.
+
+Screenshot upload and visual clicks are both explicit opt-ins. Use a controlled, non-sensitive window: the image may contain private screen content, and `--allow-button-actions` broadly authorizes clicks in that window. The vision path passes mocked API/window integration tests; the campus gateway probe timed out, so **no completed live VLM task or arbitrary-task success is claimed yet**. The published 12-decision video remains text + DOM, not vision.
+
+```powershell
+cua-jev open-desktop --goal "Complete a controlled window task" --window-title "^Your Test Window$" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_TEXT_MODEL" `
+  --vision-model "YOUR_VISION_MODEL" --vision-mode fallback `
+  --allow-screenshot-upload --allow-visual-clicks --allow-button-actions --policy jev
+```
 
 ## Quick start
 
@@ -146,13 +159,14 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] Experimental model + Jev browser-to-VS-Code task family with a five-source, 12-action case, window-only recording, and separate source-grounding check.
 - [ ] Evaluate unseen goals and sites with repeated trials, failure analysis, confidence intervals, and measured end-to-end latency and dollar cost. A completed case is not a benchmark.
 - [ ] Generalize task adapters across software and tasks, then explore macOS / Linux and more browser and office applications.
-- [ ] Add optional screenshot/VLM perception and coordinate grounding for interfaces that DOM, UIA, or COM cannot describe reliably, while retaining the text-only path.
+- [x] Add opt-in, window-only screenshot/VLM target grounding to the experimental desktop path, while retaining the text-only path; offline integration tests pass.
+- [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out Windows tasks.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.
 - [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
 
 ## Safety and license
 
-`ActionGuard` fails closed on candidate identity, stale observations, allowed roots, writes, and external side effects. Excel does not run VBA; MCP can invoke only registered typed tools. A successful tool receipt still requires task-level verification. API keys are used only for local HTTPS requests and are not written to traces, site snapshots, or the Git repository.
+`ActionGuard` fails closed on candidate identity, stale observations, allowed roots, writes, and external side effects. Excel does not run VBA; MCP can invoke only registered typed tools. A successful tool receipt still requires task-level verification. Model requests use HTTPS by default; HTTP requires explicit opt-in on a trusted network. Vision mode uploads the selected window image only with explicit consent; screenshot bytes and API keys are not written to traces, site snapshots, or the Git repository.
 
 The code is released under [Apache-2.0](LICENSE). The ZJU-REAL mark identifies the lab project and does not change ownership of third-party branding; app icon sources are listed in [`ATTRIBUTION.md`](src/cua_jev/ui/static/icons/ATTRIBUTION.md).
 

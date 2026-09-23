@@ -226,8 +226,8 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert "CUA-JEV" in page.text
         assert "How Jev powers computer use" in page.text
         assert "Four curated workflows and one experimental open-task pilot" in page.text
-        assert "Structured state, no VLM" in page.text
-        assert "arbitrary Windows tasks are not yet supported" in page.text
+        assert "The recorded pilot uses text and DOM" in page.text
+        assert "Arbitrary Windows tasks are not yet supported" in page.text
         assert "Adapter observes" in page.text
         assert "Jev chooses" in page.text
         assert "Runtime acts &amp; checks" in page.text
@@ -237,7 +237,7 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert "Jev vs Codex Computer Use" in page.text
         assert "Jev chooses how to execute it." in page.text
         assert "media/open-workspace-research.mp4" in page.text
-        assert "VLM screenshot fallback" in page.text
+        assert "optional VLM can turn a screenshot" in page.text
         assert page.text.index('id="action-rows"') < page.text.index('id="agent-rows"')
         assert "43 ms" not in page.text
         assert ">REAL LAB<" not in page.text
