@@ -86,7 +86,7 @@ cua-jev open-workspace --goal "Study the first five official Python tutorial cha
   --research-topic "Data Structures" --max-steps 20 --policy jev
 ```
 
-For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; broader multi-app planning remains future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
+For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. That pilot remains a **browser-to-editor task family** with one allowed web origin and one scoped output file; it does not use a VLM. A separate experimental cross-app loop is described below. See [open-task details and limitations](docs/OPEN_TASKS.md).
 
 ### Scoped browser + local-tool pilot (experimental)
 
@@ -106,6 +106,14 @@ cua-jev open-browser --goal "Check local Python version and open More Control Fl
 ```
 
 Only opt into a directory whose filenames and text you are willing to send to the planner; private traces can also contain tool results. Local results are withheld from the Jev request. This is a **bounded cross-tool path inside one browser origin**, not arbitrary cross-app support. See [open-task details](docs/OPEN_TASKS.md).
+
+### One browser + one desktop window (experimental)
+
+`open-computer` now composes a live browser observer, **one explicitly selected Windows UI Automation window**, and optional scoped local tools in one planning/decision loop. Browser, desktop, and tool refs are namespaced (`b:`, `d:`, `t:`); the model proposes grounded options, the existing adapters compile their real DOM/UIA/GUI/CLI/API routes, and Jev chooses the concrete action. Caller-supplied URL, window-state, and executed-capability gates determine success; model claims alone do not. App-window actions require an explicit opt-in, and common English/Chinese system Close/Minimize/Maximize labels are filtered (not a universal safety classifier).
+
+One real, unrecorded pilot used official Python documentation, the installed Python CLI, and Windows Calculator. Jev made **three decisions**: CLI version → browser DOM navigation → Calculator UIA click on “七”; the live URL and Calculator display “7” passed independent checks in **8.5 s**. At the middle decision, Jev assigned **0.90 DOM / 0.09 UIA / 0.01 GUI**; at the final decision, **0.90 UIA / 0.10 GUI**. An earlier attempt stopped safely after two actions because the model's UIA operation was not accepted; an explicit `invoke`→typed `click` normalization for a live invokable control was then tested before the successful retry. These are integration runs, not a success-rate or latency benchmark. No VLM was used in this cross-app pilot; each observer's opt-in VLM path exists but needs its own combined live evaluation.
+
+The implementation is [open_computer.py](src/cua_jev/open_computer.py). It is currently **Windows-only for the desktop surface**, limited to one browser origin, one selected window, and registered tools—not an arbitrary-application agent.
 
 ### Browser DOM + VLM + Jev pilot (experimental)
 
@@ -201,6 +209,7 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] Fuse bounded VLM scene text with UI Automation for grounded planning; validate a synthetic image against the campus VLM gateway and add trace-level decision/channel analysis.
 - [x] Fuse DOM and viewport vision in the open-browser path, add grounded visual-mouse alternatives, and complete a real single-step VLM + text model + Jev browser pilot (with failed attempts recorded).
 - [x] Add an opt-in scoped read-only local capability pack to open-browser and complete one real browser + CLI goal with independent tool/URL acceptance gates.
+- [x] Compose browser DOM, one selected Windows UIA window, and scoped CLI/API tools in a bounded open-computer loop; complete one real three-channel task with caller-supplied terminal gates.
 - [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.
 - [ ] Replace one-window/task-family constraints with a portable scene and capability-provider contract (DOM, Windows UIA, macOS Accessibility, vision, CLI/MCP/file tools), then validate real unfamiliar cross-app tasks on both operating systems.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.

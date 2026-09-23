@@ -351,6 +351,19 @@ class PublicDecisionPolicy:
                 "note_exists": public_state.get("note_exists"),
                 "editor_open": public_state.get("editor_open"),
             }
+        if observation.source == "open-computer":
+            browser = public_state.get("browser", {})
+            desktop = public_state.get("desktop", {})
+            public_state = {
+                "browser": {key: browser.get(key) for key in (
+                    "url", "title", "elements", "visual_summary", "visual_targets"
+                )},
+                "desktop": {key: desktop.get(key) for key in (
+                    "window_title", "controls", "visual_summary", "visual_targets"
+                )},
+                "tool_offers": public_state.get("tool_offers", []),
+                "requirements": public_state.get("requirements", {}),
+            }
         return self.inner.choose(replace(observation, state=public_state), public)
 
 

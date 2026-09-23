@@ -2,7 +2,7 @@
 
 The original four desktop workflows remain curated, reproducible capability packs, currently validated on Windows. `open-browser`, `open-desktop`, and `open-workspace` are experimental paths for tasks **not encoded as one of those four workflows**. They do not contain site- or app-specific click sequences.
 
-This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Playwright browser page on one web origin**, optionally fusing DOM and viewport vision and an opt-in scoped read-only local tool pack. The desktop path covers **one explicitly selected Windows window**, using UI Automation and optional screenshot/VLM grounding. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, unrestricted cross-app workflows, or general pure-canvas task completion. Broader model quality and task generalization remain untested.
+This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Playwright browser page on one web origin**, optionally fusing DOM and viewport vision and an opt-in scoped read-only local tool pack. The desktop path covers **one explicitly selected Windows window**, using UI Automation and optional screenshot/VLM grounding. `open-computer` composes those two surfaces and optional local tools in one bounded loop. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, unrestricted cross-app workflows, or general pure-canvas task completion. Broader model quality and task generalization remain untested.
 
 ## Division of labor
 
@@ -68,6 +68,24 @@ cua-jev open-browser --goal "Check local Python version and open More Control Fl
 Only use a non-sensitive directory: the planner receives the offered filenames and any selected tool output; the private trace can contain full receipts. Jev sees the available typed actions but **not** file text or tool result bodies. `--require-tool` verifies that a registered capability actually ran, and `--require-url-contains` checks the live URL independently of the planner's success claim. A single real run with `dashscope/qwen-flash` and Jev completed CLI then DOM in 7.0 s; Jev chose the CLI option with 0.99 probability on the first decision. This is not a reliability estimate. The browser remains locked to its starting origin; VLM was not used in that run.
 
 A second real CLI + DOM run enabled `dashscope/qwen3-vl-32b-instruct` in `always` mode. It completed in 51.4 s, but one of two visual attempts returned an invalid scene and fell back to DOM; the other yielded a valid scene. Visual requests consumed 45.1 s. These two runs are diagnostic pilots, not paired performance evidence. The CLI now reports `vision_attempts`, `vision_calls` (valid scenes), and `vision_failures` separately.
+
+### One browser + one selected Windows window
+
+`open-computer` composes the existing browser and Windows UIA adapters with the scoped local-tool pack. The planner sees namespaced live refs (`b:eN`, `b:vN`, `d:cN`, `d:vN`, `t:tN`), not selectors, handles, paths, or commands. Each accepted option is recompiled by its original adapter into real DOM, browser mouse, UIA, physical GUI, CLI, or file API candidates. Jev selects one candidate, the normal guard executes it, and the originating adapter verifies the effect. Browser navigation remains on one origin; the desktop regex must match exactly one visible window. Common English/Chinese Close/Minimize/Maximize labels are filtered, but this is not a universal safety classifier. Terminal success uses **caller-supplied** URL/window/capability gates; at least one observable URL or window-state gate is mandatory.
+
+For example, on a Chinese-localized Windows system with Calculator already open:
+
+```powershell
+cua-jev open-computer --goal "Check Python version, open More Control Flow Tools, and press 七 in Calculator" `
+  --url "https://docs.python.org/3/tutorial/index.html" --window-title "^计算器$" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_TEXT_MODEL" `
+  --local-tool-root "PATH_TO_A_CONTROLLED_DIRECTORY" --allow-window-actions `
+  --require-capability cli.python_version --require-capability desktop.click `
+  --require-url-contains "/3/tutorial/controlflow.html" `
+  --require-window-text-contains "显示为 7" --policy jev
+```
+
+Use a window-title regex matching **your system locale**. `--allow-window-actions` authorizes model-proposed clicks within that selected app; test only in a disposable, non-sensitive window. Optional browser and desktop vision models require `--allow-screenshot-upload`; no combined VLM run is claimed yet. A real three-action CLI → DOM → UIA pilot finished in 8.5 s with live URL and Calculator display checks. An earlier attempt stopped at an invalid desktop plan; the planner's UIA `invoke` wording is now normalized to a typed `click` only for a currently invokable control. The current success is a single-case integration check, not evidence of arbitrary cross-app capability or a speed advantage.
 
 ### Optional browser viewport vision
 

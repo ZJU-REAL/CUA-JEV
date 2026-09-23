@@ -17,6 +17,7 @@ from .guard import ActionGuard
 from .model_planner import ChatModelPlanner
 from .models import Channel
 from .open_browser import HttpJsonPlanner, OpenBrowserTask, PublicDecisionPolicy
+from .open_computer import OpenComputerTask
 from .open_desktop import OpenDesktopTask
 from .open_workspace import OpenWorkspaceTask
 from .policy import JevPolicy, RulePolicy
@@ -136,6 +137,35 @@ def _parser() -> argparse.ArgumentParser:
     )
     open_desktop.add_argument("--max-steps", type=int, default=20)
     open_desktop.add_argument("--trace", help="Opt-in local trace; may contain window data")
+    computer = sub.add_parser(
+        "open-computer", help="Experimental browser + selected Windows window + local-tool loop"
+    )
+    computer.add_argument("--goal", required=True)
+    computer.add_argument("--url", required=True)
+    computer.add_argument("--window-title", required=True, help="Regex matching one visible window")
+    computer.add_argument("--model-base-url", required=True)
+    computer.add_argument("--model", required=True)
+    computer.add_argument("--allow-insecure-model-http", action="store_true")
+    computer.add_argument("--use-env-proxy", action="store_true")
+    computer.add_argument("--policy", choices=("rule", "jev"), default="jev")
+    computer.add_argument("--browser-channel", choices=("msedge", "chrome", "chromium"), default="msedge")
+    computer.add_argument("--headed-browser", action="store_true")
+    computer.add_argument("--allow-form-input", action="store_true")
+    computer.add_argument("--allow-browser-actions", action="store_true")
+    computer.add_argument("--allow-window-text-input", action="store_true")
+    computer.add_argument("--allow-window-actions", action="store_true")
+    computer.add_argument("--browser-vision-model")
+    computer.add_argument("--desktop-vision-model")
+    computer.add_argument("--allow-screenshot-upload", action="store_true")
+    computer.add_argument("--allow-browser-visual-clicks", action="store_true")
+    computer.add_argument("--allow-desktop-visual-clicks", action="store_true")
+    computer.add_argument("--local-tool-root", type=Path)
+    computer.add_argument("--require-url-contains", default="")
+    computer.add_argument("--require-window-title-contains", default="")
+    computer.add_argument("--require-window-text-contains", default="")
+    computer.add_argument("--require-capability", action="append", default=[])
+    computer.add_argument("--max-steps", type=int, default=12)
+    computer.add_argument("--trace", help="Private local trace; may contain browser/window/tool text")
     workspace = sub.add_parser(
         "open-workspace", help="Model + Jev browser-to-VS-Code note task family"
     )
@@ -244,6 +274,28 @@ def _open_desktop_runner(args: argparse.Namespace) -> EpisodeRunner:
         )
 
     return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=600))
+
+
+def _open_computer_runner(args: argparse.Namespace) -> EpisodeRunner:
+    def runtime_factory(environment: OpenComputerTask) -> AgentRuntime:
+        executors = ExecutorRegistry()
+        for channel, executor in environment.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        environment.register_verifiers(verifiers)
+        inner = JevPolicy(retries=2) if args.policy == "jev" else RulePolicy()
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(inner),
+            guard=ActionGuard(
+                allowed_roots=[environment.local_tools.root] if environment.local_tools else (),
+                allow_writes=args.allow_form_input or args.allow_window_text_input,
+                allow_destructive=args.allow_browser_actions or args.allow_window_actions,
+            ),
+            executors=executors, verifiers=verifiers, trace=JsonlTrace(args.trace),
+        )
+
+    return EpisodeRunner(runtime_factory, EpisodeConfig(max_steps=args.max_steps, timeout_s=900))
 
 
 def _open_workspace_runner(args: argparse.Namespace) -> EpisodeRunner:
@@ -408,6 +460,76 @@ def main(argv: list[str] | None = None) -> int:
         summary["vision_attempts"] = summary["vision_calls"] + summary["vision_failures"]
         summary["vision_wall_ms"] = vision_planner.vision_wall_ms if vision_planner else 0
         summary["vision_model_usage"] = vision_planner.usage_totals if vision_planner else None
+        summary["policy"] = args.policy
+        summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0 if result.success else 1
+    if args.command == "open-computer":
+        if args.max_steps < 1:
+            raise SystemExit("--max-steps must be positive")
+        if (args.browser_vision_model or args.desktop_vision_model) and not args.allow_screenshot_upload:
+            raise SystemExit("vision models require --allow-screenshot-upload")
+        if args.allow_browser_visual_clicks and not (
+            args.browser_vision_model and args.allow_browser_actions
+        ):
+            raise SystemExit("browser visual clicks require a vision model and browser-action opt-in")
+        if args.allow_desktop_visual_clicks and not (
+            args.desktop_vision_model and args.allow_window_actions
+        ):
+            raise SystemExit("desktop visual clicks require a vision model and window-action opt-in")
+        planner = _chat_planner(args)
+        browser_vision = (
+            _chat_planner(args, model=args.browser_vision_model)
+            if args.browser_vision_model else None
+        )
+        desktop_vision = (
+            _chat_planner(args, model=args.desktop_vision_model)
+            if args.desktop_vision_model else None
+        )
+        try:
+            browser = OpenBrowserTask(
+                goal=args.goal, start_url=args.url, planner=planner,
+                headed=args.headed_browser, browser_channel=args.browser_channel,
+                allow_form_input=args.allow_form_input,
+                allow_external_actions=args.allow_browser_actions,
+                vision_grounder=browser_vision,
+                vision_mode="always" if browser_vision else "fallback",
+                allow_screenshot_upload=args.allow_screenshot_upload,
+                allow_visual_clicks=args.allow_browser_visual_clicks,
+            )
+            desktop = OpenDesktopTask(
+                goal=args.goal, window_title_re=args.window_title, planner=planner,
+                allow_text_input=args.allow_window_text_input,
+                allow_button_actions=args.allow_window_actions,
+                vision_grounder=desktop_vision,
+                vision_mode="always" if desktop_vision else "fallback",
+                allow_screenshot_upload=args.allow_screenshot_upload,
+                allow_visual_clicks=args.allow_desktop_visual_clicks,
+            )
+            environment = OpenComputerTask(
+                goal=args.goal, browser=browser, desktop=desktop, planner=planner,
+                local_tool_root=args.local_tool_root,
+                required_url_contains=args.require_url_contains,
+                required_window_title_contains=args.require_window_title_contains,
+                required_window_text_contains=args.require_window_text_contains,
+                required_capabilities=args.require_capability,
+            )
+            result = _open_computer_runner(args).run(environment)
+        finally:
+            planner.close()
+            if browser_vision:
+                browser_vision.close()
+            if desktop_vision:
+                desktop_vision.close()
+        summary = result.to_dict()
+        summary["planner_calls"] = environment.planner_calls
+        summary["planner_wall_ms"] = planner.planning_wall_ms
+        summary["planner_model_usage"] = planner.usage_totals
+        summary["browser_vision_failures"] = browser.vision_failures
+        summary["desktop_vision_failures"] = desktop.vision_failures
+        summary["vision_attempts"] = sum(
+            item.vision_calls for item in (browser_vision, desktop_vision) if item
+        ) + browser.vision_failures + desktop.vision_failures
         summary["policy"] = args.policy
         summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
         print(json.dumps(summary, indent=2, ensure_ascii=False))
