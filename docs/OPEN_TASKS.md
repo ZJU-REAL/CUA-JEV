@@ -2,14 +2,14 @@
 
 The original four desktop workflows remain curated, reproducible capability packs, currently validated on Windows. `open-browser`, `open-desktop`, and `open-workspace` are experimental paths for tasks **not encoded as one of those four workflows**. They do not contain site- or app-specific click sequences.
 
-This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Playwright browser page on one web origin**, optionally fusing DOM and viewport vision. The desktop path covers **one explicitly selected Windows window**, using UI Automation and optional screenshot/VLM grounding. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, unrestricted cross-app workflows, or general pure-canvas task completion. Broader model quality and task generalization remain untested.
+This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Playwright browser page on one web origin**, optionally fusing DOM and viewport vision and an opt-in scoped read-only local tool pack. The desktop path covers **one explicitly selected Windows window**, using UI Automation and optional screenshot/VLM grounding. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, unrestricted cross-app workflows, or general pure-canvas task completion. Broader model quality and task generalization remain untested.
 
 ## Division of labor
 
 1. Playwright observes a browser page (URL, title, short visible text, up to 60 interactive elements with temporary `eN` refs and normalized visible boxes). UI Automation observes a selected desktop window (title, visible named controls, up to 80 `cN` refs). Password controls are excluded from structured observations. With explicit opt-in, `open-browser` uploads a viewport-only JPEG and `open-desktop` uploads a selected-window JPEG; the VLM returns a bounded scene summary, short visible-text excerpts, and up to 12 labeled `vN` boxes. Visual boxes are **not** a reliable secret-field detector.
-2. A planner proposes a subgoal, up to 16 grounded options, and an observable completion condition. The OpenAI-compatible chat adapter calls `/v1/chat/completions`; the original provider-neutral JSON endpoint is also supported for browsers. Text plans cannot propose code, selectors, coordinates, shell commands, or arbitrary tool calls. The separate VLM's bounded scene text is fused with DOM/UIA state before planning; its normalized boxes are validated and converted to click-only refs.
+2. A planner proposes a subgoal, up to 16 grounded options, and an observable completion condition. The OpenAI-compatible chat adapter calls `/v1/chat/completions`; the original provider-neutral JSON endpoint is also supported for browsers. Text plans cannot propose code, selectors, coordinates, shell commands, or arbitrary tool calls. With explicit `--local-tool-root`, the browser snapshot also offers bounded `tN` refs from a registered read-only pack; the planner can only invoke those refs, not change their paths or arguments. The separate VLM's bounded scene text is fused with DOM/UIA state before planning; its normalized boxes are validated and converted to click-only refs.
 3. The framework turns each legal browser option into DOM and (when headed on Windows) physical GUI routes. Browser visual refs can use a Playwright mouse script; a DOM element also receives that alternative only when its label and box overlap a live VLM target. Desktop options can use UIA `invoke`/`set_edit_text` or physical GUI; desktop VLM targets offer GUI clicks only. Jev chooses a **concrete typed action and route** at each step. Candidate arguments, screenshot bytes, verbatim OCR lines, and snapshot text are withheld from the Jev request, though the bounded visual summary, goal, titles, and element labels are still sent.
-4. The normal `ActionGuard`, executor, and verifier run. A failed effect check or exhausted options triggers another planner call. A model-proposed completion condition is checked against live state, but **is not independent semantic proof** that the user's original goal was achieved.
+4. The normal `ActionGuard`, executor, and verifier run. A failed effect check or exhausted options triggers another planner call. A model-proposed completion condition is checked against live state, but **is not independent semantic proof** that the user's original goal was achieved. Browser episodes can additionally require an independently supplied tool capability and URL substring before reporting success.
 
 The long-term design aims to call the planner less often than Jev by reusing a grounded subgoal across several constrained decisions. The current pilot called both once per step, so this is still an architectural hypothesis, not a measured speed/cost result for open tasks. The four published benchmark cases are unchanged.
 
@@ -51,6 +51,21 @@ cua-jev open-desktop --goal "Find the requested item" --window-title "^File Expl
 The insecure-HTTP flag is required because this endpoint is plain HTTP. It exposes the bearer key and task content to the network unless protected by a trusted tunnel; prefer HTTPS or a local SSH tunnel. `planner-models` only lists IDs. Names alone do not prove vision support or planning quality; shortlist with controlled live probes and held-out tasks once reachable.
 
 The model adapter connects directly by default, ignoring OS/environment proxies. This matters on Windows when a system proxy intercepts campus HTTP requests. Pass `--use-env-proxy` only if your model gateway actually requires that proxy.
+
+### Optional scoped browser + local-tool actions
+
+`--local-tool-root` explicitly registers a read-only pack for one directory. The planner sees opaque `tN` offers alongside live browser refs and may propose `{"ref":"tN","operation":"invoke"}`. The pack fixes the arguments; a forged ref, click operation on a tool, model-supplied path, or executable command is rejected. Offers currently include a bounded directory list, at most 16 KB from selected top-level `.md`/`.txt` files, `python --version`, and `git status --short` if the directory is a Git repository. Hidden files, symlinks, and other file types are not offered as read targets. This is **not a general MCP discovery or arbitrary CLI interface**.
+
+```powershell
+cua-jev open-browser --goal "Check local Python version and open More Control Flow Tools" `
+  --url "https://docs.python.org/3/tutorial/index.html" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_TEXT_MODEL" `
+  --local-tool-root "PATH_TO_A_CONTROLLED_DIRECTORY" `
+  --require-tool cli.python_version --require-url-contains "/3/tutorial/controlflow.html" `
+  --policy jev --trace "runs/private-browser-cli.jsonl"
+```
+
+Only use a non-sensitive directory: the planner receives the offered filenames and any selected tool output; the private trace can contain full receipts. Jev sees the available typed actions but **not** file text or tool result bodies. `--require-tool` verifies that a registered capability actually ran, and `--require-url-contains` checks the live URL independently of the planner's success claim. A single real run with `dashscope/qwen-flash` and Jev completed CLI then DOM in 7.0 s; Jev chose the CLI option with 0.99 probability on the first decision. This is not a reliability estimate. The browser remains locked to its starting origin; VLM was not used in that run.
 
 ### Optional browser viewport vision
 

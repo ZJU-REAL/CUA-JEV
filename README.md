@@ -88,6 +88,23 @@ cua-jev open-workspace --goal "Study the first five official Python tutorial cha
 
 For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_workspace.py); it captures only the real task window after Edge is visible. The pilot is currently a **browser-to-editor task family** with one allowed web origin and one scoped output file. It does not use a VLM; broader multi-app planning remains future work. See [open-task details and limitations](docs/OPEN_TASKS.md).
 
+### Scoped browser + local-tool pilot (experimental)
+
+`open-browser` can also opt into a **read-only local capability pack**. The text model sees temporary `tN` references alongside live browser `eN`/`vN` references; Jev selects one concrete browser or local-tool action. The runtime, not the model, fixes the executable operation and path. Current offers are scoped directory listing, small top-level `.md`/`.txt` reads, registered `python --version`, and Git status when the scoped directory is a repository. There is no arbitrary shell command, model-chosen path, or file write in this path. `--require-tool` and `--require-url-contains` supply independent acceptance gates for a bounded cross-tool goal.
+
+In one **real, unrecorded pilot**, the goal was to check local Python through CLI and open a different official Python tutorial chapter. The model proposed both a CLI and DOM action; Jev selected `cli.python_version` with **0.99** probability, then a DOM link. Both actions verified; the required tool and URL checks passed in **7.0 s** (two planner calls, two Jev decisions). This is a single integration result, not a held-out success rate or a cross-model benchmark. VLM was disabled in this run; the earlier DOM+VLM pilot is separate.
+
+```powershell
+cua-jev open-browser --goal "Check local Python version and open More Control Flow Tools" `
+  --url "https://docs.python.org/3/tutorial/index.html" `
+  --model-base-url "https://YOUR_MODEL_GATEWAY/v1" --model "YOUR_TEXT_MODEL" `
+  --local-tool-root "PATH_TO_A_CONTROLLED_DIRECTORY" `
+  --require-tool cli.python_version --require-url-contains "/3/tutorial/controlflow.html" `
+  --policy jev
+```
+
+Only opt into a directory whose filenames and text you are willing to send to the planner; private traces can also contain tool results. Local results are withheld from the Jev request. This is a **bounded cross-tool path inside one browser origin**, not arbitrary cross-app support. See [open-task details](docs/OPEN_TASKS.md).
+
 ### Browser DOM + VLM + Jev pilot (experimental)
 
 `open-browser` can now fuse live DOM controls with an opt-in VLM description of the current viewport. The text model proposes grounded DOM or visual refs; the framework validates each one and can offer both DOM click and screenshot-grounded browser-mouse routes for the same visible control. Jev chooses one concrete candidate. Visual clicks require explicit screenshot-upload, visual-click, and external-action opt-ins; they are checked against the current URL, DOM, viewport geometry, and screenshot freshness before execution. DOM/visual changes check **effect**, while a live URL/title/text condition checks the bounded goal. This is not unrestricted web automation.
@@ -181,6 +198,7 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] Add opt-in, window-only screenshot/VLM target grounding to the experimental desktop path, while retaining the text-only path; offline integration tests pass.
 - [x] Fuse bounded VLM scene text with UI Automation for grounded planning; validate a synthetic image against the campus VLM gateway and add trace-level decision/channel analysis.
 - [x] Fuse DOM and viewport vision in the open-browser path, add grounded visual-mouse alternatives, and complete a real single-step VLM + text model + Jev browser pilot (with failed attempts recorded).
+- [x] Add an opt-in scoped read-only local capability pack to open-browser and complete one real browser + CLI goal with independent tool/URL acceptance gates.
 - [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.
 - [ ] Replace one-window/task-family constraints with a portable scene and capability-provider contract (DOM, Windows UIA, macOS Accessibility, vision, CLI/MCP/file tools), then validate real unfamiliar cross-app tasks on both operating systems.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.

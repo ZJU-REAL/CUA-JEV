@@ -182,7 +182,7 @@ class ChatModelPlanner:
         if isinstance(snapshot, BrowserSnapshot):
             medium = "browser"
             schema = (
-                '{"subgoal":"...","options":[{"ref":"e0 or v0","operation":"click|fill|select",'
+                '{"subgoal":"...","options":[{"ref":"e0 or v0 or t0","operation":"click|fill|select|invoke",'
                 '"value":"only for fill/select"}],"success":{"kind":"url_contains|'
                 'title_contains|text_contains","value":"..."}}'
             )
@@ -237,6 +237,14 @@ class ChatModelPlanner:
                 "only through a browser mouse script. Prefer an eN DOM element when both refer "
                 "to the same control. A visual pixel change is not proof of task completion; "
                 "choose a success check observable in the live URL, title, or DOM text."
+            )
+        if isinstance(snapshot, BrowserSnapshot) and snapshot.tool_offers:
+            instructions += (
+                " A tN ref is an explicitly registered read-only local tool; use operation "
+                "invoke and no value. The tool arguments are fixed by the runtime, never supply "
+                "commands or paths. Read tool_results to plan subsequent actions. If required_tool "
+                "is nonempty, invoke that capability before claiming completion. Browser actions "
+                "and local tools may be proposed together when both advance the same goal."
             )
         if isinstance(snapshot, DesktopSnapshot) and snapshot.visual_summary:
             instructions += (

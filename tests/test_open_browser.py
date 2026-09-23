@@ -7,6 +7,8 @@ import pytest
 
 from cua_jev.episode import EpisodeConfig, EpisodeRunner, EpisodeStatus
 from cua_jev.executors import ControlExecutor
+from cua_jev.executors.cli import RegisteredCliExecutor
+from cua_jev.executors.filesystem import FileSystemExecutor
 from cua_jev.guard import ActionGuard
 from cua_jev.models import ActionCandidate, Channel, Observation
 from cua_jev.open_browser import (
@@ -177,6 +179,70 @@ def test_open_task_runs_with_dynamic_options_and_one_planning_call():
     assert result.steps[0].decision.candidate_id == "option_0_dom"
     assert result.steps[0].verification.passed
     assert environment.planner_calls == 1
+
+
+def test_scoped_local_tool_and_browser_action_complete_one_open_goal(tmp_path):
+    (tmp_path / "guide.md").write_text("public study notes", encoding="utf-8")
+    (tmp_path / ".env").write_text("hidden", encoding="utf-8")
+    environment = task(
+        planner=FakePlanner([
+            {"ref": "t0", "operation": "invoke"},
+            {"ref": "e0", "operation": "click"},
+        ]),
+        local_tool_root=tmp_path, required_tool="filesystem.list",
+        required_url_contains="/done",
+    )
+
+    def factory(item):
+        executors = ExecutorRegistry()
+        executors.register(Channel.SCRIPT, item)
+        executors.register(Channel.API, FileSystemExecutor())
+        executors.register(Channel.CLI, RegisteredCliExecutor())
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        item.register_verifiers(verifiers)
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(RulePolicy()),
+            guard=ActionGuard(allowed_roots=[tmp_path]),
+            executors=executors, verifiers=verifiers,
+        )
+
+    result = EpisodeRunner(factory, EpisodeConfig(max_steps=5)).run(environment)
+    assert result.status == EpisodeStatus.SUCCESS
+    assert result.channel_counts == {"api": 1, "script": 1}
+    assert [step.receipt.capability for step in result.steps] == [
+        "filesystem.list", "browser.click",
+    ]
+    assert all(step.verification.passed for step in result.steps)
+
+
+def test_tool_refs_are_scoped_and_not_model_defined(tmp_path):
+    (tmp_path / "readme.md").write_text("safe", encoding="utf-8")
+    (tmp_path / ".env").write_text("secret", encoding="utf-8")
+    environment = task(local_tool_root=tmp_path)
+    environment.reset()
+    snapshot = environment._capture()
+    assert {offer.capability for offer in snapshot.tool_offers} == {
+        "filesystem.list", "cli.python_version", "filesystem.read_text",
+    }
+    assert all(".env" not in offer.description for offer in snapshot.tool_offers)
+    read_offer = next(offer for offer in snapshot.tool_offers if offer.capability == "filesystem.read_text")
+    candidate = read_offer.candidate(0)
+    receipt = FileSystemExecutor()(candidate, "obs", "decision")
+    assert receipt.success and receipt.output["text"] == "safe"
+    (tmp_path / "readme.md").write_text("x" * 16_001, encoding="utf-8")
+    stale = FileSystemExecutor()(candidate, "obs", "decision")
+    assert not stale.success
+    base = {"subgoal": "Inspect", "success": {"kind": "url_contains", "value": "/done"}}
+    for option in (
+        {"ref": "t99", "operation": "invoke"},
+        {"ref": "t0", "operation": "click"},
+        {"ref": "t0", "operation": "invoke", "value": "rm everything"},
+        {"ref": "e0", "operation": "invoke"},
+    ):
+        with pytest.raises(ValueError):
+            BrowserPlan.from_dict({**base, "options": [option]}, snapshot)
+    environment.close()
 
 
 def test_browser_vision_fuses_scene_and_routes_canvas_target_through_mouse_script():
@@ -420,6 +486,7 @@ def test_public_policy_does_not_send_page_text_or_action_arguments():
         assert "private page text" not in request.content.decode()
         assert "private input" not in request.content.decode()
         assert "private OCR line" not in request.content.decode()
+        assert "private tool output" not in request.content.decode()
         assert body["state"]["state"] == {"url": "https://example.test"}
         assert body["state"]["available_actions"][0]["arguments"] == {}
         return httpx.Response(
@@ -441,6 +508,7 @@ def test_public_policy_does_not_send_page_text_or_action_arguments():
         Observation("test", "test", {
             "url": "https://example.test", "text": "private page text",
             "visual_text": ["private OCR line"],
+            "tool_results": [{"result": "private tool output"}],
         }),
         [ActionCandidate("fill", Channel.SCRIPT, "browser.fill", "Fill a field", {"value": "private input"})],
     )

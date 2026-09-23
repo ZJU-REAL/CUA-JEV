@@ -12,6 +12,7 @@ import json
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import urlparse
 
@@ -21,6 +22,7 @@ from .episode import Evaluation
 from .errors import CapabilityUnavailable
 from .executors.common import execute_with_receipt
 from .executors.screen import ScreenController
+from .local_tools import ScopedReadOnlyTools, ToolOffer
 from .models import ActionCandidate, ActionReceipt, Channel, Decision, Observation, Risk, Verification
 from .policy import DecisionPolicy
 from .runtime import StepResult
@@ -115,6 +117,9 @@ class BrowserSnapshot:
     visual_targets: tuple[VisualTarget, ...] = ()
     visual_image_hash: str = ""
     visual_viewport: tuple[int, int] | None = None
+    tool_offers: tuple[ToolOffer, ...] = ()
+    tool_results: tuple[dict[str, Any], ...] = ()
+    required_tool: str = ""
 
     @classmethod
     def capture(cls, page: Any) -> BrowserSnapshot:
@@ -167,6 +172,9 @@ class BrowserSnapshot:
             "visual_targets": [target.to_dict() for target in self.visual_targets],
             "visual_image_hash": self.visual_image_hash,
             "visual_viewport": self.visual_viewport,
+            "tool_offers": [offer.to_dict() for offer in self.tool_offers],
+            "tool_results": list(self.tool_results),
+            "required_tool": self.required_tool,
         }
 
     def fingerprint(self) -> str:
@@ -195,7 +203,10 @@ class BrowserPlan:
         items = data["options"]
         if not 1 <= len(items) <= MAX_OPTIONS:
             raise ValueError("planner must return 1-16 options")
-        known = {element.ref: element for element in (*snapshot.elements, *snapshot.visual_targets)}
+        known = {
+            element.ref: element for element in
+            (*snapshot.elements, *snapshot.visual_targets, *snapshot.tool_offers)
+        }
         options: list[PlannedOption] = []
         for item in items:
             if not isinstance(item, dict):
@@ -205,10 +216,17 @@ class BrowserPlan:
                 not isinstance(ref, str)
                 or not isinstance(operation, str)
                 or ref not in known
-                or operation not in {"click", "fill", "select"}
+                or operation not in {"click", "fill", "select", "invoke"}
             ):
                 raise ValueError("planner referenced an unavailable element or operation")
             element = known[ref]
+            if isinstance(element, ToolOffer):
+                if operation != "invoke" or item.get("value"):
+                    raise ValueError("local tool refs support invoke only")
+                options.append(PlannedOption(ref, "invoke"))
+                continue
+            if operation == "invoke":
+                raise ValueError("invoke requires a registered local tool ref")
             if isinstance(element, VisualTarget):
                 if operation != "click" or item.get("value"):
                     raise ValueError("visual targets support click only")
@@ -324,7 +342,7 @@ class PublicDecisionPolicy:
         # scene summary and grounded target labels, but not verbatim visual text.
         public_state = {
             key: value for key, value in observation.state.items()
-            if key not in {"text", "visual_text"}
+            if key not in {"text", "visual_text", "tool_results"}
         }
         if observation.source == "open-workspace":
             browser = public_state.get("browser", {})
@@ -357,6 +375,9 @@ class OpenBrowserTask:
         allow_screenshot_upload: bool = False,
         allow_visual_clicks: bool = False,
         browser_channel: str = "msedge",
+        local_tool_root: Path | None = None,
+        required_tool: str = "",
+        required_url_contains: str = "",
     ) -> None:
         if not goal.strip():
             raise ValueError("goal is required")
@@ -379,6 +400,16 @@ class OpenBrowserTask:
         self.vision_mode = vision_mode
         self.allow_visual_clicks = allow_visual_clicks
         self.browser_channel = browser_channel
+        self.local_tools = ScopedReadOnlyTools(local_tool_root) if local_tool_root else None
+        self.required_tool = required_tool
+        self.required_url_contains = required_url_contains
+        if required_tool and (
+            self.local_tools is None
+            or required_tool not in {offer.capability for offer in self.local_tools.offers()}
+        ):
+            raise ValueError("required tool is not offered by the scoped capability pack")
+        self._tool_results: list[dict[str, Any]] = []
+        self._completed_tools: set[str] = set()
         self._visual_image: WindowImage | None = None
         self._before_images: dict[str, WindowImage] = {}
         self._playwright = None
@@ -390,6 +421,8 @@ class OpenBrowserTask:
         self._snapshot: BrowserSnapshot | None = None
         self._before: dict[str, BrowserSnapshot] = {}
         self.vision_failures = 0
+        self._tool_results.clear()
+        self._completed_tools.clear()
         self.planner_calls = 0
 
     def reset(self) -> None:
@@ -465,6 +498,11 @@ class OpenBrowserTask:
                     )
             else:
                 self._visual_image = None
+        if self.local_tools is not None:
+            snapshot = replace(
+                snapshot, tool_offers=self.local_tools.offers(),
+                tool_results=tuple(self._tool_results[-6:]), required_tool=self.required_tool,
+            )
         return snapshot
 
     def observe(self, history: Sequence[StepResult]) -> Observation:
@@ -480,6 +518,10 @@ class OpenBrowserTask:
     def _satisfied(self, snapshot: BrowserSnapshot) -> bool:
         if self._plan is None:
             return False
+        if self.required_tool and self.required_tool not in self._completed_tools:
+            return False
+        if self.required_url_contains:
+            return self.required_url_contains.casefold() in snapshot.url.casefold()
         expected = self._plan.success_value.casefold()
         actual = {
             "url_contains": snapshot.url,
@@ -532,9 +574,15 @@ class OpenBrowserTask:
     def _build_candidates(self) -> tuple[ActionCandidate, ...]:
         assert self._snapshot is not None and self._plan is not None
         known = {element.ref: element for element in self._snapshot.elements}
+        tools = {offer.ref: offer for offer in self._snapshot.tool_offers}
         result: list[ActionCandidate] = []
         for index, option in enumerate(self._plan.options):
             if index in self._used:
+                continue
+            tool = tools.get(option.ref)
+            if tool is not None:
+                if option.operation == "invoke" and tool.capability not in self._completed_tools:
+                    result.append(tool.candidate(index))
                 continue
             visual = next(
                 (target for target in self._snapshot.visual_targets if target.ref == option.ref),
@@ -594,6 +642,13 @@ class OpenBrowserTask:
         unique: dict[tuple[str, str, str, str, str], ActionCandidate] = {}
         for candidate in result:
             args = candidate.arguments
+            if candidate.capability.startswith(("filesystem.", "cli.")):
+                key = (
+                    str(candidate.channel), candidate.capability,
+                    str(args.get("path", "")), "", "",
+                )
+                unique[key] = candidate
+                continue
             key = (
                 str(candidate.channel), candidate.capability, str(args["ref"]),
                 str(args["operation"]), str(args.get("value", "")),
@@ -619,12 +674,43 @@ class OpenBrowserTask:
 
     def executor_bindings(self) -> dict[Channel, Any]:
         bindings: dict[Channel, Any] = {Channel.SCRIPT: self}
+        if self.local_tools is not None:
+            from .executors.cli import RegisteredCliExecutor
+            from .executors.filesystem import FileSystemExecutor
+
+            bindings[Channel.API] = FileSystemExecutor()
+            bindings[Channel.CLI] = RegisteredCliExecutor()
         if self.headed:
             bindings[Channel.GUI] = self
         return bindings
 
     def register_verifiers(self, registry: VerifierRegistry) -> None:
         registry.register("browser.effect", self._verify_effect)
+        registry.register("tool.result", self._verify_tool_result)
+
+    def _verify_tool_result(self, candidate: ActionCandidate, receipt: ActionReceipt) -> Verification:
+        if not receipt.success:
+            return Verification(False, "tool.result", {"error": receipt.error})
+        output = receipt.output
+        capability = candidate.capability
+        if capability == "filesystem.list":
+            passed = (
+                output.get("path") == candidate.arguments["path"]
+                and isinstance(output.get("entries"), list)
+            )
+        elif capability == "filesystem.read_text":
+            path = Path(candidate.arguments["path"])
+            passed = (
+                output.get("path") == str(path) and isinstance(output.get("text"), str)
+                and path.is_file() and output["text"] == path.read_text(encoding="utf-8")[:16_000]
+            )
+        elif capability == "cli.python_version":
+            passed = bool(re.match(r"^Python \d+\.\d+", output.get("stdout", "")))
+        elif capability == "cli.git_status":
+            passed = output.get("returncode") == 0 and isinstance(output.get("stdout"), str)
+        else:
+            passed = False
+        return Verification(passed, "tool.result", {"capability": capability})
 
     def __call__(
         self, candidate: ActionCandidate, observation_id: str, decision_id: str
@@ -755,6 +841,14 @@ class OpenBrowserTask:
             return Evaluation(False, False, "action_unverified_replan")
         index = int(candidate.intent.removeprefix("option_"))
         self._used.add(index)
+        if candidate.capability.startswith(("filesystem.", "cli.")):
+            self._completed_tools.add(candidate.capability)
+            output = receipt.output
+            summary = output.get("text", output.get("stdout", output.get("entries", "")))
+            self._tool_results.append({
+                "capability": candidate.capability,
+                "result": str(summary)[:2000], "verified": True,
+            })
         after = self._capture()
         if self._satisfied(after):
             return Evaluation(True, True, "goal_check_passed")

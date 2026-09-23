@@ -66,6 +66,7 @@ class ActionGuard:
             elif isinstance(value, str) and (
                 name.endswith("path")
                 or name.endswith("_path")
+                or name.endswith("_root")
                 or name in {"cwd", "workspace", "repo", "directory"}
             ):
                 yield name, value

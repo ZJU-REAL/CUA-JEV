@@ -17,7 +17,10 @@ class RegisteredCliExecutor:
         self.timeout_s = timeout_s
         self._commands: dict[str, CommandFactory] = {
             "cli.python_version": lambda _: ["python", "--version"],
-            "cli.git_status": lambda args: ["git", "-C", str(Path(args["path"])), "status", "--short"],
+            "cli.git_status": lambda args: [
+                "git", "--no-optional-locks", "-c", "core.fsmonitor=false",
+                "-C", str(Path(args["path"])), "status", "--short",
+            ],
             "cli.git_diff_stat": lambda args: ["git", "-C", str(Path(args["path"])), "diff", "--stat"],
             "cli.powershell_read_text": lambda args: [
                 "powershell",

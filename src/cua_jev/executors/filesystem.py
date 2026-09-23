@@ -16,19 +16,29 @@ class FileSystemExecutor:
             args = candidate.arguments
             if candidate.capability == "filesystem.list":
                 root = Path(args["path"])
+                limit = max(1, min(int(args.get("max_entries", 10_000)), 10_000))
+                paths = sorted(root.iterdir(), key=lambda p: p.name.lower())
                 entries = [
                     {
                         "name": path.name,
                         "is_dir": path.is_dir(),
                         "size": path.stat().st_size if path.is_file() else None,
                     }
-                    for path in sorted(root.iterdir(), key=lambda p: p.name.lower())
+                    for path in paths[:limit]
                 ]
-                return {"path": str(root.resolve()), "entries": entries}
+                return {"path": str(root.resolve()), "entries": entries,
+                        "truncated": len(paths) > limit}
             if candidate.capability == "filesystem.read_text":
                 path = Path(args["path"])
-                text = path.read_text(encoding=args.get("encoding", "utf-8"))
-                limit = int(args.get("max_chars", 100_000))
+                if "scope_root" in args:
+                    root = Path(args["scope_root"]).resolve(strict=True)
+                    if path.is_symlink() or path.resolve(strict=True).parent != root:
+                        raise ValueError("scoped read target moved outside its offered directory")
+                    if path.stat().st_size > 16_000:
+                        raise ValueError("scoped read target grew beyond the offer limit")
+                limit = max(1, min(int(args.get("max_chars", 100_000)), 100_000))
+                with path.open("r", encoding=args.get("encoding", "utf-8")) as handle:
+                    text = handle.read(limit + 1)
                 return {"path": str(path.resolve()), "text": text[:limit], "truncated": len(text) > limit}
             if candidate.capability == "filesystem.stat":
                 path = Path(args["path"])

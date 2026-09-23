@@ -96,6 +96,18 @@ def _parser() -> argparse.ArgumentParser:
     open_browser.add_argument("--vision-mode", choices=("fallback", "always"), default="fallback")
     open_browser.add_argument("--allow-screenshot-upload", action="store_true")
     open_browser.add_argument("--allow-visual-clicks", action="store_true")
+    open_browser.add_argument(
+        "--local-tool-root", type=Path,
+        help="Explicitly permit bounded read-only file and registered CLI offers in this directory",
+    )
+    open_browser.add_argument(
+        "--require-tool", default="",
+        help="Acceptance gate: a registered local capability must run and verify",
+    )
+    open_browser.add_argument(
+        "--require-url-contains", default="",
+        help="Independent URL acceptance gate; overrides the planner's browser success check",
+    )
     open_browser.add_argument("--max-steps", type=int, default=20)
     open_browser.add_argument("--trace", help="Opt-in local trace; may contain task data")
     open_desktop = sub.add_parser(
@@ -201,6 +213,7 @@ def _open_browser_runner(args: argparse.Namespace) -> EpisodeRunner:
         return AgentRuntime(
             policy=PublicDecisionPolicy(inner),
             guard=ActionGuard(
+                allowed_roots=[environment.local_tools.root] if environment.local_tools else (),
                 allow_writes=args.allow_form_input,
                 allow_destructive=args.allow_external_actions,
             ),
@@ -339,6 +352,9 @@ def main(argv: list[str] | None = None) -> int:
                 allow_screenshot_upload=args.allow_screenshot_upload,
                 allow_visual_clicks=args.allow_visual_clicks,
                 browser_channel=args.browser_channel,
+                local_tool_root=args.local_tool_root,
+                required_tool=args.require_tool,
+                required_url_contains=args.require_url_contains,
             )
             result = _open_browser_runner(args).run(environment)
         finally:
