@@ -372,6 +372,7 @@ class PublicDecisionPolicy:
                     "visual_targets": desktop.get("visual_targets", []),
                 },
                 "tool_offers": public_state.get("tool_offers", []),
+                "mcp_offers": public_state.get("mcp_offers", []),
                 "requirements": public_state.get("requirements", {}),
             }
         return self.inner.choose(replace(observation, state=public_state), public)

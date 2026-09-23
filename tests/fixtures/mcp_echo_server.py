@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("cua-jev-test")
@@ -7,6 +9,12 @@ mcp = FastMCP("cua-jev-test")
 def echo(text: str) -> dict[str, str]:
     """Return controlled test input."""
     return {"echo": text}
+
+
+@mcp.tool()
+def read_text(path: str) -> dict[str, str]:
+    """Read a short text file selected by trusted caller configuration."""
+    return {"text": Path(path).read_text(encoding="utf-8")[:1000]}
 
 
 if __name__ == "__main__":

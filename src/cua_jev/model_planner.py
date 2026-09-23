@@ -280,12 +280,13 @@ class ChatModelPlanner:
         if isinstance(snapshot, ComputerSnapshot):
             instructions = (
                 "Plan the next grounded action for one browser origin, one selected Windows window, "
-                "and optional registered read-only local tools. Return exactly one JSON object "
+                "and optional registered local/MCP tools. Return exactly one JSON object "
                 "matching " + schema + ". Offer 1-16 actions that advance the user's goal. "
                 "Use only live namespaced refs from snapshot: b:eN for browser DOM, b:vN for "
                 "browser visual click, d:cN for Windows UI Automation, d:vN for desktop "
-                "visual click, and t:tN for a registered local tool. Use invoke only with t:tN; "
-                "never provide a tool value or command. For a d:cN Button use click (the runtime "
+                "visual click, t:tN for a registered local tool, and m:mN for a registered "
+                "MCP call. Use invoke only with t:tN or m:mN; never provide tool arguments, "
+                "a value, or a command. For a d:cN Button use click (the runtime "
                 "will invoke UIA). Use click/fill/select as supported by the "
                 "referenced live control. Only use app controls, never window chrome such as "
                 "Close, Minimize, or Maximize. Never invent refs, selectors, coordinates, shell commands, "

@@ -14,6 +14,7 @@ from .episode import EpisodeConfig, EpisodeRunner
 from .executors import ControlExecutor, FileSystemExecutor
 from .experiment import ExperimentRunner
 from .guard import ActionGuard
+from .mcp_surface import McpToolSurface
 from .model_planner import ChatModelPlanner
 from .models import Channel
 from .open_browser import HttpJsonPlanner, OpenBrowserTask, PublicDecisionPolicy
@@ -160,6 +161,8 @@ def _parser() -> argparse.ArgumentParser:
     computer.add_argument("--allow-browser-visual-clicks", action="store_true")
     computer.add_argument("--allow-desktop-visual-clicks", action="store_true")
     computer.add_argument("--local-tool-root", type=Path)
+    computer.add_argument("--mcp-profile", type=Path, help="Trusted local MCP server/tool profile")
+    computer.add_argument("--allow-mcp-actions", action="store_true")
     computer.add_argument("--require-url-contains", default="")
     computer.add_argument("--require-window-title-contains", default="")
     computer.add_argument("--require-window-text-contains", default="")
@@ -290,7 +293,10 @@ def _open_computer_runner(args: argparse.Namespace) -> EpisodeRunner:
             guard=ActionGuard(
                 allowed_roots=[environment.local_tools.root] if environment.local_tools else (),
                 allow_writes=args.allow_form_input or args.allow_window_text_input,
-                allow_destructive=args.allow_browser_actions or args.allow_window_actions,
+                allow_destructive=(
+                    args.allow_browser_actions or args.allow_window_actions
+                    or args.allow_mcp_actions
+                ),
             ),
             executors=executors, verifiers=verifiers, trace=JsonlTrace(args.trace),
         )
@@ -467,6 +473,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "open-computer":
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
+        if args.mcp_profile and not args.allow_mcp_actions:
+            raise SystemExit("MCP profile requires explicit --allow-mcp-actions")
+        if args.allow_mcp_actions and not args.mcp_profile:
+            raise SystemExit("--allow-mcp-actions requires --mcp-profile")
         if (args.browser_vision_model or args.desktop_vision_model) and not args.allow_screenshot_upload:
             raise SystemExit("vision models require --allow-screenshot-upload")
         if args.allow_browser_visual_clicks and not (
@@ -509,6 +519,8 @@ def main(argv: list[str] | None = None) -> int:
             environment = OpenComputerTask(
                 goal=args.goal, browser=browser, desktop=desktop, planner=planner,
                 local_tool_root=args.local_tool_root,
+                mcp_surface=McpToolSurface.from_profile(args.mcp_profile)
+                if args.mcp_profile else None,
                 required_url_contains=args.require_url_contains,
                 required_window_title_contains=args.require_window_title_contains,
                 required_window_text_contains=args.require_window_text_contains,

@@ -91,6 +91,34 @@ Use a window-title regex matching **your system locale**. `--allow-window-action
 
 After the provider refactor, a different live goal (Python version, the Data Structures tutorial chapter, Calculator “8”) passed three caller-supplied gates via CLI → DOM → UIA in 15.4 s. Three text-planner calls reported 15,930 tokens. The run had no VLM and was not paired with the previous goal; it is a regression smoke test, not evidence that prompt compaction saved tokens or money.
 
+#### Registered MCP calls
+
+`open-computer` can add an `m:` action surface using a **trusted local** JSON profile. The profile binds one stdio server process and up to eight fixed calls. For example (replace both absolute paths with paths on your machine):
+
+```json
+{
+  "server": {
+    "name": "research",
+    "command": "C:/absolute/path/to/python.exe",
+    "args": ["C:/absolute/path/to/trusted_server.py"]
+  },
+  "tools": [
+    {
+      "name": "lookup",
+      "description": "Look up the caller-selected reference",
+      "arguments": {"reference": "fixed-by-caller"},
+      "expected": {"reference": "fixed-by-caller"}
+    }
+  ]
+}
+```
+
+Install `.[mcp]`, then add `--mcp-profile PATH --allow-mcp-actions` to `open-computer`. The model only sees a namespaced offer such as `m:m0`, its description and tool name. It can propose `{"ref":"m:m0","operation":"invoke"}`; the runtime rejects any model-supplied value, server command, tool name, or arguments. Jev chooses among the compiled MCP and other channel candidates. The candidate is guarded as `EXTERNAL_SIDE_EFFECT`, because even a nominally read-only MCP tool or its server startup might mutate state. Only use a server you trust in a controlled environment. The profile's fixed arguments may appear in an opt-in **local** trace; never put secrets in them or commit private traces. Each profile tool must declare a nonempty expected JSON subset, which the structured MCP output must match. This verifies the declared fields, **not the truth of arbitrary third-party data or overall task success**; caller-supplied terminal gates remain separate.
+
+The end-to-end regression test starts a real MCP stdio server and performs MCP → browser DOM → desktop UIA actions in one episode. It does not use the campus model/Jev APIs or establish general MCP tool-discovery, dynamic parameter generation, or cross-app success rates. Those remain future work.
+
+An additional mocked editor-style task tests UIA `fill` plus browser navigation. The terminal gate re-reads the edit control's value; observed edit values influence freshness/acceptance but are omitted from the serialized desktop snapshot sent to the planner and trace. The user-authored goal/acceptance string may of course still contain the same text. This test is not a live Notepad validation.
+
 ### Optional browser viewport vision
 
 Install `.[browser-vision]` and `python -m playwright install chromium`, then select `--browser-channel chromium` to avoid depending on an installed Edge/Chrome binary. This enables the experimental browser path on platforms with Playwright Chromium; a live macOS run has not yet been verified. With `--vision-model MODEL_ID --vision-mode always --allow-screenshot-upload`, the VLM reads only the current viewport and gives the planner bounded scene text. Add `--allow-visual-clicks --allow-external-actions` only in a controlled task to make `vN` browser-mouse clicks executable. Even then, the runtime checks origin, DOM fingerprint, viewport size, and screenshot freshness before clicking; an image change is **not** independent semantic task verification. If an optional VLM response is malformed but live DOM controls remain, the browser continues with structured observations and reports a vision failure count.

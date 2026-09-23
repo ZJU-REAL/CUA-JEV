@@ -16,6 +16,7 @@ from typing import Any, Protocol
 
 from .episode import Evaluation
 from .local_tools import ScopedReadOnlyTools, ToolOffer
+from .mcp_surface import McpCallOffer, McpToolSurface
 from .models import ActionCandidate, ActionReceipt, Channel, Observation, Verification
 from .open_browser import BrowserSnapshot, OpenBrowserTask
 from .open_desktop import DesktopSnapshot, OpenDesktopTask
@@ -38,11 +39,13 @@ class ComputerSnapshot:
     tool_offers: tuple[ToolOffer, ...]
     tool_results: tuple[dict[str, Any], ...]
     requirements: dict[str, Any]
+    mcp_offers: tuple[McpCallOffer, ...] = ()
     providers: dict[str, ActionSurface] = field(default_factory=dict, repr=False, compare=False)
 
     def state_for(self, namespace: str) -> Any:
         return {
             "b": self.browser, "d": self.desktop, "t": self.tool_offers,
+            "m": self.mcp_offers,
         }[namespace]
 
     def to_dict(self) -> dict[str, Any]:
@@ -56,6 +59,9 @@ class ComputerSnapshot:
             "browser": browser, "desktop": desktop,
             "tool_offers": [
                 {**offer.to_dict(), "ref": f"t:{offer.ref}"} for offer in self.tool_offers
+            ],
+            "mcp_offers": [
+                {**offer.to_dict(), "ref": f"m:{offer.ref}"} for offer in self.mcp_offers
             ],
             "tool_results": list(self.tool_results),
             "requirements": self.requirements,
@@ -83,7 +89,8 @@ class ComputerSnapshot:
         return state
 
     def fingerprint(self) -> str:
-        return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
+        state = {**self.to_dict(), "desktop_private_fingerprint": self.desktop.fingerprint()}
+        return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -145,6 +152,7 @@ class OpenComputerTask:
         desktop_surface: ActionSurface | None = None,
         planner: ComputerGoalPlanner,
         local_tool_root: Path | None = None,
+        mcp_surface: McpToolSurface | None = None,
         required_url_contains: str = "",
         required_window_title_contains: str = "",
         required_window_text_contains: str = "",
@@ -172,6 +180,8 @@ class OpenComputerTask:
         }
         if self.local_tools is not None:
             self.providers["t"] = ReadOnlyToolSurface(self.local_tools)
+        if mcp_surface is not None:
+            self.providers["m"] = mcp_surface
         self.required_url_contains = required_url_contains
         self.required_window_title_contains = required_window_title_contains
         self.required_window_text_contains = required_window_text_contains
@@ -206,6 +216,7 @@ class OpenComputerTask:
         return ComputerSnapshot(
             browser=self.providers["b"].capture(), desktop=self.providers["d"].capture(),
             tool_offers=self.providers["t"].capture() if "t" in self.providers else (),
+            mcp_offers=self.providers["m"].capture() if "m" in self.providers else (),
             tool_results=tuple(self._tool_results[-6:]),
             requirements={
                 "url_contains": self.required_url_contains,
@@ -222,6 +233,7 @@ class OpenComputerTask:
             browser=self.providers["b"].observe(history),
             desktop=self.providers["d"].observe(history),
             tool_offers=self.providers["t"].observe(history) if "t" in self.providers else (),
+            mcp_offers=self.providers["m"].observe(history) if "m" in self.providers else (),
             tool_results=tuple(self._tool_results[-6:]),
             requirements={
                 "url_contains": self.required_url_contains,
@@ -249,7 +261,7 @@ class OpenComputerTask:
             self.required_window_text_contains.casefold() in (
                 snapshot.desktop.text + "\n" + "\n".join(
                     item.name for item in snapshot.desktop.controls
-                )
+                ) + "\n" + "\n".join(snapshot.desktop.edit_values)
             ).casefold(),
             all(item in self._completed_capabilities for item in self.required_capabilities),
         )
@@ -312,7 +324,9 @@ class OpenComputerTask:
         return tuple(result)
 
     def executor_bindings(self) -> dict[Channel, Any]:
-        return {channel: self for channel in (Channel.API, Channel.CLI, Channel.SCRIPT, Channel.GUI)}
+        return {channel: self for channel in (
+            Channel.API, Channel.CLI, Channel.SCRIPT, Channel.GUI, Channel.MCP,
+        )}
 
     def register_verifiers(self, registry: VerifierRegistry) -> None:
         for provider in self.providers.values():
@@ -342,9 +356,17 @@ class OpenComputerTask:
         index = int(candidate.intent.removeprefix("option_"))
         self._used.add(index)
         self._completed_capabilities.add(candidate.capability)
-        if self._plan is not None and self._plan.options[index].source == "t":
+        if candidate.capability == "mcp.call_tool":
+            server = candidate.arguments["server"]
+            tool = candidate.arguments["tool"]
+            self._completed_capabilities.add(f"mcp.{server}.{tool}")
+        if self._plan is not None and self._plan.options[index].source in {"t", "m"}:
             output = receipt.output
-            summary = output.get("text", output.get("stdout", output.get("entries", "")))
+            summary = output.get(
+                "structured_content", output.get(
+                    "text", output.get("stdout", output.get("entries", ""))
+                )
+            )
             self._tool_results.append({
                 "capability": candidate.capability, "result": str(summary)[:2000],
                 "verified": True,

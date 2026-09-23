@@ -3,6 +3,7 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
+from test_open_desktop import FakeWindow
 
 from cua_jev.episode import EpisodeConfig, EpisodeRunner, EpisodeStatus
 from cua_jev.executors import ControlExecutor
@@ -366,3 +367,53 @@ def test_model_projection_keeps_grounded_refs_without_runtime_handles(tmp_path):
         assert runtime_only not in wire
     assert len(wire) < len(json.dumps(raw))
     task.close()
+
+
+def test_editor_style_text_goal_uses_private_live_edit_value():
+    class Planner:
+        def plan(self, _goal, snapshot, _recent):
+            options = []
+            if "Ada" not in snapshot.desktop.edit_values:
+                options.append({"ref": "d:c0", "operation": "fill", "value": "Ada"})
+            if "/done" not in snapshot.browser.url:
+                options.append({"ref": "b:e0", "operation": "click"})
+            return ComputerPlan.from_dict({"subgoal": "Edit and navigate", "options": options}, snapshot)
+
+    goal = "Write Ada in the editor and open the result page"
+    planner = Planner()
+    window = FakeWindow()
+    before_edit = DesktopSnapshot.capture(window)[0]
+    task = OpenComputerTask(
+        goal=goal, planner=planner,
+        browser=OpenBrowserTask(
+            goal=goal, start_url="https://example.test/start",
+            planner=planner, page=BrowserPage(),
+        ),
+        desktop=OpenDesktopTask(
+            goal=goal, window_title_re="Example", planner=planner,
+            window=window, allow_text_input=True,
+        ),
+        required_url_contains="/done", required_window_text_contains="Ada",
+        required_capabilities=("desktop.fill",),
+    )
+
+    def factory(item):
+        executors = ExecutorRegistry()
+        for channel, executor in item.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        item.register_verifiers(verifiers)
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(RulePolicy()), guard=ActionGuard(allow_writes=True),
+            executors=executors, verifiers=verifiers,
+        )
+
+    result = EpisodeRunner(factory, EpisodeConfig(max_steps=4)).run(task)
+    assert result.status == EpisodeStatus.SUCCESS, result.reason
+    assert {step.receipt.capability for step in result.steps} == {"desktop.fill", "browser.click"}
+    assert window.controls[0].value == "Ada"
+    after_edit = DesktopSnapshot.capture(window)[0]
+    assert after_edit.edit_values == ("Ada",)
+    assert before_edit.fingerprint() != after_edit.fingerprint()
+    assert "Ada" not in json.dumps(task._snapshot.to_dict()["desktop"])

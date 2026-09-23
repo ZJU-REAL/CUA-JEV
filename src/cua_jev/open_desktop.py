@@ -47,6 +47,7 @@ class DesktopSnapshot:
     window_handle: int
     text: str
     controls: tuple[DesktopControl, ...]
+    edit_values: tuple[str, ...] = ()
     visual_targets: tuple[VisualTarget, ...] = ()
     visual_summary: str = ""
     visual_text: tuple[str, ...] = ()
@@ -58,6 +59,7 @@ class DesktopSnapshot:
         controls: list[DesktopControl] = []
         handles: dict[str, Any] = {}
         text_parts: list[str] = []
+        edit_values: list[str] = []
         for index, wrapper in enumerate(window.descendants()[:400]):
             try:
                 info = wrapper.element_info
@@ -77,6 +79,15 @@ class DesktopSnapshot:
                     continue
                 if name and control_type in {"Text", "Document", "StatusBar"}:
                     text_parts.append(name)
+                if control_type == "Edit":
+                    read_value = getattr(wrapper, "get_value", None)
+                    if callable(read_value):
+                        try:
+                            value = read_value()
+                        except Exception:
+                            value = None
+                        if isinstance(value, str) and value:
+                            edit_values.append(value[:1600])
                 can_invoke = callable(getattr(wrapper, "invoke", None))
                 can_set_text = callable(getattr(wrapper, "set_edit_text", None))
                 if not (name or can_invoke or can_set_text):
@@ -97,6 +108,7 @@ class DesktopSnapshot:
         snapshot = cls(
             window_title=str(window.window_text())[:160], window_handle=int(window.handle),
             text="\n".join(text_parts)[:1600], controls=tuple(controls),
+            edit_values=tuple(edit_values[:20]),
         )
         return snapshot, handles
 
@@ -114,11 +126,13 @@ class DesktopSnapshot:
         state = {
             "window_title": self.window_title, "window_handle": self.window_handle,
             "text": self.text, "controls": [item.to_dict() for item in self.controls],
+            "edit_values": self.edit_values,
         }
         return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
     def fingerprint(self) -> str:
-        return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
+        state = {**self.to_dict(), "edit_values": self.edit_values}
+        return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
 
 @dataclass(frozen=True)

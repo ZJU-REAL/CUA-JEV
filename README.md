@@ -117,6 +117,10 @@ A separate run enabled **Calculator-window VLM scene grounding** in the same thr
 
 The host now talks to typed [action-surface providers](src/cua_jev/surface_providers.py) through `observe → validate → compile → execute → verify`. The browser, Windows UIA window, and scoped tools implement this contract; a test replaces the Windows desktop provider without changing the planner or Jev/runtime loop. A compact model-facing snapshot preserves live refs and labels while omitting runtime handles and geometry; the full snapshot remains available for freshness and execution checks. In a second live CLI → DOM → UIA task (Python version, a different documentation chapter, and Calculator “8”), all caller-supplied gates passed in **15.4 s** over three Jev decisions. The text planner reported **15,930 tokens** across three calls. This one run is a regression smoke test, **not** evidence of cost or speed improvement.
 
+An optional [MCP tool surface](src/cua_jev/mcp_surface.py) now adds explicitly registered `m:` offers alongside DOM, UIA, and local tools. A trusted local profile fixes the stdio executable, tool allowlist, and arguments; the model may select a live ref but cannot generate a command or change its arguments. MCP calls are disabled without `--mcp-profile` **and** `--allow-mcp-actions`, and are treated as potentially side-effecting. A real MCP protocol call passes an end-to-end test alongside browser DOM and desktop UIA actions. This tests integration, not the safety or usefulness of arbitrary third-party MCP servers; see the [profile format and limits](docs/OPEN_TASKS.md#registered-mcp-calls).
+
+A second, simulated editor-style cross-app goal exercises UIA text fill plus browser navigation. Its terminal gate re-reads the edit control's live value without exposing that observed value in the model-facing desktop snapshot. It is **not** a live Notepad result.
+
 The host is [open_computer.py](src/cua_jev/open_computer.py). Its shipped desktop provider is still **Windows UIA-only**; the replacement-provider test does not establish macOS support. It remains limited to one browser origin, one selected window, and registered tools—not an arbitrary-application agent.
 
 ### Browser DOM + VLM + Jev pilot (experimental)
@@ -215,11 +219,13 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] Add an opt-in scoped read-only local capability pack to open-browser and complete one real browser + CLI goal with independent tool/URL acceptance gates.
 - [x] Compose browser DOM, one selected Windows UIA window, and scoped CLI/API tools in a bounded open-computer loop; complete one real three-channel task with caller-supplied terminal gates.
 - [x] Extract an action-surface provider contract, test a replacement accessibility backend, compact model-facing state, and rerun a distinct live CLI → DOM → UIA goal.
+- [x] Add opt-in, profile-bound MCP calls to the combined action space and test a real MCP stdio call in the same episode as DOM and UIA.
+- [x] Add a distinct editor-style cross-app regression and keep observed edit values private while using them in freshness and terminal checks.
 - [x] Complete one live cross-app VLM-scene-fusion run; the selected desktop action remained UIA, so visually grounded action selection is still unproven.
 - [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.
 - [ ] Extend the initial provider contract to macOS Accessibility, dynamic MCP, and additional apps; replace one-window/task-family constraints and validate unfamiliar cross-app tasks on both operating systems.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.
-- [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
+- [ ] Add schema-grounded MCP tool discovery and parameter generation beyond fixed trusted profiles; improve cross-channel recovery, per-action safety confirmations, and long-term regression benchmarks.
 
 ## Safety and license
 
