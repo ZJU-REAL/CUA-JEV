@@ -80,3 +80,19 @@ def test_bad_model_response_fails_closed():
     )
     with pytest.raises(ValueError, match="invalid planning response"):
         planner.plan("Finish", BrowserSnapshot.capture(FakePage()), [])
+
+
+def test_model_gateway_bypasses_system_proxy_unless_opted_in(monkeypatch):
+    original = httpx.Client
+    options = []
+
+    def factory(**kwargs):
+        options.append(kwargs["trust_env"])
+        return original(transport=httpx.MockTransport(lambda _request: httpx.Response(200)), **kwargs)
+
+    monkeypatch.setattr("cua_jev.model_planner.httpx.Client", factory)
+    direct = ChatModelPlanner("http://127.0.0.1:8010/v1", "model")
+    proxied = ChatModelPlanner("http://127.0.0.1:8010/v1", "model", use_env_proxy=True)
+    assert options == [False, True]
+    direct.close()
+    proxied.close()

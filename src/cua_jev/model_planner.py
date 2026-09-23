@@ -29,6 +29,7 @@ class ChatModelPlanner:
         *,
         api_key: str | None = None,
         allow_insecure_http: bool = False,
+        use_env_proxy: bool = False,
         client: httpx.Client | None = None,
     ) -> None:
         parsed = urlparse(base_url)
@@ -44,7 +45,11 @@ class ChatModelPlanner:
         self.base_url = base_url.rstrip("/")
         self.model = model.strip()
         self.api_key = api_key
-        self.client = client or httpx.Client(timeout=httpx.Timeout(90, connect=8), follow_redirects=False)
+        self.client = client or httpx.Client(
+            timeout=httpx.Timeout(90, connect=8),
+            follow_redirects=False,
+            trust_env=use_env_proxy,
+        )
         self._owns_client = client is None
         self.last_usage: dict[str, Any] = {}
         self.usage_totals: dict[str, int] = {}

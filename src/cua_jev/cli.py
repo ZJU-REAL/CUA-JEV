@@ -79,6 +79,7 @@ def _parser() -> argparse.ArgumentParser:
     browser_planner.add_argument("--model-base-url")
     open_browser.add_argument("--model")
     open_browser.add_argument("--allow-insecure-model-http", action="store_true")
+    open_browser.add_argument("--use-env-proxy", action="store_true")
     open_browser.add_argument("--policy", choices=("rule", "jev"), default="jev")
     open_browser.add_argument("--headed", action="store_true")
     open_browser.add_argument("--allow-form-input", action="store_true")
@@ -93,6 +94,7 @@ def _parser() -> argparse.ArgumentParser:
     open_desktop.add_argument("--model-base-url", required=True)
     open_desktop.add_argument("--model", required=True)
     open_desktop.add_argument("--allow-insecure-model-http", action="store_true")
+    open_desktop.add_argument("--use-env-proxy", action="store_true")
     open_desktop.add_argument("--policy", choices=("rule", "jev"), default="jev")
     open_desktop.add_argument("--allow-text-input", action="store_true")
     open_desktop.add_argument("--allow-button-actions", action="store_true")
@@ -101,6 +103,7 @@ def _parser() -> argparse.ArgumentParser:
     catalog = sub.add_parser("planner-models", help="List available IDs from a model gateway")
     catalog.add_argument("--model-base-url", required=True)
     catalog.add_argument("--allow-insecure-model-http", action="store_true")
+    catalog.add_argument("--use-env-proxy", action="store_true")
     return parser
 
 
@@ -193,6 +196,7 @@ def _chat_planner(args: argparse.Namespace, *, model: str | None = None) -> Chat
         args.model_base_url, model_id,
         api_key=os.getenv("CUA_JEV_MODEL_API_KEY") or os.getenv("CUA_JEV_PLANNER_API_KEY"),
         allow_insecure_http=args.allow_insecure_model_http,
+        use_env_proxy=args.use_env_proxy,
     )
 
 
@@ -265,7 +269,8 @@ def main(argv: list[str] | None = None) -> int:
         summary["planner_calls"] = environment.planner_calls
         summary["planner_wall_ms"] = getattr(planner, "planning_wall_ms", None)
         summary["planner_model_usage"] = getattr(planner, "usage_totals", None)
-        summary["jev_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
+        summary["policy"] = args.policy
+        summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 0 if result.success else 1
     if args.command == "open-desktop":
@@ -285,7 +290,8 @@ def main(argv: list[str] | None = None) -> int:
         summary["planner_calls"] = environment.planner_calls
         summary["planner_wall_ms"] = planner.planning_wall_ms
         summary["planner_model_usage"] = planner.usage_totals
-        summary["jev_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
+        summary["policy"] = args.policy
+        summary["policy_decision_ms"] = sum(step.decision.latency_ms for step in result.steps)
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 0 if result.success else 1
     if args.command in {"episode-demo", "experiment"}:

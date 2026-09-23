@@ -2,7 +2,7 @@
 
 The original four Windows workflows remain curated, reproducible capability packs. `open-browser` and `open-desktop` are separate experimental paths for tasks **not encoded as one of those four workflows**. Neither contains site- or app-specific selectors or scripts.
 
-This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **accessible UI Automation controls in one explicitly selected Windows window**. Neither handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. The supplied campus model gateway was unreachable during implementation, so real model quality and compatibility remain untested.
+This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **accessible UI Automation controls in one explicitly selected Windows window**. Neither handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. A short read-only browser task has run with a live model and Jev; broader model quality and task generalization remain untested.
 
 ## Division of labor
 
@@ -15,16 +15,30 @@ The planner is intentionally called less often than Jev. This is an architectura
 
 ## Direct model gateway
 
-`ChatModelPlanner` uses the widely implemented OpenAI-style `GET /v1/models` and `POST /v1/chat/completions` wire shapes. It avoids model-specific parameters such as JSON mode and temperature, then validates the returned JSON against the live element snapshot. The campus gateway may differ from the official OpenAI API; successful live compatibility has **not** been established. Its key is read from `CUA_JEV_MODEL_API_KEY` (or `CUA_JEV_PLANNER_API_KEY`) and must never be committed.
+`ChatModelPlanner` uses the widely implemented OpenAI-style `GET /v1/models` and `POST /v1/chat/completions` wire shapes. It avoids model-specific parameters such as JSON mode and temperature, then validates the returned JSON against the live element snapshot. A small live smoke test succeeded with one campus gateway; provider-specific compatibility is not guaranteed. Its key is read from `CUA_JEV_MODEL_API_KEY` (or `CUA_JEV_PLANNER_API_KEY`) and must never be committed.
 
 ```powershell
 $env:CUA_JEV_MODEL_API_KEY = "..."
-cua-jev planner-models --model-base-url "http://101.37.174.109:8010/v1" --allow-insecure-model-http
-cua-jev open-browser --goal "Find the release page" --url "https://example.org/" --model-base-url "http://101.37.174.109:8010/v1" --model "MODEL_ID" --allow-insecure-model-http --policy jev
-cua-jev open-desktop --goal "Find the requested item" --window-title "^File Explorer$" --model-base-url "http://101.37.174.109:8010/v1" --model "MODEL_ID" --allow-insecure-model-http --policy jev
+cua-jev planner-models --model-base-url "http://YOUR_CAMPUS_GATEWAY:8010/v1" --allow-insecure-model-http
+cua-jev open-browser --goal "Find the release page" --url "https://example.org/" --model-base-url "http://YOUR_CAMPUS_GATEWAY:8010/v1" --model "MODEL_ID" --allow-insecure-model-http --policy jev
+cua-jev open-desktop --goal "Find the requested item" --window-title "^File Explorer$" --model-base-url "http://YOUR_CAMPUS_GATEWAY:8010/v1" --model "MODEL_ID" --allow-insecure-model-http --policy jev
 ```
 
 The insecure-HTTP flag is required because this endpoint is plain HTTP. It exposes the bearer key and task content to the network unless protected by a trusted tunnel; prefer HTTPS or a local SSH tunnel. `planner-models` only lists IDs. Names alone do not prove vision support or planning quality; shortlist with controlled live probes and held-out tasks once reachable.
+
+The model adapter connects directly by default, ignoring OS/environment proxies. This matters on Windows when a system proxy intercepts campus HTTP requests. Pass `--use-env-proxy` only if your model gateway actually requires that proxy.
+
+### Provisional model shortlist
+
+The accessible gateway advertised these IDs, and minimal live calls established the following—not benchmark rankings:
+
+| Model ID | Initial role | Evidence |
+|---|---|---|
+| `dashscope/qwen-flash` | Default structured-state planner candidate | Returned a valid grounded browser plan; a short public-site task completed with Jev. |
+| `dashscope/qwen3-vl-32b-instruct` | Potential screenshot/VLM fallback | Accepted an image input and correctly answered a trivial color question; not yet wired to the observer. |
+| `dashscope/qwen-plus`, `dashscope/qwen3.5-plus` | Escalation candidates | Returned valid plans on the same tiny prompt, but were slower in one-shot calls. |
+
+The [Qwen Flash model page](https://help.aliyun.com/en/model-studio/qwen-flash) and [visual-model documentation](https://help.aliyun.com/en/model-studio/vision-model/) describe provider capabilities, but the campus gateway's actual behavior must be evaluated separately. One prompt and one image do not establish reliability, latency distributions, or cost under real CUA workloads.
 
 By default the desktop path is observation-only. `--allow-text-input` permits editable controls; `--allow-button-actions` permits clicks with possible external side effects. Fake UIA controls exercise both routes in tests, but arbitrary live desktop tasks have **not** been validated.
 
@@ -73,7 +87,7 @@ By default only same-origin link navigation is eligible. Even a same-origin GET 
 
 ## What remains
 
-- Restore connectivity to the campus gateway, inspect actual model IDs, test chat compatibility, and shortlist text planners versus vision-capable models with held-out goals. No model quality or generalization claim is made yet.
+- Evaluate the short-listed text planner and vision-capable model on held-out goals with repeated runs, cost/latency measurement, and failure analysis. No broad model quality or generalization claim is made yet.
 - Add a screenshot/VLM fallback for inaccessible UIs and multi-window navigation; single-window UIA is not desktop generality.
 - Expose safe, typed CLI/MCP capabilities within the same open-task frontier; today the open paths offer DOM/UIA/GUI, while the curated workflows contain CLI/MCP.
 - Make completion verification independent of the planner, add human confirmation for sensitive actions, and quantify planner calls, Jev decisions, success, latency, and cost on held-out tasks.
