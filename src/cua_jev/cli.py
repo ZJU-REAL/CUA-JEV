@@ -527,6 +527,16 @@ def main(argv: list[str] | None = None) -> int:
         summary["planner_model_usage"] = planner.usage_totals
         summary["browser_vision_failures"] = browser.vision_failures
         summary["desktop_vision_failures"] = desktop.vision_failures
+        summary["browser_vision_calls"] = browser_vision.vision_calls if browser_vision else 0
+        summary["desktop_vision_calls"] = desktop_vision.vision_calls if desktop_vision else 0
+        summary["browser_vision_wall_ms"] = browser_vision.vision_wall_ms if browser_vision else 0
+        summary["desktop_vision_wall_ms"] = desktop_vision.vision_wall_ms if desktop_vision else 0
+        summary["browser_vision_model_usage"] = (
+            browser_vision.usage_totals if browser_vision else None
+        )
+        summary["desktop_vision_model_usage"] = (
+            desktop_vision.usage_totals if desktop_vision else None
+        )
         summary["vision_attempts"] = sum(
             item.vision_calls for item in (browser_vision, desktop_vision) if item
         ) + browser.vision_failures + desktop.vision_failures
