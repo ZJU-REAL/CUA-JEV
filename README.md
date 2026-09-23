@@ -94,6 +94,8 @@ For a recording, use [`scripts/record_open_workspace.py`](scripts/record_open_wo
 
 In one **real, unrecorded pilot**, the goal was to check local Python through CLI and open a different official Python tutorial chapter. The model proposed both a CLI and DOM action; Jev selected `cli.python_version` with **0.99** probability, then a DOM link. Both actions verified; the required tool and URL checks passed in **7.0 s** (two planner calls, two Jev decisions). This is a single integration result, not a held-out success rate or a cross-model benchmark. VLM was disabled in this run; the earlier DOM+VLM pilot is separate.
 
+A second two-step run enabled the VLM on the same kind of browser + CLI goal. It also completed, but took **51.4 s**, with **45.1 s** in visual requests: one VLM response failed validation and fell back to DOM, while the other produced a valid scene. This is evidence of fallback behavior and a current latency/reliability bottleneck, **not** evidence that adding vision improves performance.
+
 ```powershell
 cua-jev open-browser --goal "Check local Python version and open More Control Flow Tools" `
   --url "https://docs.python.org/3/tutorial/index.html" `
