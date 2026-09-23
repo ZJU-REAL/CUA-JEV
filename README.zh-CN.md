@@ -4,15 +4,9 @@
 
 CUA-JEV 是一个面向 Windows Computer-Use Agent（CUA）的开源参考框架。它把 DOM、Windows UI Automation、Excel COM、终端和文件系统等结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个完整可运行的任务范例及 Hybrid / GUI Only 对照实验。
 
-Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动作选择的下游方向，例如 CUA、具身智能，以及潜在的智能驾驶场景。[RoboJEV](https://github.com/lykycy123/RoboJEV) 已在 MuJoCo 仿真中探索 Jev 控制的机器人操作；CUA-JEV 则聚焦计算机使用中的“下一步做什么、通过哪种通道执行”。这是一项研究动机，不表示本框架已在机器人或智驾系统中得到验证。
+Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动作选择的下游方向，例如 CUA、具身智能，以及潜在的智能驾驶场景。[RoboJEV](https://github.com/lykycy123/RoboJEV) 已在 MuJoCo 仿真中探索 Jev 控制的机器人操作；CUA-JEV 则聚焦计算机使用中的“下一步做什么、通过哪种通道执行”。
 
 > **能力边界：**这不是“给任意指令，就能操作任意 Windows 软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本，也不凭截图理解陌生软件。
-
-现已增加[实验性的开放任务路径](docs/OPEN_TASKS.md)：文本模型从实时 DOM / UIA 等观察中理解目标并提出下一步意图，框架将意图展开为合法的类型化执行路线，Jev 再选一个，随后执行、验证并重观察。[新的跨软件案例视频](https://zjureal.com/CUA-JEV/#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；视觉模型尚未接入，重复成功率与成本效果也尚未评测。
-
-公开录制的单次运行实测 155.9 秒，视频为观看方便统一加速 2.5 倍；另一次成功运行耗时 307 秒，其中 287 秒等待规划模型。也出现过网关超时和模型输出不合规的失败尝试，因此目前不能以该案例宣称开放任务模式在端到端速度或可靠性上已经占优。
-
-![开放任务架构：实时状态、模型提出意图、框架构建候选、Jev 选路、执行验证循环](src/cua_jev/ui/static/open-task-loop.svg)
 
 ![CUA-JEV：任务适配器、Jev 决策、执行器与验证器组成的闭环](assets/architecture.svg)
 
@@ -63,6 +57,16 @@ GUI Only 中，状态读取与定位仍可使用结构化接口，但**修改操
 VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**Edge 与 Excel 的这批 Hybrid 运行实际上仍选择了 GUI，Excel 甚至略慢**。因此不能把这四行描述为“Jev 在所有任务上更快”。Codex 是通用工具代理，Jev 则使用预先构建的任务能力包；样本数也不足以形成通用速度排名。网站展示的美元数值是按 [TypeSafe 公开价格](https://docs.typesafe.ai/models)和 [OpenAI 公开费率](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing)折算的**模型成本估计，不是实际账单**。方法、token 计数与限制见 [`benchmarks/v2-cost-pilot-2026-09-23.json`](benchmarks/v2-cost-pilot-2026-09-23.json)。
 
 网页是只读的公开实验快照，不连接 Jev API，也不运行用户电脑上的任务。案例视频是演示录制，表中耗时取自运行记录，而不是视频长度。Jev 展开的是代表性运行的逐步 trace；Codex 展开的是当时记录、按阶段合并的工具调用，不冒充一一对应的原子 GUI 动作。发布快照位于 [`website/snapshot.json`](website/snapshot.json)。
+
+## 开放任务探索
+
+[实验性的开放任务路径](docs/OPEN_TASKS.md)将模型规划与 Jev 选路分开：文本模型从实时 DOM / UIA 等观察中理解目标并提出下一步意图，框架将意图展开为合法的类型化执行路线，Jev 再选一个，随后执行、验证并重观察。
+
+![开放任务架构：实时状态、模型提出意图、框架构建候选、Jev 选路、执行验证循环](src/cua_jev/ui/static/open-task-loop.svg)
+
+[跨软件案例视频](https://zjureal.com/CUA-JEV/#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。其中 5 次通过 DOM 操作 Edge，5 次在框架内部记录引文，1 次通过文件 API 写入，1 次通过 CLI 打开 VS Code；内部记录不等同于外部计算机操作。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；视觉模型尚未接入，重复成功率与成本效果也尚未评测。
+
+公开录制的单次运行实测 155.9 秒，视频为观看方便统一加速 2.5 倍；另一次成功运行耗时 307 秒，其中 287 秒等待规划模型。也出现过网关超时和模型输出不合规的失败尝试，因此目前不能以该案例宣称开放任务模式在端到端速度或可靠性上已经占优。
 
 ## 快速开始
 
