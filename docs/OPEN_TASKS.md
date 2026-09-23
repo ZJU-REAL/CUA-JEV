@@ -1,6 +1,6 @@
 # Experimental open-task paths
 
-The original four Windows workflows remain curated, reproducible capability packs. `open-browser`, `open-desktop`, and `open-workspace` are experimental paths for tasks **not encoded as one of those four workflows**. They do not contain site- or app-specific click sequences.
+The original four desktop workflows remain curated, reproducible capability packs, currently validated on Windows. `open-browser`, `open-desktop`, and `open-workspace` are experimental paths for tasks **not encoded as one of those four workflows**. They do not contain site- or app-specific click sequences.
 
 This is an integration scaffold, not a claim of general computer-use capability. The browser path covers **one Edge/Chromium page on one web origin**. The desktop path covers **one explicitly selected Windows window**, using UI Automation and an optional screenshot/VLM target grounder. `open-workspace` adds one browser-to-VS-Code note-writing task family, with live model-generated navigation and content, Jev-selected routes, and a scoped file target. None handles arbitrary dialogs, pure-canvas interfaces, or unrestricted cross-app workflows. Broader model quality and task generalization remain untested.
 

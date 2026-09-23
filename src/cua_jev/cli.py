@@ -13,7 +13,6 @@ from .doctor import doctor
 from .episode import EpisodeConfig, EpisodeRunner
 from .executors import ControlExecutor, FileSystemExecutor
 from .experiment import ExperimentRunner
-from .frozen import builtin_task_specs
 from .guard import ActionGuard
 from .model_planner import ChatModelPlanner
 from .models import Channel
@@ -43,7 +42,7 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--workspace", default="demo-workspace")
     benchmark.add_argument("--trace", default="runs/benchmark.jsonl")
     sub.add_parser("jev-smoke", help="Make one read-only Jev decision without executing an action")
-    sub.add_parser("tasks", help="List frozen representative task contracts")
+    sub.add_parser("tasks", help="List the four current workflow cases")
     episode = sub.add_parser("episode-demo", help="Run the closed-loop sandbox episode")
     episode.add_argument("--policy", choices=("rule", "jev"), default="rule")
     episode.add_argument("--workspace", default="demo-workspace/episode")
@@ -259,17 +258,18 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(doctor(), indent=2, ensure_ascii=False))
         return 0
     if args.command == "tasks":
+        from .ui.manager import TASK_CATALOG
+
         print(
             json.dumps(
                 [
                     {
-                        "name": task.name,
-                        "application": task.application,
-                        "capability_packs": task.capability_packs,
-                        "max_steps": task.max_steps,
-                        "digest": task.digest,
+                        "name": name,
+                        "title": TASK_CATALOG[name]["title"],
+                        "description": TASK_CATALOG[name]["description"],
+                        "steps": TASK_CATALOG[name]["steps"],
                     }
-                    for task in builtin_task_specs()
+                    for name in SUITE_NAMES
                 ],
                 indent=2,
             )

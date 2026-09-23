@@ -16,3 +16,6 @@ runs/
 .runs/
 artifacts/
 demo-workspace/
+# Local experiment notes and intermediate pilot accounting; the reviewed site snapshot is public.
+benchmarks/
+docs/PUBLISHING.md

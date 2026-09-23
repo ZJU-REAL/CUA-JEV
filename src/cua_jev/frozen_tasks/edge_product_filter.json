@@ -1,9 +1,0 @@
-{
-  "name": "edge-product-filter",
-  "application": "edge",
-  "description": "Fill a deterministic local product filter, select the requested row, and download CSV.",
-  "capability_packs": ["edge-dom", "filesystem", "control"],
-  "reset": {"kind": "local-web-fixture", "fixture": "product-filter"},
-  "success": {"dom": "#status[data-state='complete']", "download": "products.csv"},
-  "max_steps": 12
-}

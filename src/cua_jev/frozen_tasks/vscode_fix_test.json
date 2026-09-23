@@ -1,9 +1,0 @@
-{
-  "name": "vscode-fix-test",
-  "application": "vscode",
-  "description": "Run a failing fixture test, choose a registered patch, open the location, and verify tests pass.",
-  "capability_packs": ["vscode", "registered-cli", "filesystem", "control"],
-  "reset": {"kind": "git-fixture", "fixture": "broken-python-project"},
-  "success": {"command": "pytest", "exit_code": 0, "git_diff_allowlisted": true},
-  "max_steps": 18
-}

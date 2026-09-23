@@ -225,14 +225,14 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert page.status_code == 200
         assert "CUA-JEV" in page.text
         assert "How Jev powers computer use" in page.text
-        assert "Four curated workflows and one experimental open-task pilot" in page.text
-        assert "The recorded pilot uses text and DOM" in page.text
-        assert "Arbitrary Windows tasks are not yet supported" in page.text
+        assert "Four verified desktop workflows" in page.text
+        assert "The recorded open-task pilot uses text and DOM" in page.text
+        assert "macOS/Linux desktop adapters are not yet implemented" in page.text
         assert "Adapter observes" in page.text
         assert "Jev chooses" in page.text
         assert "Runtime acts &amp; checks" in page.text
         assert "not general app automation" in page.text
-        assert "Four Windows workflows cases" in page.text
+        assert "Four desktop workflow cases" in page.text
         assert "Hybrid vs GUI Only" in page.text
         assert "Jev vs Codex Computer Use" in page.text
         assert "Jev chooses how to execute it." in page.text

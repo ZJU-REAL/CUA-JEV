@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cua-jev"
 version = "0.1.0"
-description = "A typed, verifiable Jev action router for hybrid Windows computer use"
+description = "A typed, verifiable Jev action router for hybrid computer use"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

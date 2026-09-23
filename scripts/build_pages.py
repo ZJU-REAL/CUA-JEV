@@ -41,11 +41,19 @@ def _write_json(path: Path, value: Any) -> None:
 
 def refresh_snapshot() -> None:
     """Explicitly export allowlisted display fields from measured local records."""
+    from cua_jev.cost import (
+        CODEX_ENTERPRISE_USD_PER_MILLION,
+        CODEX_MODEL,
+        JEV_INPUT_USD_PER_MILLION,
+        JEV_MODEL,
+    )
     from cua_jev.ui.manager import TASK_CATALOG, RunManager
 
     manager = RunManager(ROOT)
     benchmarks: dict[str, Any] = {}
     steps: dict[str, Any] = {}
+    jev_tokens: dict[str, float] = {}
+    codex_tokens: dict[str, dict[str, int]] = {}
     for task in TASKS:
         rows = []
         for row in manager.benchmarks(task)["rows"]:
@@ -60,6 +68,16 @@ def refresh_snapshot() -> None:
                 raise ValueError(f"Missing successful representative run for {task}")
             public_row = {key: row.get(key) for key in PUBLIC_ROW_FIELDS}
             rows.append(public_row)
+            if row["agent"] == "jev" and row["action_space"] == "hybrid":
+                jev_tokens[task] = row["median_input_tokens"]
+            if row["agent"] == "codex_computer_use":
+                if row["successful_samples"] != 1:
+                    raise ValueError("Review Codex cost methodology before publishing multiple pilots")
+                codex_tokens[task] = {
+                    "input": row["median_input_tokens"],
+                    "cached_input": row["median_cached_input_tokens"],
+                    "output": row["median_output_tokens"],
+                }
             record = manager.steps(run_id)
             public_steps = []
             for step in record["steps"]:
@@ -78,7 +96,9 @@ def refresh_snapshot() -> None:
                 "terminal_verified": record["terminal_verified"],
                 "steps": public_steps,
             }
-        if len(rows) != 3:
+        if len(rows) != 3 or jev_tokens.get(task) is None or any(
+            value is None for value in codex_tokens.get(task, {}).values()
+        ) or task not in codex_tokens:
             raise ValueError(f"Expected Jev Hybrid, Jev GUI Only and Codex Hybrid for {task}")
         benchmarks[task] = {"rows": rows}
     tasks = {
@@ -88,6 +108,33 @@ def refresh_snapshot() -> None:
     snapshot = {
         "schema_version": 1,
         "captured_on": date.today().isoformat(),
+        "cost_evidence": {
+            "note": (
+                "Model-cost estimates from published rates, not observed bills. Jev values "
+                "use successful Hybrid medians; Codex uses one pilot per task in an existing conversation."
+            ),
+            "jev": {
+                "model": JEV_MODEL,
+                "input_usd_per_million": JEV_INPUT_USD_PER_MILLION,
+                "rate_source": "https://docs.typesafe.ai/models",
+                "median_hybrid_input_tokens": jev_tokens,
+            },
+            "codex": {
+                "model": CODEX_MODEL,
+                "usd_per_million": dict(zip(
+                    ("uncached_input", "cached_input", "output"),
+                    CODEX_ENTERPRISE_USD_PER_MILLION,
+                    strict=True,
+                )),
+                "rate_source": "https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing",
+                "pilot_tokens": codex_tokens,
+            },
+            "limits": (
+                "Codex token events were allocated to task windows in a long conversation; "
+                "estimates omit tooling, infrastructure, and subscription costs. "
+                "This is not a fresh-start per-task bill."
+            ),
+        },
         "tasks": tasks,
         "benchmarks": benchmarks,
         "steps": steps,

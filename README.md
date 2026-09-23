@@ -2,11 +2,13 @@
 
 [Webpage](https://zjureal.com/CUA-JEV/) · [中文文档](README.zh-CN.md)
 
-CUA-JEV is an open-source reference framework for Jev-powered computer use on Windows. A task adapter turns structured state from the browser, desktop UI, Excel, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects an `intent × action channel`; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four complete workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
+CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects an `intent × action channel`; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four Windows-validated workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
 
 Jev's fast, typed decisions are a promising fit for downstream systems that must choose actions repeatedly under latency constraints, including computer use, embodied agents, and potentially autonomous driving. [RoboJEV](https://github.com/lykycy123/RoboJEV) already explores the embodied setting with Jev-controlled manipulation in a MuJoCo simulator. CUA-JEV explores a different setting: choosing both *what to do next* and *which computer-use channel should do it*.
 
-> **Scope:** This is not a general agent that can operate any Windows application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
+> **Scope:** This is not a general agent that can operate any application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
+
+**Platform status:** The typed decision loop, guards, and traces are designed to be portable, and CI runs unit tests on Linux. The published desktop workflows and `open-desktop` path currently depend on Windows integrations such as UI Automation, Excel COM, and Explorer. macOS/Linux desktop adapters have **not** been implemented or validated; running these cases on a Mac is not supported yet.
 
 The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. A twelve-action browser-to-VS-Code research case now runs end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
 
@@ -56,7 +58,7 @@ Initial v2 records from 2026-09-23 are shown below in seconds. Jev values are me
 | VS Code | 14.0 | 90.8 | 57.9 |
 | Explorer | 13.2 | 211.1 | 50.9 |
 
-VS Code and Explorer illustrate how structured routes can avoid long sequences of GUI actions. **In these Edge and Excel Hybrid runs, however, Jev still chose GUI routes; Excel was slightly slower than GUI Only.** These results do not show that Jev is faster on every task. Codex is a general-purpose tool agent, while Jev uses prebuilt task capability packs; the samples are too small for a general performance ranking. The dollar figures on the website are **model-cost estimates, not billed charges**, derived from [TypeSafe public pricing](https://docs.typesafe.ai/models) and the [OpenAI public rate card](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing). Token accounting and caveats are in [`benchmarks/v2-cost-pilot-2026-09-23.json`](benchmarks/v2-cost-pilot-2026-09-23.json).
+VS Code and Explorer illustrate how structured routes can avoid long sequences of GUI actions. **In these Edge and Excel Hybrid runs, however, Jev still chose GUI routes; Excel was slightly slower than GUI Only.** These results do not show that Jev is faster on every task. Codex is a general-purpose tool agent, while Jev uses prebuilt task capability packs; the samples are too small for a general performance ranking. The dollar figures on the website are **model-cost estimates, not billed charges**, derived from [TypeSafe public pricing](https://docs.typesafe.ai/models) and the [OpenAI public rate card](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing). The minimal token accounting and caveats are kept with the published [`website/snapshot.json`](website/snapshot.json), rather than in separate process files.
 
 The public site is a read-only experimental snapshot. It neither calls the Jev API nor runs tasks on a visitor's computer. Video durations are not the benchmark wall times. Jev step lists come from representative run traces; Codex entries summarize recorded tool calls by phase and are not presented as equivalent atomic GUI steps. The curated publication data lives in [`website/snapshot.json`](website/snapshot.json).
 
@@ -154,13 +156,13 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 
 - [x] Jev `choice`, typed candidates, shared runtime, guard, receipts, and JSONL traces.
 - [x] GUI / DOM / COM / CLI / MCP / API execution interfaces and a keyless Rule baseline.
-- [x] Four defined Windows workflows, independent terminal verification, Hybrid / GUI Only paired experiments, and a Codex Hybrid pilot.
+- [x] Four Windows-validated desktop workflows, independent terminal verification, Hybrid / GUI Only paired experiments, and a Codex Hybrid pilot.
 - [x] Read-only website, curated experimental snapshot, real videos, and expandable execution steps.
 - [x] Experimental model + Jev browser-to-VS-Code task family with a five-source, 12-action case, window-only recording, and separate source-grounding check.
 - [ ] Evaluate unseen goals and sites with repeated trials, failure analysis, confidence intervals, and measured end-to-end latency and dollar cost. A completed case is not a benchmark.
 - [ ] Generalize task adapters across software and tasks, then explore macOS / Linux and more browser and office applications.
 - [x] Add opt-in, window-only screenshot/VLM target grounding to the experimental desktop path, while retaining the text-only path; offline integration tests pass.
-- [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out Windows tasks.
+- [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.
 - [ ] Amortize or cache slow planner calls; divide work with general CUA / LLM models for unfamiliar intent and Jev for repeated constrained choices, optimizing success, latency, and cost together.
 - [ ] Improve cross-channel recovery, dynamic MCP integration, safety confirmations, and long-term regression benchmarks.
 

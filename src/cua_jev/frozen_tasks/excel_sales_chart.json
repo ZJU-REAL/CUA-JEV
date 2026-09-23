@@ -1,9 +1,0 @@
-{
-  "name": "excel-sales-chart",
-  "application": "excel",
-  "description": "Open a reset sales workbook, add summary formulas and a chart, save, and verify via COM.",
-  "capability_packs": ["excel-com", "filesystem", "control"],
-  "reset": {"kind": "workbook-fixture", "fixture": "sales.xlsx"},
-  "success": {"range": "Summary!A1:B4", "chart_count": 1, "saved": true},
-  "max_steps": 15
-}

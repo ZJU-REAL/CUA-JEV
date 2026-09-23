@@ -1,9 +1,0 @@
-{
-  "name": "explorer-organize",
-  "application": "explorer",
-  "description": "Copy and classify controlled files using API, MCP or GUI and verify paths and hashes.",
-  "capability_packs": ["filesystem", "mcp-filesystem", "windows-uia", "control"],
-  "reset": {"kind": "directory-fixture", "fixture": "inbox"},
-  "success": {"manifest": "expected-files.json", "verify_hashes": true},
-  "max_steps": 15
-}

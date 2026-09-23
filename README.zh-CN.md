@@ -2,11 +2,13 @@
 
 [项目网页](https://zjureal.com/CUA-JEV/) · [English README](README.md)
 
-CUA-JEV 是一个面向 Windows Computer-Use Agent（CUA）的开源参考框架。它把 DOM、Windows UI Automation、Excel COM、终端和文件系统等结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个完整可运行的任务范例及 Hybrid / GUI Only 对照实验。
+CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择一个 `任务意图 × 执行通道`，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个已在 Windows 验证的完整任务范例及 Hybrid / GUI Only 对照实验。
 
 Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动作选择的下游方向，例如 CUA、具身智能，以及潜在的智能驾驶场景。[RoboJEV](https://github.com/lykycy123/RoboJEV) 已在 MuJoCo 仿真中探索 Jev 控制的机器人操作；CUA-JEV 则聚焦计算机使用中的“下一步做什么、通过哪种通道执行”。
 
-> **能力边界：**这不是“给任意指令，就能操作任意 Windows 软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本，也不凭截图理解陌生软件。
+> **能力边界：**这不是“给任意指令，就能操作任意软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本，也不凭截图理解陌生软件。
+
+**平台现状：**类型化决策循环、Guard 和 trace 的设计可移植，Linux CI 也运行单元测试；但已发布的桌面案例和 `open-desktop` 路径目前依赖 Windows UI Automation、Excel COM、Explorer 等接口。macOS/Linux 桌面适配器**尚未实现或验证**，现阶段不能直接在 Mac 上运行这些案例。
 
 ![CUA-JEV：任务适配器、Jev 决策、执行器与验证器组成的闭环](assets/architecture.svg)
 
@@ -54,7 +56,7 @@ GUI Only 中，状态读取与定位仍可使用结构化接口，但**修改操
 | VS Code | 14.0 | 90.8 | 57.9 |
 | Explorer | 13.2 | 211.1 | 50.9 |
 
-VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**Edge 与 Excel 的这批 Hybrid 运行实际上仍选择了 GUI，Excel 甚至略慢**。因此不能把这四行描述为“Jev 在所有任务上更快”。Codex 是通用工具代理，Jev 则使用预先构建的任务能力包；样本数也不足以形成通用速度排名。网站展示的美元数值是按 [TypeSafe 公开价格](https://docs.typesafe.ai/models)和 [OpenAI 公开费率](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing)折算的**模型成本估计，不是实际账单**。方法、token 计数与限制见 [`benchmarks/v2-cost-pilot-2026-09-23.json`](benchmarks/v2-cost-pilot-2026-09-23.json)。
+VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**Edge 与 Excel 的这批 Hybrid 运行实际上仍选择了 GUI，Excel 甚至略慢**。因此不能把这四行描述为“Jev 在所有任务上更快”。Codex 是通用工具代理，Jev 则使用预先构建的任务能力包；样本数也不足以形成通用速度排名。网站展示的美元数值是按 [TypeSafe 公开价格](https://docs.typesafe.ai/models)和 [OpenAI 公开费率](https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing)折算的**模型成本估计，不是实际账单**。最小必要的 token 计数与限制统一收录在 [`website/snapshot.json`](website/snapshot.json)，不再单独发布过程文件。
 
 网页是只读的公开实验快照，不连接 Jev API，也不运行用户电脑上的任务。案例视频是演示录制，表中耗时取自运行记录，而不是视频长度。Jev 展开的是代表性运行的逐步 trace；Codex 展开的是当时记录、按阶段合并的工具调用，不冒充一一对应的原子 GUI 动作。发布快照位于 [`website/snapshot.json`](website/snapshot.json)。
 
@@ -138,13 +140,13 @@ python scripts/record_v2_demos.py --task all --profile both --policy jev
 
 - [x] Jev `choice` 接入、类型化候选、统一运行时、guard、回执和 JSONL trace。
 - [x] GUI / DOM / COM / CLI / MCP / API 多通道执行接口；无密钥 Rule 基线。
-- [x] 四个 Windows 定义任务、独立终态验证、Hybrid / GUI Only 配对实验与 Codex Hybrid pilot。
+- [x] 四个已在 Windows 验证的桌面任务、独立终态验证、Hybrid / GUI Only 配对实验与 Codex Hybrid pilot。
 - [x] 只读项目网页、脱敏实验快照、真实视频与可展开执行步骤。
 - [x] 实验性模型 + Jev 跨软件任务族，五来源、12 动作案例及独立来源核验。
 - [ ] 用未见目标和网站进行足量重复试验；公布失败案例、置信区间、端到端延迟与美元成本，不能用单次成功案例代替基准。
 - [ ] 把任务适配器做得更通用：跨软件、跨任务，逐步扩展到 macOS / Linux 与更多浏览器/办公应用。
 - [x] 在实验性单窗口桌面路径中加入可选的截图/VLM 目标锚定；保留无 VLM 路径，并通过离线集成测试。
-- [ ] 完成真实 VLM 任务及未见 Windows 任务的重复评测，报告定位、安全性、成功率、延迟和成本。
+- [ ] 完成真实 VLM 任务及未见桌面任务的重复评测，报告定位、安全性、成功率、延迟和成本。
 - [ ] 缓存或复用较慢的规划模型调用；让通用 CUA / LLM 模型处理陌生目标，Jev 承担高频受约束选择，以成功率、延迟和成本共同优化。
 - [ ] 完善跨通道失败恢复、动态 MCP 服务接入、安全确认与长期回归基准。
 

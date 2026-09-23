@@ -1,6 +1,27 @@
 {
   "schema_version": 1,
   "captured_on": "2026-09-23",
+  "cost_evidence": {
+    "note": "Model-cost estimates from published rates, not observed bills. Jev values use successful Hybrid medians; Codex uses one pilot per task in an existing conversation.",
+    "jev": {
+      "model": "jev-1.13.0",
+      "input_usd_per_million": 0.042,
+      "rate_source": "https://docs.typesafe.ai/models",
+      "median_hybrid_input_tokens": {"edge": 17086.5, "excel": 33943, "vscode": 86266.5, "explorer": 117175}
+    },
+    "codex": {
+      "model": "gpt-6-sol",
+      "usd_per_million": {"uncached_input": 2.0, "cached_input": 0.2, "output": 10.0},
+      "rate_source": "https://help.openai.com/en/articles/20001415-chatgpt-rate-card-enterprise-token-based-pricing",
+      "pilot_tokens": {
+        "edge": {"input": 1144107, "cached_input": 1136896, "output": 1539},
+        "excel": {"input": 289216, "cached_input": 288000, "output": 1063},
+        "vscode": {"input": 373407, "cached_input": 370304, "output": 1771},
+        "explorer": {"input": 398735, "cached_input": 396032, "output": 2158}
+      }
+    },
+    "limits": "Codex token events were allocated to task windows in a long conversation; estimates omit tooling, infrastructure, and subscription costs. This is not a fresh-start per-task bill."
+  },
   "tasks": {
     "edge": {
       "title": "Edge checkout workflow",
