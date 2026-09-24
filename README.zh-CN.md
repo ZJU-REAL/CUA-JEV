@@ -1,6 +1,6 @@
 # <img src="src/cua_jev/ui/static/logo-mark.svg" width="44" alt="ZJU-REAL Lab logo"> CUA-JEV: Jev for Computer Use
 
-[项目网页](https://zjureal.com/CUA-JEV/) · [English README](README.md)
+[项目网页](https://zjureal.com/CUA-JEV/) · [观看 Demo](https://zjureal.com/CUA-JEV/#windows-cases) · [English README](README.md)
 
 CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择**具体动作及其执行路线**，框架再负责安全检查、实际执行、结果验证和下一轮观察。项目不训练专用路由模型，现包含早期四个任务专属工作流和新增的四个“模型 + Jev”长任务录制案例。
 
@@ -14,7 +14,7 @@ Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动�
 
 ## 新版 Windows 录制案例
 
-[新版主页](https://zjureal.com/CUA-JEV/)展示了四次**真实、只录任务窗口**的模型 + Jev 运行。文本模型读取实时 DOM 和注册工具描述，提出有依据的下一步动作；Jev 在每一步选择具体动作及通道。同源 MCP 读取来源，受限 CLI 和文件能力完成跨应用交接。章节 URL 与点击序列并未预写；网站提供逐步记录和动作通道分布。
+[新版主页](https://zjureal.com/CUA-JEV/)展示了四次**真实、只录任务窗口**的模型 + Jev 运行。应用保持普通窗口大小，不强制全屏；录制器只截取当前任务窗口，并向内裁去少量边缘，避免露出桌面。文本模型读取实时 DOM 和注册工具描述，提出有依据的下一步动作；Jev 在每一步选择具体动作及通道。同源 MCP 读取来源，受限 CLI 和文件能力完成跨应用交接。章节 URL 与点击序列并未预写；网站提供逐步记录和动作通道分布。
 
 | 案例 | 涉及应用 | 动作 / Jev 调用 / 模型调用 | 实际选择通道 |
 |---|---|---:|---|
@@ -22,6 +22,14 @@ Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动�
 | JavaScript 学习指南 | Edge、Notepad | 18 / 18 / 18 | DOM 8、MCP 8、CLI 1、文件 API 1 |
 | Git 工作流指南 | Edge、终端、VS Code | 21 / 21 / 21 | DOM 10、MCP 8、CLI 2、文件 API 1 |
 | PowerShell 学习指南 | Edge、终端、Notepad | 19 / 19 / 19 | DOM 8、MCP 8、CLI 2、文件 API 1 |
+
+点击下方预览可观看完整录制和逐步决策记录：
+
+| Python 自动化 · 19 步 | JavaScript 学习指南 · 18 步 |
+|:---:|:---:|
+| [![Python 自动化指南录制预览](website/media/windows-python-guide.jpg)](https://zjureal.com/CUA-JEV/#case-python-guide) | [![JavaScript 学习指南录制预览](website/media/windows-javascript-guide.jpg)](https://zjureal.com/CUA-JEV/#case-javascript-guide) |
+| Git 工作流 · 21 步 | PowerShell 学习指南 · 19 步 |
+| [![Git 工作流指南录制预览](website/media/windows-git-guide.jpg)](https://zjureal.com/CUA-JEV/#case-git-guide) | [![PowerShell 学习指南录制预览](website/media/windows-powershell-guide.jpg)](https://zjureal.com/CUA-JEV/#case-powershell-guide) |
 
 这些都是**单次成功、有边界的资料研究→编辑器案例**，并非重复测得的成功率、速度或成本基准。四次运行使用结构化观察与文本规划模型，**VLM 调用均为零**；浏览器 GUI 路线虽可供选择，Jev 在这些录制中选择了 DOM。视觉路径、更丰富的桌面动作、陌生任务类型、macOS 和重复实验仍是下一步工作。旧版预设任务及配对比较移至网站的 [Early work 页面](https://zjureal.com/CUA-JEV/early-work.html)。
 

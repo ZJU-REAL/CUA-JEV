@@ -1,6 +1,6 @@
 # <img src="src/cua_jev/ui/static/logo-mark.svg" width="44" alt="ZJU-REAL Lab logo"> CUA-JEV: Jev for Computer Use
 
-[Webpage](https://zjureal.com/CUA-JEV/) · [中文文档](README.zh-CN.md)
+[Webpage](https://zjureal.com/CUA-JEV/) · [Watch demos](https://zjureal.com/CUA-JEV/#windows-cases) · [中文文档](README.zh-CN.md)
 
 CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects a **concrete action and its execution route**; the framework guards and executes that choice, verifies the resulting state, and observes again. The project includes four earlier task-specific workflows and four newer recorded model + Jev Windows case studies, without training a task-specific router.
 
@@ -16,7 +16,7 @@ The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning f
 
 ## Recorded Windows case studies
 
-The [new homepage](https://zjureal.com/CUA-JEV/) shows four **real, window-only** model + Jev runs. A text model reads live DOM and registered tool descriptions, proposes grounded next actions, and Jev selects one concrete action and channel at every step. A same-origin MCP reader supplies source evidence; scoped CLI and file capabilities complete the cross-app handoff. No chapter URL or click sequence is prewritten. Each run also has an expandable step trace and an action-channel breakdown on the site.
+The [new homepage](https://zjureal.com/CUA-JEV/) shows four **real, window-only** model + Jev runs. The applications remain in normal-sized windows, not forced fullscreen; the recorder captures only the active task window with a small inward crop so the desktop is not exposed. A text model reads live DOM and registered tool descriptions, proposes grounded next actions, and Jev selects one concrete action and channel at every step. A same-origin MCP reader supplies source evidence; scoped CLI and file capabilities complete the cross-app handoff. No chapter URL or click sequence is prewritten. Each run also has an expandable step trace and an action-channel breakdown on the site.
 
 | Case | Task applications | Actions / Jev calls / model calls | Selected channels |
 |---|---|---:|---|
@@ -24,6 +24,14 @@ The [new homepage](https://zjureal.com/CUA-JEV/) shows four **real, window-only*
 | JavaScript study guide | Edge, Notepad | 18 / 18 / 18 | DOM 8, MCP 8, CLI 1, file API 1 |
 | Git workflow guide | Edge, Terminal, VS Code | 21 / 21 / 21 | DOM 10, MCP 8, CLI 2, file API 1 |
 | PowerShell learning guide | Edge, Terminal, Notepad | 19 / 19 / 19 | DOM 8, MCP 8, CLI 2, file API 1 |
+
+Click a preview to watch the full recording and inspect its decision trace:
+
+| Python automation · 19 actions | JavaScript study guide · 18 actions |
+|:---:|:---:|
+| [![Python automation guide recording preview](website/media/windows-python-guide.jpg)](https://zjureal.com/CUA-JEV/#case-python-guide) | [![JavaScript study guide recording preview](website/media/windows-javascript-guide.jpg)](https://zjureal.com/CUA-JEV/#case-javascript-guide) |
+| Git workflow · 21 actions | PowerShell learning guide · 19 actions |
+| [![Git workflow guide recording preview](website/media/windows-git-guide.jpg)](https://zjureal.com/CUA-JEV/#case-git-guide) | [![PowerShell learning guide recording preview](website/media/windows-powershell-guide.jpg)](https://zjureal.com/CUA-JEV/#case-powershell-guide) |
 
 These are **single successful bounded research-to-editor runs**, not repeated success-rate, speed, or cost benchmarks. They used structured observations and a text planner; **VLM calls were zero**. GUI routes were available for browser links but Jev selected DOM in these recordings. Vision, broader desktop action coverage, unfamiliar task families, macOS, and repeated trials remain future work. The earlier predefined workflows and their paired comparisons live on the site's [Early work page](https://zjureal.com/CUA-JEV/early-work.html).
 
