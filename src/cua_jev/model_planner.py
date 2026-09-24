@@ -333,6 +333,16 @@ class ChatModelPlanner:
             "recent_actions": recent_actions,
         }
         if isinstance(snapshot, ComputerSnapshot):
+            pending_here = any(
+                clue.casefold() in snapshot.browser.url.casefold()
+                for clue in snapshot.requirements.get("pending_mcp_visits", [])
+            )
+            if pending_here:
+                # Browser navigation is deliberately gated until this source
+                # has its required MCP evidence. Do not advertise routes that
+                # the runtime would reject at candidate compilation.
+                model_state["browser"]["elements"] = []
+                model_state["browser"]["visual_targets"] = []
             user_state["allowed_refs"] = [
                 item["ref"] for item in model_state["browser"]["elements"]
             ] + [
@@ -345,7 +355,9 @@ class ChatModelPlanner:
                 item["ref"] for item in model_state["tool_offers"]
             ] + [
                 item["ref"] for item in model_state["mcp_offers"]
-            ] + ([model_state["artifact"]["ref"]] if model_state["artifact"] else [])
+            ] + ([model_state["artifact"]["ref"]]
+                 if model_state["artifact"] and model_state["artifact"]["ready"]
+                 and not model_state["artifact"]["exists"] else [])
             instructions += (
                 " Before returning JSON, check that each option.ref is an exact string in "
                 "allowed_refs at the END of the user message. A ref not in that list is invalid."

@@ -24,12 +24,17 @@ from cua_jev.open_workspace import OpenWorkspaceTask
 
 
 class WindowRecorder:
-    """Record the real task window, aspect-fit, without desktop or content cropping."""
+    """Record the task window, optionally hiding the rounded desktop edge."""
 
-    def __init__(self, output: Path, state: dict[str, Any], *, fps: int = 10) -> None:
+    def __init__(
+        self, output: Path, state: dict[str, Any], *, fps: int = 10, inset_px: int = 0
+    ) -> None:
+        if not 0 <= inset_px <= 32:
+            raise ValueError("window inset must be between 0 and 32 pixels")
         self.output = output
         self.state = state
         self.fps = fps
+        self.inset_px = inset_px
         self.stop_event = threading.Event()
         self.error: BaseException | None = None
         self.thread = threading.Thread(target=self._capture, name="cua-jev-window-recorder", daemon=True)
@@ -65,7 +70,11 @@ class WindowRecorder:
                 handle = int(self.state.get("window_handle") or 0)
                 rect = wintypes.RECT()
                 if handle and ctypes.windll.user32.GetWindowRect(handle, ctypes.byref(rect)):
-                    bounds = (rect.left, rect.top, rect.right, rect.bottom)
+                    inset = self.inset_px
+                    bounds = (
+                        rect.left + inset, rect.top + inset,
+                        rect.right - inset, rect.bottom - inset,
+                    )
                     if bounds[2] > bounds[0] and bounds[3] > bounds[1]:
                         raw = image_grab.grab(bbox=bounds, all_screens=True).convert("RGB")
                         scale = min(1440 / raw.width, 810 / raw.height)

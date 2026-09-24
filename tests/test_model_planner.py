@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -133,6 +134,36 @@ def test_no_desktop_model_request_offers_only_available_surfaces():
     task.observe(())
     assert task._snapshot is not None
     assert isinstance(planner.plan(goal, task._snapshot, []), ComputerPlan)
+    task.close()
+
+
+def test_pending_mcp_page_does_not_advertise_gated_browser_refs(tmp_path):
+    task = environment(tmp_path)
+    task.reset()
+    task.observe(())
+    assert task._snapshot is not None
+    snapshot = replace(
+        task._snapshot,
+        requirements={**task._snapshot.requirements, "pending_mcp_visits": ["/start"]},
+    )
+
+    def handler(request):
+        message = json.loads(json.loads(request.content)["messages"][1]["content"])
+        assert message["snapshot"]["browser"]["elements"] == []
+        assert "b:e0" not in message["allowed_refs"]
+        assert "t:t0" in message["allowed_refs"]
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": json.dumps({
+                "subgoal": "Use an available tool",
+                "options": [{"ref": "t:t0", "operation": "invoke"}],
+            })}}],
+        })
+
+    planner = ChatModelPlanner(
+        "https://model.example/v1", "text-model", api_key="fake",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    assert planner.plan(task.goal, snapshot, []).options[0].source == "t"
     task.close()
 
 
