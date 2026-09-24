@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,7 @@ from cua_jev.guard import ActionGuard
 from cua_jev.mcp_surface import McpToolSurface
 from cua_jev.models import Channel
 from cua_jev.open_browser import OpenBrowserTask, PublicDecisionPolicy
-from cua_jev.open_computer import ComputerPlan, OpenComputerTask
+from cua_jev.open_computer import ComputerPlan, OpenComputerTask, _page_key
 from cua_jev.policy import RulePolicy
 from cua_jev.registry import ExecutorRegistry
 from cua_jev.runtime import AgentRuntime
@@ -134,3 +135,131 @@ def test_twenty_external_actions_across_browser_cli_mcp_and_file_api(tmp_path: P
     assert all(step.verification.passed for step in result.steps)
     text = artifact_path.read_text(encoding="utf-8")
     assert all(f"https://example.test/topic/{index}" in text for index in range(count))
+
+
+def test_model_selected_sources_need_verified_mcp_reads_before_artifact(
+    tmp_path: Path,
+):
+    pytest.importorskip("mcp")
+    config = profile(tmp_path)
+    settings = json.loads(config.read_text(encoding="utf-8"))
+    settings["tools"] = [{
+        "name": "fetch_page", "description": "Read the current test page",
+        "parameters": {"href": {"type": "string", "maxLength": 200}},
+        "required": ["href"], "expected_from_arguments": {"url": "href"},
+    }]
+    config.write_text(json.dumps(settings), encoding="utf-8")
+    artifact_path = tmp_path / "new-guide.md"
+    editor = {"title": ""}
+
+    def launch():
+        editor["title"] = "new-guide.md - Visual Studio Code"
+
+
+    class Planner:
+        def plan(self, _goal, snapshot, _recent):
+            requirements = snapshot.requirements
+            if requirements["pending_mcp_page"]:
+                option = {
+                    "ref": "m:m0", "operation": "invoke",
+                    "value": json.dumps({"href": snapshot.browser.url}),
+                }
+            elif (
+                requirements["verified_source_count"] < 3
+                or requirements["pending_source_titles"]
+            ):
+                if snapshot.browser.url == JourneyPage.hub:
+                    cited = {item["url"] for item in snapshot.source_records}
+                    pending = (
+                        requirements["pending_source_titles"]
+                        if requirements["verified_source_count"] >= 3 else []
+                    )
+                    target = next(
+                        item for item in snapshot.browser.elements
+                        if item.href not in cited
+                        and (not pending or pending[0] in item.label)
+                    )
+                else:
+                    target = snapshot.browser.elements[0]
+                option = {"ref": f"b:{target.ref}", "operation": "click"}
+            elif not snapshot.artifact.exists:
+                option = {
+                    "ref": "a:a0", "operation": "write",
+                    "value": "# Newly discovered sources\n" + "\n".join(
+                        item["url"] for item in snapshot.source_records
+                    ),
+                }
+            else:
+                option = {"ref": "a:a0", "operation": "open"}
+            return ComputerPlan.from_dict({"subgoal": "Research", "options": [option]}, snapshot)
+
+    goal = "Choose any three relevant source pages and cite them in a new guide"
+    planner = Planner()
+    task = OpenComputerTask(
+        goal=goal, planner=planner,
+        browser=OpenBrowserTask(
+            goal=goal, start_url=JourneyPage.hub, planner=planner,
+            page=JourneyPage(5),
+        ),
+        mcp_surface=McpToolSurface.from_profile(config),
+        mcp_current_page_only=True,
+        min_verified_sources=3,
+        required_source_titles=("4",),
+        artifact_surface=ArtifactSurface(
+            artifact_path, allow_open_vscode=True,
+            editor_probe=lambda: editor["title"],
+            editor_launcher=launch,
+        ),
+        required_capabilities=("artifact.open_vscode",),
+    )
+
+    def factory(item):
+        executors = ExecutorRegistry()
+        for channel, executor in item.executor_bindings().items():
+            executors.register(channel, executor)
+        executors.register(Channel.CONTROL, ControlExecutor())
+        verifiers = VerifierRegistry()
+        item.register_verifiers(verifiers)
+        return AgentRuntime(
+            policy=PublicDecisionPolicy(RulePolicy()),
+            guard=ActionGuard(allowed_roots=[tmp_path], allow_writes=True,
+                              allow_destructive=True),
+            executors=executors, verifiers=verifiers,
+        )
+
+    result = EpisodeRunner(factory, EpisodeConfig(max_steps=14)).run(task)
+    assert result.status == EpisodeStatus.SUCCESS, (
+        result.reason,
+        [(step.receipt.capability, step.receipt.success) for step in result.steps],
+        task._pending_source_titles(),
+    )
+    assert len(result.steps) == 13
+    assert result.channel_counts == {"script": 7, "mcp": 4, "api": 1, "cli": 1}
+    text = artifact_path.read_text(encoding="utf-8")
+    assert "https://example.test/topic/0" in text
+    assert "https://example.test/topic/1" in text
+    assert "https://example.test/topic/2" in text
+    assert "https://example.test/topic/4" in text
+
+
+def test_model_discovered_sources_require_current_page_mcp_and_artifact(tmp_path: Path):
+    goal = "Research new pages"
+    planner = object()
+    browser = OpenBrowserTask(
+        goal=goal, start_url=JourneyPage.hub, planner=planner,
+        page=JourneyPage(5),
+    )
+    with pytest.raises(ValueError, match="discovered sources need"):
+        OpenComputerTask(
+            goal=goal, planner=planner, browser=browser,
+            min_verified_sources=2, artifact_surface=ArtifactSurface(tmp_path / "note.md"),
+        )
+
+
+def test_source_identity_ignores_in_page_fragments():
+    assert _page_key("https://example.test/topic/0#intro") == (
+        _page_key("https://example.test/topic/0#examples")
+    )
+    assert _page_key("https://example.test/topic/0#intro") != (
+        _page_key("https://example.test/topic/1#intro")
+    )

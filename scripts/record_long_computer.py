@@ -54,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
         recorder_parser.error("set the model and Jev keys locally, never in the command line")
     if args.mcp_profile and not args.allow_mcp_actions:
         recorder_parser.error("MCP profile needs --allow-mcp-actions")
+    if args.open_artifact_vscode and not args.artifact_path:
+        recorder_parser.error("--open-artifact-vscode needs --artifact-path")
     args.headed_browser = True
     planner = ChatModelPlanner(
         args.model_base_url, args.model,
@@ -72,10 +74,14 @@ def main(argv: list[str] | None = None) -> int:
         local_tool_root=args.local_tool_root,
         mcp_surface=McpToolSurface.from_profile(args.mcp_profile)
         if args.mcp_profile else None,
-        artifact_surface=ArtifactSurface(args.artifact_path)
+        artifact_surface=ArtifactSurface(
+            args.artifact_path, allow_open_vscode=args.open_artifact_vscode,
+        )
         if args.artifact_path else None,
         mcp_current_page_only=args.mcp_current_page_only,
         mcp_read_for_visits=args.mcp_read_for_visits,
+        min_verified_sources=args.min_verified_sources,
+        required_source_titles=args.require_source_title_contains,
         required_visits=args.require_visit_url_contains,
         required_artifact_contains=args.artifact_contains,
         required_url_contains=args.require_url_contains,
@@ -93,6 +99,13 @@ def main(argv: list[str] | None = None) -> int:
         state["step"] += 1
         state["channel"] = str(candidate.channel)
         state["status"] = "verified" if verification.passed else "replan"
+        if candidate.capability == "artifact.open_vscode" and verification.passed:
+            handle = task.artifact_surface.opened_window_handle
+            if handle is None:
+                raise RuntimeError("verified editor has no new window handle")
+            state["window_handle"] = stage_window(
+                browser, "", handle=handle,
+            )
         return outcome
 
     task.evaluate = evaluate_with_hud  # type: ignore[method-assign]

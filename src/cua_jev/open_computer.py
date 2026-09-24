@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import urldefrag
 
 from .artifact_surface import ArtifactState, ArtifactSurface
 from .episode import Evaluation
@@ -31,6 +32,11 @@ from .surface_providers import (
 from .verify import VerifierRegistry
 
 MAX_OPTIONS = 16
+
+
+def _page_key(url: str) -> str:
+    """A fragment changes scroll position, not the fetched source document."""
+    return urldefrag(url).url
 
 
 @dataclass(frozen=True)
@@ -178,6 +184,8 @@ class OpenComputerTask:
         artifact_surface: ArtifactSurface | None = None,
         mcp_current_page_only: bool = False,
         mcp_read_for_visits: bool = False,
+        min_verified_sources: int = 0,
+        required_source_titles: Sequence[str] = (),
         required_visits: Sequence[str] = (),
         required_artifact_contains: Sequence[str] = (),
         required_url_contains: str = "",
@@ -212,8 +220,28 @@ class OpenComputerTask:
             raise ValueError("required visits must be at most 12 unique short URL clues")
         if mcp_read_for_visits and (not mcp_current_page_only or not visits):
             raise ValueError("per-visit MCP evidence requires current-page mode and visits")
+        if type(min_verified_sources) is not int or not 0 <= min_verified_sources <= 12:
+            raise ValueError("minimum verified sources must be an integer from 0 to 12")
+        if min_verified_sources and (
+            visits or not mcp_current_page_only or mcp_surface is None
+            or artifact_surface is None
+        ):
+            raise ValueError(
+                "discovered sources need a new artifact, current-page MCP, and no visit clues"
+            )
+        if any(not isinstance(item, str) for item in required_source_titles):
+            raise ValueError("source-title clues must be strings")
+        titles = tuple(item.strip() for item in required_source_titles if item.strip())
+        if titles and (
+            not min_verified_sources or len(titles) > 12
+            or len({item.casefold() for item in titles}) != len(titles)
+            or any(len(item) > 120 for item in titles)
+        ):
+            raise ValueError("source-title gates need discovered-source mode and unique short clues")
         self.goal = goal.strip()
         self.browser = browser
+        if titles:
+            self.browser.link_hints = titles
         self.desktop = desktop
         self.planner = planner
         self.local_tools = ScopedReadOnlyTools(local_tool_root) if local_tool_root else None
@@ -231,7 +259,10 @@ class OpenComputerTask:
         self.artifact_surface = artifact_surface
         self.mcp_current_page_only = mcp_current_page_only
         self.mcp_read_for_visits = mcp_read_for_visits
+        self.min_verified_sources = min_verified_sources
+        self.required_source_titles = titles
         self._mcp_pages_read: set[str] = set()
+        self._discovered_sources: dict[str, dict[str, str]] = {}
         self.required_visits = visits
         self.required_artifact_contains = tuple(required_artifact_contains)
         self._visits: dict[str, dict[str, str]] = {}
@@ -262,8 +293,24 @@ class OpenComputerTask:
         self._tool_results.clear()
         self._visits.clear()
         self._mcp_pages_read.clear()
+        self._discovered_sources.clear()
         if self.artifact_surface is not None:
-            self.artifact_surface.set_acceptance(ready=not self.required_visits, citations=())
+            self.artifact_surface.set_acceptance(
+                ready=not self.required_visits and not self.min_verified_sources,
+                citations=(),
+            )
+
+    def _source_records(self) -> tuple[dict[str, str], ...]:
+        return (*self._visits.values(), *self._discovered_sources.values())
+
+    def _pending_source_titles(self) -> list[str]:
+        return [
+            clue for clue in self.required_source_titles
+            if not any(
+                clue.casefold() in record["title"].casefold()
+                for record in self._discovered_sources.values()
+            )
+        ]
 
     def _record_visit(self, browser: BrowserSnapshot) -> None:
         for clue in self.required_visits:
@@ -273,17 +320,30 @@ class OpenComputerTask:
                     "title": browser.title, "excerpt": browser.text[:500],
                 }
         if self.artifact_surface is not None:
+            visits_ready = len(self._visits) == len(self.required_visits)
+            sources_ready = (
+                len(self._discovered_sources) >= self.min_verified_sources
+                and not self._pending_source_titles()
+            )
+            reads_ready = not self.mcp_read_for_visits or all(
+                _page_key(record["url"]) in self._mcp_pages_read
+                for record in self._visits.values()
+            )
             self.artifact_surface.set_acceptance(
-                ready=(len(self._visits) == len(self.required_visits) and (
-                    not self.mcp_read_for_visits or all(
-                        record["url"] in self._mcp_pages_read
-                        for record in self._visits.values()
-                    )
-                )),
-                citations=[record["url"] for record in self._visits.values()],
+                ready=visits_ready and sources_ready and reads_ready,
+                citations=[record["url"] for record in self._source_records()],
             )
 
-    def _requirements(self) -> dict[str, Any]:
+    def _requirements(self, browser: BrowserSnapshot) -> dict[str, Any]:
+        pending_page = (
+            browser.url if self.min_verified_sources
+            and (
+                len(self._discovered_sources) < self.min_verified_sources
+                or self._pending_source_titles()
+            )
+            and _page_key(browser.url) != _page_key(self.browser.start_url)
+            and _page_key(browser.url) not in self._mcp_pages_read else ""
+        )
         return {
             "url_contains": self.required_url_contains,
             "window_title_contains": self.required_window_title_contains,
@@ -292,12 +352,17 @@ class OpenComputerTask:
             "completed_capabilities": sorted(self._completed_capabilities),
             "required_visits": list(self.required_visits),
             "pending_visits": [clue for clue in self.required_visits if clue not in self._visits],
+            "min_verified_sources": self.min_verified_sources,
+            "verified_source_count": len(self._discovered_sources),
+            "pending_source_titles": self._pending_source_titles(),
+            "pending_mcp_page": pending_page,
             "artifact_contains": list(self.required_artifact_contains),
             "mcp_current_page_only": self.mcp_current_page_only,
             "mcp_pages_read": sorted(self._mcp_pages_read),
             "pending_mcp_visits": [
                 clue for clue, record in self._visits.items()
-                if self.mcp_read_for_visits and record["url"] not in self._mcp_pages_read
+                if self.mcp_read_for_visits
+                and _page_key(record["url"]) not in self._mcp_pages_read
             ],
         }
 
@@ -316,11 +381,15 @@ class OpenComputerTask:
     def _active_mcp_offers(self, browser: BrowserSnapshot) -> tuple[McpCallOffer, ...]:
         if "m" not in self.providers:
             return ()
+        if self.min_verified_sources and (
+            _page_key(browser.url) == _page_key(self.browser.start_url)
+        ):
+            return ()
         if self.mcp_read_for_visits and not any(
             record["url"] == browser.url for record in self._visits.values()
         ):
             return ()
-        if self.mcp_current_page_only and browser.url in self._mcp_pages_read:
+        if self.mcp_current_page_only and _page_key(browser.url) in self._mcp_pages_read:
             return ()
         return self.providers["m"].capture()
 
@@ -333,9 +402,9 @@ class OpenComputerTask:
             tool_offers=self._active_tool_offers(),
             mcp_offers=self._active_mcp_offers(browser),
             artifact=self.providers["a"].capture() if "a" in self.providers else None,
-            source_records=tuple(self._visits.values()),
+            source_records=self._source_records(),
             tool_results=tuple(self._tool_results[-6:]),
-            requirements=self._requirements(),
+            requirements=self._requirements(browser),
             providers=self.providers,
         )
 
@@ -348,9 +417,9 @@ class OpenComputerTask:
             tool_offers=self._active_tool_offers(),
             mcp_offers=self._active_mcp_offers(browser),
             artifact=self.providers["a"].observe(history) if "a" in self.providers else None,
-            source_records=tuple(self._visits.values()),
+            source_records=self._source_records(),
             tool_results=tuple(self._tool_results[-6:]),
-            requirements=self._requirements(),
+            requirements=self._requirements(browser),
             providers=self.providers,
         )
         return Observation(
@@ -377,15 +446,17 @@ class OpenComputerTask:
             ).casefold()),
             all(item in self._completed_capabilities for item in self.required_capabilities),
             all(item in self._visits for item in self.required_visits),
+            len(self._discovered_sources) >= self.min_verified_sources,
+            not self._pending_source_titles(),
             not self.mcp_read_for_visits or all(
-                record["url"] in self._mcp_pages_read
+                _page_key(record["url"]) in self._mcp_pages_read
                 for record in self._visits.values()
             ),
             self.artifact_surface is None or (
                 snapshot.artifact is not None and snapshot.artifact.exists
                 and all(item in snapshot.artifact.text for item in self.required_artifact_contains)
                 and all(
-                    record["url"] in snapshot.artifact.text for record in self._visits.values()
+                    record["url"] in snapshot.artifact.text for record in self._source_records()
                 )
             ),
         )
@@ -450,9 +521,11 @@ class OpenComputerTask:
         for index, option in enumerate(self._plan.options):
             if index in self._used:
                 continue
+            if option.source == "b" and self._snapshot.requirements["pending_mcp_page"]:
+                continue
             if self.mcp_read_for_visits and option.source == "b" and any(
                 record["url"] == self._snapshot.browser.url
-                and record["url"] not in self._mcp_pages_read
+                and _page_key(record["url"]) not in self._mcp_pages_read
                 for record in self._visits.values()
             ):
                 continue
@@ -511,7 +584,18 @@ class OpenComputerTask:
             tool = candidate.arguments["tool"]
             self._completed_capabilities.add(f"mcp.{server}.{tool}")
             if self.mcp_current_page_only:
-                self._mcp_pages_read.add(candidate.arguments["arguments"]["href"])
+                url = candidate.arguments["arguments"]["href"]
+                key = _page_key(url)
+                self._mcp_pages_read.add(key)
+                if self.min_verified_sources and (
+                    key != _page_key(self.browser.start_url)
+                ):
+                    source = self._snapshot.browser if self._snapshot is not None else None
+                    if source is not None and source.url == url:
+                        self._discovered_sources.setdefault(key, {
+                            "clue": "model_discovered", "url": url,
+                            "title": source.title, "excerpt": source.text[:500],
+                        })
         if self._plan is not None and self._plan.options[index].source in {"t", "m"}:
             output = receipt.output
             summary = output.get(

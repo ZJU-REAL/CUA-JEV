@@ -122,10 +122,10 @@ class BrowserSnapshot:
     required_tool: str = ""
 
     @classmethod
-    def capture(cls, page: Any) -> BrowserSnapshot:
+    def capture(cls, page: Any, *, max_elements: int = 60) -> BrowserSnapshot:
         raw = page.evaluate(
-            """selector => {
-              const nodes = [...document.querySelectorAll(selector)];
+            """request => {
+              const nodes = [...document.querySelectorAll(request.selector)];
               const elements = nodes.map((el, index) => {
                 const rect = el.getBoundingClientRect();
                 const style = getComputedStyle(el);
@@ -146,7 +146,7 @@ class BrowserSnapshot:
                     Math.min(1000, Math.round(rect.bottom / innerHeight * 1000))
                   ]
                 };
-              }).filter(Boolean).slice(0, 60);
+              }).filter(Boolean).slice(0, request.limit);
               const contentRoot = document.querySelector('main, [role="main"], article') ||
                 document.body;
               return {
@@ -154,13 +154,13 @@ class BrowserSnapshot:
                 text: (contentRoot?.innerText || '').slice(0, 1600), elements
               };
             }""",
-            SELECTOR,
+            {"selector": SELECTOR, "limit": max_elements},
         )
         return cls(
             url=str(raw["url"]),
             title=str(raw["title"])[:160],
             text=str(raw["text"])[:1600],
-            elements=tuple(BrowserElement.from_dict(item) for item in raw["elements"]),
+            elements=tuple(BrowserElement.from_dict(item) for item in raw["elements"][:max_elements]),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -427,6 +427,7 @@ class OpenBrowserTask:
         self.vision_mode = vision_mode
         self.allow_visual_clicks = allow_visual_clicks
         self.browser_channel = browser_channel
+        self.link_hints: tuple[str, ...] = ()
         self.local_tools = ScopedReadOnlyTools(local_tool_root) if local_tool_root else None
         self.required_tool = required_tool
         self.required_url_contains = required_url_contains
@@ -496,7 +497,8 @@ class OpenBrowserTask:
     def _capture(self, *, vision: bool = False) -> BrowserSnapshot:
         if self.page is None:
             raise RuntimeError("browser task has not been reset")
-        snapshot = BrowserSnapshot.capture(self.page)
+        max_elements = 300 if self.link_hints else 60
+        snapshot = BrowserSnapshot.capture(self.page, max_elements=max_elements)
         if not snapshot.elements and hasattr(self.page, "wait_for_load_state"):
             # A navigation can expose its new URL before the document's
             # interactive controls are ready. Retry a bounded number of times
@@ -506,12 +508,29 @@ class OpenBrowserTask:
             except Exception:
                 pass
             for _ in range(3):
-                snapshot = BrowserSnapshot.capture(self.page)
+                snapshot = BrowserSnapshot.capture(self.page, max_elements=max_elements)
                 if snapshot.elements:
                     break
                 self.page.wait_for_timeout(250)
         if _origin(snapshot.url) != self.allowed_origin:
             raise RuntimeError("browser left the allowed origin")
+        if len(snapshot.elements) > 60:
+            chosen = list(snapshot.elements[:20] if self.link_hints else snapshot.elements[:60])
+            if self.link_hints:
+                hints = tuple(item.casefold() for item in self.link_hints)
+                chosen.extend(
+                    item for item in snapshot.elements[20:]
+                    if any(hint in (item.label + " " + item.href).casefold() for hint in hints)
+                )
+                chosen = chosen[:60]
+                if len(chosen) < 60:
+                    selected = {item.ref for item in chosen}
+                    chosen.extend(
+                        item for item in snapshot.elements
+                        if item.ref not in selected
+                    )
+                    chosen = chosen[:60]
+            snapshot = replace(snapshot, elements=tuple(sorted(chosen, key=lambda item: item.index)))
         if vision and self.vision_grounder is not None:
             actionable = any(
                 not item.disabled and item.input_type.lower() != "password"

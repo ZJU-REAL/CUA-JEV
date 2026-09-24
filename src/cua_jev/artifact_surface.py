@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import re
+import shutil
+import subprocess
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,12 +26,15 @@ class ArtifactState:
     ready: bool
     sha256: str = ""
     text: str = ""
+    editor_open: bool = False
+    can_open_editor: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         # The file's contents stay in the verifier, not in model/Jev observations.
         return {
             "ref": self.ref, "name": self.name, "exists": self.exists,
             "ready": self.ready, "sha256": self.sha256,
+            "editor_open": self.editor_open, "can_open_editor": self.can_open_editor,
         }
 
 
@@ -35,13 +42,26 @@ class ArtifactSurface:
     namespace = "a"
     supported_capabilities = frozenset({"artifact.write_text"})
 
-    def __init__(self, path: Path, *, max_chars: int = 8000) -> None:
+    def __init__(
+        self, path: Path, *, max_chars: int = 8000,
+        allow_open_vscode: bool = False, editor_probe: Any | None = None,
+        editor_launcher: Any | None = None,
+    ) -> None:
         self.path = path.resolve()
         if self.path.suffix.lower() not in {".md", ".txt"}:
             raise ValueError("artifact must be a .md or .txt file")
         if not 1 <= max_chars <= 20_000:
             raise ValueError("artifact size limit is invalid")
         self.max_chars = max_chars
+        self.allow_open_vscode = allow_open_vscode
+        self.editor_probe = editor_probe
+        self.editor_launcher = editor_launcher or self._launch_vscode
+        self.opened_window_handle: int | None = None
+        self._opened_test_editor = False
+        if allow_open_vscode:
+            self.supported_capabilities = frozenset({
+                "artifact.write_text", "artifact.open_vscode",
+            })
         self.ready = False
         self.required_citations: tuple[str, ...] = ()
 
@@ -53,6 +73,8 @@ class ArtifactSurface:
         if self.path.exists():
             raise ValueError("refusing to overwrite an existing artifact")
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.opened_window_handle = None
+        self._opened_test_editor = False
 
     def close(self) -> None:
         pass
@@ -62,19 +84,57 @@ class ArtifactSurface:
 
     def capture(self) -> ArtifactState:
         if not self.path.exists():
-            return ArtifactState("a0", self.path.name, False, self.ready)
+            return ArtifactState(
+                "a0", self.path.name, False, self.ready,
+                can_open_editor=self.allow_open_vscode,
+            )
         if not self.path.is_file() or self.path.stat().st_size > self.max_chars * 4:
             raise ValueError("artifact changed to an unsupported target")
         text = self.path.read_text(encoding="utf-8")
         return ArtifactState(
             "a0", self.path.name, True, self.ready,
             hashlib.sha256(text.encode("utf-8")).hexdigest(), text,
+            self._editor_is_open(),
+            self.allow_open_vscode,
         )
+
+    def _editor_windows(self) -> dict[int, str]:
+        try:
+            from pywinauto import Desktop
+        except ImportError:
+            return {}
+        matches = Desktop(backend="uia").windows(
+            title_re=rf".*{re.escape(self.path.name)}.*Visual Studio Code.*",
+            visible_only=True,
+        )
+        return {int(item.handle): str(item.window_text()) for item in matches}
+
+    def _editor_is_open(self) -> bool:
+        if not self.allow_open_vscode:
+            return False
+        if self.editor_probe is not None:
+            return self._opened_test_editor and bool(self.editor_probe())
+        return (
+            self.opened_window_handle is not None
+            and self.opened_window_handle in self._editor_windows()
+        )
+
+    def _launch_vscode(self) -> None:
+        executable = shutil.which("code") or shutil.which("code.cmd")
+        if not executable:
+            raise RuntimeError("VS Code CLI is not installed")
+        subprocess.Popen([executable, "--new-window", str(self.path)], shell=False)
 
     def validate(
         self, state: ArtifactState, ref: str, operation: Any, value: Any
     ) -> tuple[str, str, str]:
-        if ref != state.ref or operation != "write" or state.exists or not state.ready:
+        if ref != state.ref:
+            raise ValueError("artifact ref changed")
+        if operation == "open":
+            if not self.allow_open_vscode or not state.exists or state.editor_open or value:
+                raise ValueError("editor open is not currently offered")
+            return ref, "open", ""
+        if operation != "write" or state.exists or not state.ready:
             raise ValueError("artifact write is not offered until source gates pass")
         if not isinstance(value, str) or not 1 <= len(value) <= self.max_chars:
             raise ValueError("artifact text is empty or exceeds its size limit")
@@ -87,6 +147,13 @@ class ArtifactSurface:
         subgoal: str, index: int,
     ) -> tuple[ActionCandidate, ...]:
         self.validate(state, ref, operation, value)
+        if operation == "open":
+            return (ActionCandidate(
+                f"option_{index}_editor", Channel.CLI, "artifact.open_vscode",
+                f"Open {self.path.name} in VS Code",
+                {"path": str(self.path)}, Risk.READ_ONLY,
+                verifier="artifact.editor_open", intent=f"option_{index}",
+            ),)
         return (ActionCandidate(
             f"option_{index}_artifact", Channel.API, "artifact.write_text",
             f"Create the scoped {self.path.name} artifact",
@@ -95,11 +162,38 @@ class ArtifactSurface:
         ),)
 
     def owns(self, candidate: ActionCandidate) -> bool:
-        return candidate.capability == "artifact.write_text"
+        return candidate.capability in self.supported_capabilities
 
     def execute(
         self, candidate: ActionCandidate, observation_id: str, decision_id: str
     ) -> ActionReceipt:
+        if candidate.capability == "artifact.open_vscode":
+            def open_editor() -> dict[str, Any]:
+                if candidate.arguments["path"] != str(self.path) or not self.path.is_file():
+                    raise ValueError("artifact target changed")
+                before = set(self._editor_windows()) if self.editor_probe is None else set()
+                self.editor_launcher()
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline:
+                    if self.editor_probe is not None:
+                        title = self.editor_probe()
+                        if title:
+                            self._opened_test_editor = True
+                            return {"path": str(self.path), "window_title": title}
+                    else:
+                        windows = self._editor_windows()
+                        fresh = [handle for handle in windows if handle not in before]
+                        if fresh:
+                            self.opened_window_handle = fresh[-1]
+                            return {
+                                "path": str(self.path),
+                                "window_title": windows[self.opened_window_handle],
+                            }
+                    time.sleep(0.3)
+                raise RuntimeError("VS Code did not display the artifact")
+
+            return execute_with_receipt(candidate, observation_id, decision_id, open_editor)
+
         def create() -> dict[str, Any]:
             if candidate.arguments["path"] != str(self.path):
                 raise ValueError("artifact target changed")
@@ -114,6 +208,20 @@ class ArtifactSurface:
 
     def register_verifiers(self, registry: VerifierRegistry) -> None:
         registry.register("artifact.exact_text", self._verify)
+        if self.allow_open_vscode:
+            registry.register("artifact.editor_open", self._verify_editor_open)
+
+    def _verify_editor_open(
+        self, candidate: ActionCandidate, receipt: ActionReceipt,
+    ) -> Verification:
+        state = self.capture()
+        passed = (
+            receipt.success and state.exists and state.editor_open
+            and receipt.output.get("path") == str(self.path)
+        )
+        return Verification(bool(passed), "artifact.editor_open", {
+            "editor_open": state.editor_open,
+        })
 
     def _verify(self, candidate: ActionCandidate, receipt: ActionReceipt) -> Verification:
         state = self.capture()

@@ -91,6 +91,44 @@ class FakePage:
         return FakeLocator(self)
 
 
+def test_title_hints_keep_relevant_late_dom_links():
+    page = FakePage()
+    page.elements = [
+        {
+            "ref": f"e{index}", "index": index, "tag": "a", "role": "",
+            "label": "Errors and Exceptions" if index == 90 else f"Unrelated {index}",
+            "input_type": "", "disabled": False,
+            "href": f"https://example.test/page/{index}",
+        }
+        for index in range(100)
+    ]
+    task = OpenBrowserTask(
+        goal="Find relevant documentation", start_url=page.url,
+        planner=object(), page=page,
+    )
+    task.link_hints = ("Errors and Exceptions",)
+    snapshot = task._capture()
+    assert len(snapshot.elements) == 60
+    assert any(item.ref == "e90" for item in snapshot.elements)
+    assert all(item.index < 20 or item.ref == "e90" or item.index < 60
+               for item in snapshot.elements)
+
+
+def test_default_browser_capture_keeps_original_element_budget():
+    page = FakePage()
+    page.elements = [
+        {
+            "ref": f"e{index}", "index": index, "tag": "a", "role": "",
+            "label": f"Link {index}", "input_type": "", "disabled": False,
+            "href": f"https://example.test/page/{index}",
+        }
+        for index in range(100)
+    ]
+    snapshot = BrowserSnapshot.capture(page)
+    assert len(snapshot.elements) == 60
+    assert snapshot.elements[-1].ref == "e59"
+
+
 def test_empty_transient_dom_waits_for_document_controls():
     class LoadingPage(FakePage):
         def __init__(self):

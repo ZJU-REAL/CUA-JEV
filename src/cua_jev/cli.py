@@ -158,6 +158,13 @@ def _parser() -> argparse.ArgumentParser:
     computer.add_argument("--allow-window-actions", action="store_true")
     computer.add_argument("--browser-vision-model")
     computer.add_argument("--desktop-vision-model")
+    computer.add_argument(
+        "--browser-vision-mode", choices=("fallback", "always"), default="fallback",
+        help="Call the browser VLM only without usable DOM controls, or on every observation",
+    )
+    computer.add_argument(
+        "--desktop-vision-mode", choices=("fallback", "always"), default="fallback",
+    )
     computer.add_argument("--allow-screenshot-upload", action="store_true")
     computer.add_argument("--allow-browser-visual-clicks", action="store_true")
     computer.add_argument("--allow-desktop-visual-clicks", action="store_true")
@@ -173,7 +180,19 @@ def _parser() -> argparse.ArgumentParser:
         help="Require one verified current-page MCP read for each required browser visit",
     )
     computer.add_argument("--require-visit-url-contains", action="append", default=[])
+    computer.add_argument(
+        "--min-verified-sources", type=int, default=0,
+        help="Let the model discover this many distinct non-start pages; verify each via current-page MCP",
+    )
+    computer.add_argument(
+        "--require-source-title-contains", action="append", default=[],
+        help="Topical title clue a discovered, MCP-verified source must cover (not a URL)",
+    )
     computer.add_argument("--artifact-path", type=Path, help="New scoped .md/.txt artifact")
+    computer.add_argument(
+        "--open-artifact-vscode", action="store_true",
+        help="Offer the verified new artifact for opening in VS Code via the CLI",
+    )
     computer.add_argument("--artifact-contains", action="append", default=[])
     computer.add_argument("--require-url-contains", default="")
     computer.add_argument("--require-window-title-contains", default="")
@@ -502,6 +521,8 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("--allow-mcp-actions requires --mcp-profile")
         if args.artifact_contains and not args.artifact_path:
             raise SystemExit("--artifact-contains requires --artifact-path")
+        if args.open_artifact_vscode and not args.artifact_path:
+            raise SystemExit("--open-artifact-vscode requires --artifact-path")
         if (args.browser_vision_model or args.desktop_vision_model) and not args.allow_screenshot_upload:
             raise SystemExit("vision models require --allow-screenshot-upload")
         if args.allow_browser_visual_clicks and not (
@@ -528,7 +549,7 @@ def main(argv: list[str] | None = None) -> int:
                 allow_form_input=args.allow_form_input,
                 allow_external_actions=args.allow_browser_actions,
                 vision_grounder=browser_vision,
-                vision_mode="always" if browser_vision else "fallback",
+                vision_mode=args.browser_vision_mode,
                 allow_screenshot_upload=args.allow_screenshot_upload,
                 allow_visual_clicks=args.allow_browser_visual_clicks,
             )
@@ -537,7 +558,7 @@ def main(argv: list[str] | None = None) -> int:
                 allow_text_input=args.allow_window_text_input,
                 allow_button_actions=args.allow_window_actions,
                 vision_grounder=desktop_vision,
-                vision_mode="always" if desktop_vision else "fallback",
+                vision_mode=args.desktop_vision_mode,
                 allow_screenshot_upload=args.allow_screenshot_upload,
                 allow_visual_clicks=args.allow_desktop_visual_clicks,
             ) if args.window_title else None
@@ -546,10 +567,14 @@ def main(argv: list[str] | None = None) -> int:
                 local_tool_root=args.local_tool_root,
                 mcp_surface=McpToolSurface.from_profile(args.mcp_profile)
                 if args.mcp_profile else None,
-                artifact_surface=ArtifactSurface(args.artifact_path)
+                artifact_surface=ArtifactSurface(
+                    args.artifact_path, allow_open_vscode=args.open_artifact_vscode,
+                )
                 if args.artifact_path else None,
                 mcp_current_page_only=args.mcp_current_page_only,
                 mcp_read_for_visits=args.mcp_read_for_visits,
+                min_verified_sources=args.min_verified_sources,
+                required_source_titles=args.require_source_title_contains,
                 required_visits=args.require_visit_url_contains,
                 required_artifact_contains=args.artifact_contains,
                 required_url_contains=args.require_url_contains,

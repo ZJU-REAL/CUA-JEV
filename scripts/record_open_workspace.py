@@ -95,10 +95,15 @@ class WindowRecorder:
                 writer.close()
 
 
-def stage_window(task: OpenWorkspaceTask, title_re: str) -> int:
+def stage_window(
+    task: OpenWorkspaceTask, title_re: str, *, handle: int | None = None,
+) -> int:
     import ctypes
 
-    window = task.screen.focus(title_re, maximize=False)
+    window = (
+        task.screen.focus_handle(handle, maximize=False) if handle is not None
+        else task.screen.focus(title_re, maximize=False)
+    )
     window.restore()
     if not ctypes.windll.user32.MoveWindow(int(window.handle), 35, 35, 1900, 1070, True):
         raise RuntimeError("could not size the visible task window for recording")
