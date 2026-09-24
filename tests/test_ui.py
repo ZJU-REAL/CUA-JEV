@@ -228,6 +228,11 @@ def test_console_serves_brand_assets(tmp_path: Path) -> None:
         assert "Four verified desktop workflows" in page.text
         assert "The recorded open-task pilot uses text and DOM" in page.text
         assert "macOS/Linux desktop adapters are not yet implemented" in page.text
+        preview = client.get("/preview.html")
+        assert preview.status_code == 200
+        assert "One computer-use loop" in preview.text
+        assert client.get("/data/windows_demos.json").json()["cases"] == []
+        assert "Four desktop workflow cases" in client.get("/early-work.html").text
         assert "Adapter observes" in page.text
         assert "Jev chooses" in page.text
         assert "Runtime acts &amp; checks" in page.text

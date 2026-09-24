@@ -17,6 +17,10 @@ class RegisteredCliExecutor:
         self.timeout_s = timeout_s
         self._commands: dict[str, CommandFactory] = {
             "cli.python_version": lambda _: ["python", "--version"],
+            "cli.powershell_version": lambda _: [
+                "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+                "Write-Output ('PowerShell ' + $PSVersionTable.PSVersion.ToString())",
+            ],
             "cli.git_status": lambda args: [
                 "git", "--no-optional-locks", "-c", "core.fsmonitor=false",
                 "-C", str(Path(args["path"])), "status", "--short",

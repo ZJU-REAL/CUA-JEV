@@ -193,6 +193,10 @@ def _parser() -> argparse.ArgumentParser:
         "--open-artifact-vscode", action="store_true",
         help="Offer the verified new artifact for opening in VS Code via the CLI",
     )
+    computer.add_argument(
+        "--open-artifact-notepad", action="store_true",
+        help="Offer the verified new artifact for opening in Windows Notepad",
+    )
     computer.add_argument("--artifact-contains", action="append", default=[])
     computer.add_argument("--require-url-contains", default="")
     computer.add_argument("--require-window-title-contains", default="")
@@ -523,6 +527,10 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("--artifact-contains requires --artifact-path")
         if args.open_artifact_vscode and not args.artifact_path:
             raise SystemExit("--open-artifact-vscode requires --artifact-path")
+        if args.open_artifact_notepad and not args.artifact_path:
+            raise SystemExit("--open-artifact-notepad requires --artifact-path")
+        if args.open_artifact_vscode and args.open_artifact_notepad:
+            raise SystemExit("select only one artifact editor")
         if (args.browser_vision_model or args.desktop_vision_model) and not args.allow_screenshot_upload:
             raise SystemExit("vision models require --allow-screenshot-upload")
         if args.allow_browser_visual_clicks and not (
@@ -569,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
                 if args.mcp_profile else None,
                 artifact_surface=ArtifactSurface(
                     args.artifact_path, allow_open_vscode=args.open_artifact_vscode,
+                    allow_open_notepad=args.open_artifact_notepad,
                 )
                 if args.artifact_path else None,
                 mcp_current_page_only=args.mcp_current_page_only,

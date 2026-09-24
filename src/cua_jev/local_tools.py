@@ -6,7 +6,9 @@ model-chosen path. Every offer is re-created from the scoped filesystem state.
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -55,6 +57,11 @@ class ScopedReadOnlyTools:
             ToolOffer("t0", "filesystem.list", Channel.API, "List the scoped directory", str(self.root)),
             ToolOffer("t1", "cli.python_version", Channel.CLI, "Read the installed Python version"),
         ]
+        if os.name == "nt" and shutil.which("powershell.exe"):
+            offers.append(ToolOffer(
+                f"t{len(offers)}", "cli.powershell_version", Channel.CLI,
+                "Read the installed Windows PowerShell version",
+            ))
         if (self.root / ".git").exists():
             offers.append(ToolOffer(
                 f"t{len(offers)}", "cli.git_status", Channel.CLI,
@@ -97,6 +104,8 @@ def verify_readonly_tool_result(
         )
     elif capability == "cli.python_version":
         passed = bool(re.match(r"^Python \d+\.\d+", output.get("stdout", "")))
+    elif capability == "cli.powershell_version":
+        passed = bool(re.match(r"^PowerShell \d+\.\d+", output.get("stdout", "")))
     elif capability == "cli.git_status":
         passed = output.get("returncode") == 0 and isinstance(output.get("stdout"), str)
     else:

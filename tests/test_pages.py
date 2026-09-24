@@ -40,9 +40,10 @@ def test_pages_build_uses_relative_assets_and_snapshot(tmp_path):
     output = tmp_path / "pages"
     builder.build(output)
     html = (output / "index.html").read_text(encoding="utf-8")
-    assert 'data-site-mode="static"' in html
-    assert 'href="static/style.css"' in html
-    assert 'src="static/app.js"' in html
+    early = (output / "early-work.html").read_text(encoding="utf-8")
+    assert 'data-site-mode="static"' in early
+    assert 'href="static/style.css"' in early
+    assert 'src="static/app.js"' in early
     assert (output / ".nojekyll").is_file()
     bootstrap = json.loads((output / "data" / "bootstrap.json").read_text(encoding="utf-8"))
     for task in builder.TASKS:
@@ -53,3 +54,37 @@ def test_pages_build_uses_relative_assets_and_snapshot(tmp_path):
     assert len(list((output / "data" / "steps").glob("*.json"))) == 12
     assert (output / "static" / "open-task-loop.svg").is_file()
     assert (output / "media" / "open-workspace-research.mp4").is_file()
+    assert "Four desktop workflow cases" in early
+    assert "One computer-use loop" in html
+    assert "One computer-use loop" in (output / "preview.html").read_text(encoding="utf-8")
+    catalog = json.loads((output / "data" / "windows_demos.json").read_text(encoding="utf-8"))
+    assert len(catalog["cases"]) == 4
+    for case in catalog["cases"]:
+        assert (output / case["video"]).is_file()
+
+
+def test_four_verified_windows_cases_activate_new_home(tmp_path, monkeypatch):
+    builder = _builder()
+    media = tmp_path / "website" / "media"
+    media.mkdir(parents=True)
+    cases = []
+    for index in range(4):
+        name = f"windows-case-{index}.mp4"
+        (media / name).write_bytes(b"reviewed video")
+        cases.append({
+            "id": f"case-{index}", "verified": True,
+            "title": f"Case {index}", "summary": "A verified Windows task",
+            "apps": ["Edge", "VS Code"], "video": f"media/{name}",
+            "actions": 17, "jev_calls": 17, "model_calls": 17, "vlm_calls": 0,
+            "wall_time_s": 110.0, "channels": {"script": 17},
+            "steps": [{"title": "Verified click", "channel": "script", "app": "Edge"}] * 17,
+        })
+    catalog = tmp_path / "website" / "windows_demos.json"
+    catalog.write_text(json.dumps({"schema_version": 2, "cases": cases}), encoding="utf-8")
+    monkeypatch.setattr(builder, "WEBSITE", tmp_path / "website")
+    monkeypatch.setattr(builder, "WINDOWS_DEMOS", catalog)
+    output = tmp_path / "pages"
+    builder.build(output)
+    assert "One computer-use loop" in (output / "index.html").read_text(encoding="utf-8")
+    assert "Four desktop workflow cases" in (output / "early-work.html").read_text(encoding="utf-8")
+    assert (output / "media" / "windows-case-0.mp4").is_file()

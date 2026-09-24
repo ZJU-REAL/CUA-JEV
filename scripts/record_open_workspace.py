@@ -65,7 +65,8 @@ class WindowRecorder:
                 macro_block_size=2, output_params=["-movflags", "+faststart"],
             )
             writer.send(None)
-            next_frame = time.perf_counter()
+            recording_started = time.perf_counter()
+            sent_frames = 0
             while not self.stop_event.is_set():
                 handle = int(self.state.get("window_handle") or 0)
                 rect = wintypes.RECT()
@@ -79,14 +80,18 @@ class WindowRecorder:
                         raw = image_grab.grab(bbox=bounds, all_screens=True).convert("RGB")
                         scale = min(1440 / raw.width, 810 / raw.height)
                         size = (max(2, round(raw.width * scale)), max(2, round(raw.height * scale)))
-                        fitted = raw.resize(size, image.Resampling.LANCZOS)
+                        fitted = raw.resize(size, image.Resampling.BILINEAR)
                         frame = image.new("RGB", (1440, 810), "#f4f8fb")
                         frame.paste(fitted, ((1440 - size[0]) // 2, (810 - size[1]) // 2))
                         last_frame = frame
                 if last_frame is not None:
                     shown = _draw_hud(last_frame.copy(), dict(self.state), image, image_draw, image_font)
-                    writer.send(numpy.asarray(shown).tobytes())
-                next_frame += 1 / self.fps
+                    encoded = numpy.asarray(shown).tobytes()
+                    target_frames = max(1, round((time.perf_counter() - recording_started) * self.fps))
+                    while sent_frames < target_frames:
+                        writer.send(encoded)
+                        sent_frames += 1
+                next_frame = recording_started + (sent_frames + 1) / self.fps
                 self.stop_event.wait(max(0.0, next_frame - time.perf_counter()))
         except BaseException as exc:
             self.error = exc

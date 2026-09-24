@@ -1,5 +1,7 @@
 import io
 import json
+import os
+import shutil
 from types import SimpleNamespace
 
 import httpx
@@ -247,6 +249,21 @@ def test_open_task_runs_with_dynamic_options_and_one_planning_call():
     assert environment.planner_calls == 1
 
 
+def test_dom_navigation_uses_the_observed_href_when_a_menu_mutates():
+    environment = task()
+    environment.reset()
+    observation = environment.observe([])
+    candidate = next(
+        item for item in environment.candidates(observation, [])
+        if item.id == "option_0_dom"
+    )
+    environment.page.elements[0]["label"] = "Changed menu label"
+    environment.page.elements[0]["href"] = "https://example.test/other"
+    receipt = environment(candidate, observation.observation_id, "decision")
+    assert receipt.success
+    assert environment.page.url == "https://example.test/done"
+
+
 def test_scoped_local_tool_and_browser_action_complete_one_open_goal(tmp_path):
     (tmp_path / "guide.md").write_text("public study notes", encoding="utf-8")
     (tmp_path / ".env").write_text("hidden", encoding="utf-8")
@@ -288,9 +305,12 @@ def test_tool_refs_are_scoped_and_not_model_defined(tmp_path):
     environment = task(local_tool_root=tmp_path)
     environment.reset()
     snapshot = environment._capture()
-    assert {offer.capability for offer in snapshot.tool_offers} == {
+    expected = {
         "filesystem.list", "cli.python_version", "filesystem.read_text",
     }
+    if os.name == "nt" and shutil.which("powershell.exe"):
+        expected.add("cli.powershell_version")
+    assert {offer.capability for offer in snapshot.tool_offers} == expected
     assert all(".env" not in offer.description for offer in snapshot.tool_offers)
     read_offer = next(offer for offer in snapshot.tool_offers if offer.capability == "filesystem.read_text")
     candidate = read_offer.candidate(0)

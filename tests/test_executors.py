@@ -9,6 +9,7 @@ from cua_jev.executors import (
     StdioMcpServer,
     VSCodeExecutor,
 )
+from cua_jev.local_tools import verify_readonly_tool_result
 from cua_jev.models import ActionCandidate, Channel
 
 
@@ -34,6 +35,26 @@ def test_registered_cli_does_not_use_shell(monkeypatch):
     assert receipt.success
     assert seen["kwargs"]["shell"] is False
     assert seen["argv"] == ["python", "--version"]
+
+
+def test_powershell_version_is_a_fixed_readonly_command(monkeypatch):
+    seen = {}
+
+    def run(argv, **kwargs):
+        seen.update(argv=argv, kwargs=kwargs)
+        return subprocess.CompletedProcess(argv, 0, "PowerShell 5.1.0\n", "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    candidate = ActionCandidate(
+        "ps-version", Channel.CLI, "cli.powershell_version", "Read PowerShell version",
+    )
+    receipt = RegisteredCliExecutor()(candidate, "obs", "decision")
+    assert receipt.success
+    assert seen["kwargs"]["shell"] is False
+    assert seen["argv"][:4] == [
+        "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+    ]
+    assert verify_readonly_tool_result(candidate, receipt).passed
 
 
 def test_vscode_uses_goto_argv_without_shell(monkeypatch, tmp_path):

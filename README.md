@@ -2,17 +2,30 @@
 
 [Webpage](https://zjureal.com/CUA-JEV/) · [中文文档](README.zh-CN.md)
 
-CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects a **concrete action and its execution route**; the framework guards and executes that choice, verifies the resulting state, and observes again. The first release includes four Windows-validated workflow examples and paired Hybrid / GUI Only experiments, without training a task-specific router or requiring a VLM.
+CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects a **concrete action and its execution route**; the framework guards and executes that choice, verifies the resulting state, and observes again. The project includes four earlier task-specific workflows and four newer recorded model + Jev Windows case studies, without training a task-specific router.
 
 Jev's fast, typed decisions are a promising fit for downstream systems that must choose actions repeatedly under latency constraints, including computer use, embodied agents, and potentially autonomous driving. [RoboJEV](https://github.com/lykycy123/RoboJEV) already explores the embodied setting with Jev-controlled manipulation in a MuJoCo simulator. CUA-JEV explores a different setting: choosing both *what to do next* and *which computer-use channel should do it*.
 
-> **Scope:** This is not a general agent that can operate any application from an arbitrary instruction. Each of the four workflows currently has a task-specific adapter, candidate generator, and terminal verifier. Jev selects among constrained options; it does not generate arbitrary scripts or interpret unfamiliar screenshots.
+> **Scope:** The earlier four application workflows use task-specific adapters. The newer model + Jev cases discover live pages and actions, but remain bounded to one browser origin, registered tools, and a scoped artifact. Neither set establishes reliable operation on arbitrary applications or tasks. Jev selects among constrained options; it does not generate arbitrary scripts or interpret screenshots itself.
 
 **Platform status:** The typed decision loop, guards, and traces are designed to be portable, and CI is configured to run unit tests on Linux and macOS as well as Windows. The experimental Playwright browser path can be configured to use bundled Chromium; its macOS behavior still needs a live run. The published desktop workflows and `open-desktop` depend on Windows integrations such as UI Automation, Excel COM, and Explorer. macOS/Linux **desktop** adapters have not been implemented or validated.
 
-The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. A twelve-action browser-to-VS-Code research case now runs end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
+The [experimental open-task paths](docs/OPEN_TASKS.md) separate model planning from Jev's typed action selection. They discover browser DOM elements or Windows UI Automation controls dynamically and offer grounded structured-tool / physical-GUI alternatives without a site- or app-specific click sequence. Four roughly twenty-action browser-to-tool cases now run end to end with a model and Jev, but **arbitrary-task generalization is not claimed**.
 
 ![CUA-JEV architecture: task adapters, Jev selection, guarded execution, and independent verification](assets/architecture.svg)
+
+## Recorded Windows case studies
+
+The [new homepage](https://zjureal.com/CUA-JEV/) shows four **real, window-only** model + Jev runs. A text model reads live DOM and registered tool descriptions, proposes grounded next actions, and Jev selects one concrete action and channel at every step. A same-origin MCP reader supplies source evidence; scoped CLI and file capabilities complete the cross-app handoff. No chapter URL or click sequence is prewritten. Each run also has an expandable step trace and an action-channel breakdown on the site.
+
+| Case | Task applications | Actions / Jev calls / model calls | Selected channels |
+|---|---|---:|---|
+| Python automation guide | Edge, Terminal, VS Code | 19 / 19 / 19 | DOM 8, MCP 8, CLI 2, file API 1 |
+| JavaScript study guide | Edge, Notepad | 18 / 18 / 18 | DOM 8, MCP 8, CLI 1, file API 1 |
+| Git workflow guide | Edge, Terminal, VS Code | 21 / 21 / 21 | DOM 10, MCP 8, CLI 2, file API 1 |
+| PowerShell learning guide | Edge, Terminal, Notepad | 19 / 19 / 19 | DOM 8, MCP 8, CLI 2, file API 1 |
+
+These are **single successful bounded research-to-editor runs**, not repeated success-rate, speed, or cost benchmarks. They used structured observations and a text planner; **VLM calls were zero**. GUI routes were available for browser links but Jev selected DOM in these recordings. Vision, broader desktop action coverage, unfamiliar task families, macOS, and repeated trials remain future work. The earlier predefined workflows and their paired comparisons live on the site's [Early work page](https://zjureal.com/CUA-JEV/early-work.html).
 
 ## Why Jev × computer use?
 
@@ -31,7 +44,7 @@ This division of labor depends on informative structured observations and well-e
 
 The reusable pieces are [`ActionCandidate`](src/cua_jev/models.py), [`AgentRuntime`](src/cua_jev/runtime.py), [`ActionGuard`](src/cua_jev/guard.py), [`ExecutorRegistry`](src/cua_jev/registry.py), observer and capability interfaces, and the evaluation/trace contract. The four workflows are reference implementations of these interfaces.
 
-### Included workflows
+### Earlier task-specific workflows
 
 | Application | Goal | Competing channels in this release |
 |---|---|---|
@@ -42,9 +55,9 @@ The reusable pieces are [`ActionCandidate`](src/cua_jev/models.py), [`AgentRunti
 
 In **GUI Only**, structured interfaces may still provide observations and element locations, but mutations use PyAutoGUI. In **Hybrid**, Jev can select among the available GUI and structured execution routes. A keyless Rule policy is also included for testing and ablations. Windows UI Automation, terminal text, and filesystem state can serve as observation channels.
 
-## Experiments and demos
+## Early experiments and demos
 
-The [webpage](https://zjureal.com/CUA-JEV/) contains four workflow videos, two separate comparisons, and expandable execution records:
+The [Early work page](https://zjureal.com/CUA-JEV/early-work.html) contains four workflow videos, two separate comparisons, and expandable execution records:
 
 - **Jev Hybrid vs Jev GUI Only:** Same Jev policy and terminal verifier; different action spaces. The comparison focuses on completion time.
 - **Jev Hybrid vs Codex Computer Use Hybrid:** Both may use mixed tools. The pilot compares measured wall time and estimated model cost in US dollars.
@@ -68,7 +81,7 @@ An open goal requires two different kinds of decisions. A general model can inte
 
 ![CUA-JEV open-task loop: live state, model intent, typed route construction, highlighted Jev choice, execution and verification](src/cua_jev/ui/static/open-task-loop.svg)
 
-The [twelve-decision cross-app recording](https://zjureal.com/CUA-JEV/#open-task) starts at the official Python tutorial index. Given five requested chapter headings—but **no chapter URLs, selectors, or click sequence**—the text model follows live links, extracts one exact quote from each of five distinct chapter pages, synthesizes a sourced study guide, writes a new Markdown file, and opens it in VS Code. Jev selects every step from the current typed candidates: **5 DOM navigations in Edge → 5 internal evidence records → 1 file API write → 1 CLI launch of VS Code**. The evidence records update framework state; they are not external computer-use actions. Research-topic headings and the new output path are user-supplied acceptance constraints; this remains a bounded browser-to-editor task family.
+The [twelve-decision cross-app recording](https://zjureal.com/CUA-JEV/early-work.html#open-task) starts at the official Python tutorial index. Given five requested chapter headings—but **no chapter URLs, selectors, or click sequence**—the text model follows live links, extracts one exact quote from each of five distinct chapter pages, synthesizes a sourced study guide, writes a new Markdown file, and opens it in VS Code. Jev selects every step from the current typed candidates: **5 DOM navigations in Edge → 5 internal evidence records → 1 file API write → 1 CLI launch of VS Code**. The evidence records update framework state; they are not external computer-use actions. Research-topic headings and the new output path are user-supplied acceptance constraints; this remains a bounded browser-to-editor task family.
 
 The [independent research verifier](scripts/verify_research_demo.py) reopens the five cited official pages in a fresh browser, checks their headings and exact quotations, confirms the written file, and checks that every decision came from Jev. It checks provenance and execution, **not** whether the model wrote the best possible teaching material. The recorded `dashscope/qwen3.5-plus` run made 12 model plans and 12 Jev decisions in **155.9 s**; the public video is uniformly sped up 2.5× for viewing. A separate successful `DeepSeek-V4-Flash` run took **307 s**, including **287 s** in planner requests. Failed attempts also occurred due to gateway timeouts and malformed plans. These are case studies, **not** a repeated success-rate, latency, or cost benchmark; an end-to-end speed advantage for open-task mode has not been established.
 
@@ -227,7 +240,8 @@ The minimal JSON task in [`inspect_report.json`](src/cua_jev/predefined/inspect_
 - [x] Remove the mandatory Windows-window dependency for browser + registered-tool tasks; test the no-desktop loop and bounded model-generated MCP parameters.
 - [x] Add caller-defined source-visit and cited-artifact gates, a scoped same-origin MCP reader, per-page read controls, and a deterministic 20-action cross-channel regression.
 - [x] Complete and locally record an 18-action live bounded case; add model-discovered sources, topical source gates, late-link prioritization, and verified Edge → VS Code artifact handoff in a distinct 12-action live case.
-- [ ] Complete and record a live model + Jev ~20-action unseen-goal case, then run repeat trials with verified artifact quality, failure taxonomy, action mix, wall time, token use, and cost.
+- [x] Record four verified 18–21-action Windows model + Jev case studies, derive Jev/model counts and action mix from private traces, and publish reviewed window-only videos separately from earlier predefined tasks.
+- [ ] Run repeated held-out tasks and task families with independently verified artifact quality, failure taxonomy, action mix, wall time, token use, and dollar cost; include successful GUI/VLM choices rather than only offering those routes.
 - [x] Add a distinct editor-style cross-app regression and keep observed edit values private while using them in freshness and terminal checks.
 - [x] Complete one live cross-app VLM-scene-fusion run; the selected desktop action remained UIA, so visually grounded action selection is still unproven.
 - [ ] Complete a live VLM-driven task and evaluate visual grounding, safety, success, latency, and cost on repeatable held-out desktop tasks.

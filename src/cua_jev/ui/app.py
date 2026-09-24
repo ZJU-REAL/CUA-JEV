@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import secrets
 from contextlib import asynccontextmanager
@@ -33,6 +34,7 @@ def create_app(root: str | Path | None = None, data: str | Path | None = None):
     app.mount("/static", StaticFiles(directory=static), name="static")
     app.mount("/demos", StaticFiles(directory=demos), name="demos")
     curated_media = project_root / "website" / "media"
+    windows_catalog = project_root / "website" / "windows_demos.json"
     if curated_media.is_dir():
         app.mount("/media", StaticFiles(directory=curated_media), name="media")
 
@@ -59,7 +61,26 @@ def create_app(root: str | Path | None = None, data: str | Path | None = None):
         return response
 
     @app.get("/", response_class=HTMLResponse)
+    @app.get("/index.html", response_class=HTMLResponse)
     def index():
+        page = "home.html" if len(windows_case_data()["cases"]) == 4 else "index.html"
+        return (static / page).read_text(encoding="utf-8")
+
+    def windows_case_data():
+        if not windows_catalog.is_file():
+            return {"schema_version": 2, "cases": []}
+        return json.loads(windows_catalog.read_text(encoding="utf-8"))
+
+    @app.get("/data/windows_demos.json")
+    def windows_demos():
+        return windows_case_data()
+
+    @app.get("/preview.html", response_class=HTMLResponse)
+    def preview():
+        return (static / "home.html").read_text(encoding="utf-8")
+
+    @app.get("/early-work.html", response_class=HTMLResponse)
+    def early_work():
         return (static / "index.html").read_text(encoding="utf-8")
 
     @app.get("/api/bootstrap")

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CUA-JEV combines model planning, guarded action candidates, and Jev decisions for verifiable computer-use workflows. Explore real Windows recordings and their traces.">
+  <title>CUA-JEV · Model planning, Jev decisions, real computer use</title>
+  <link rel="stylesheet" href="static/home.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="masthead">
+    <a class="brand" href="#top" aria-label="CUA-JEV home"><img src="static/logo-mark.svg" alt="REAL Lab" width="40" height="40"><strong>CUA-JEV</strong></a>
+    <nav aria-label="Main navigation"><a href="#approach">Approach</a><a href="#windows-cases">Windows cases</a><a href="early-work.html">Early work</a></nav>
+    <a class="source-link" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">Source code <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow">REAL LAB · OPEN RESEARCH FRAMEWORK</p>
+        <h1>One computer-use loop.<br><em>Many ways to act.</em></h1>
+        <p class="lead">A text model interprets the live task and proposes grounded actions. The framework turns them into legal GUI and tool candidates. <strong>Jev chooses the next concrete action</strong>; guards and verifiers close the loop.</p>
+        <div class="hero-actions"><a class="button primary" href="#windows-cases">Explore the recordings <span aria-hidden="true">↗</span></a><a class="button secondary" href="#approach">How it works</a></div>
+        <p class="scope-line">Windows implementation · recorded case studies, not a claim of arbitrary-task reliability</p>
+      </div>
+      <aside class="hero-diagram" aria-label="Model and Jev decision flow">
+        <div class="diagram-head"><span>CUA-JEV RUNTIME</span><b>Observe → choose → verify</b></div>
+        <div class="diagram-stage"><span class="stage-num">01</span><div><b>Live context</b><small>DOM · accessibility · files · optional VLM</small></div></div>
+        <div class="diagram-stage"><span class="stage-num">02</span><div><b>Model proposes</b><small>Subgoal and grounded action options</small></div></div>
+        <div class="diagram-core"><span class="stage-num">03</span><div><b>Jev selects</b><small>One intent × execution route</small></div><span class="core-pulse" aria-hidden="true"></span></div>
+        <div class="diagram-stage"><span class="stage-num">04</span><div><b>Execute &amp; verify</b><small>Scoped tool call, independent result check</small></div></div>
+        <div class="diagram-channels" aria-label="Supported action channels"><span>GUI</span><span>DOM</span><span>UIA</span><span>CLI</span><span>MCP</span><span>API</span></div>
+      </aside>
+    </section>
+
+    <section class="intro-band" id="approach">
+      <div><p class="eyebrow">THE IDEA</p><h2>Generalize the decision loop.<br>Keep execution grounded.</h2></div>
+      <div class="intro-copy"><p>The model handles interpretation and candidate generation. Jev compares those candidates, including alternative routes for the same intent. The runtime constrains scope, executes the selected route, then checks the changed application state.</p><p>Structured observations are the reliable path today. Screenshot/VLM grounding is available experimentally, but visual-click success across varied applications has not yet been established.</p></div>
+    </section>
+
+    <section class="case-section" id="windows-cases">
+      <div class="section-heading"><div><p class="eyebrow">WINDOWS · RECORDED WORKFLOWS</p><h2>Watch the decisions unfold.</h2></div><p>Each case below is backed by a successful local episode, its Jev trace, and a window-only recording. Counts describe that run, not an average or a benchmark.</p></div>
+      <div id="case-status" class="case-status" role="status">Loading verified cases…</div>
+      <div id="windows-grid" class="windows-grid" aria-live="polite"></div>
+      <details class="case-method"><summary>Recording and metrics notes</summary><p>Action mix counts committed actions by execution channel. “Jev calls” counts policy decisions; “model calls” counts planner requests, with VLM calls shown separately. Recordings show only task windows; local path bars may be covered and a brief editor launch may be cut. Wall time comes from the raw run, not edited video length. One run per case does not establish a success rate or cost advantage.</p></details>
+    </section>
+
+    <section class="limits-section" id="limits">
+      <div><p class="eyebrow">RESEARCH STATUS</p><h2>What the evidence does—and does not—show.</h2></div>
+      <div class="limit-grid"><article><span>01 / Proven locally</span><h3>End-to-end Windows cases</h3><p>Real model planning, Jev decisions, guarded execution, and task-level verification in recorded workflows.</p></article><article><span>02 / Still experimental</span><h3>Visual grounding</h3><p>VLM-derived targets are supported, but visual route reliability and benefit need broader live testing.</p></article><article><span>03 / Next</span><h3>Broader generality</h3><p>More unfamiliar tasks, applications, repeat trials, and macOS work after the Windows study.</p></article></div>
+      <a class="archive-link" href="early-work.html">See the earlier task-specific experiments <span aria-hidden="true">↗</span></a>
+    </section>
+  </main>
+  <footer><span>CUA-JEV · REAL Lab</span><a href="https://github.com/ZJU-REAL/CUA-JEV">GitHub</a><a href="early-work.html">Early work</a></footer>
+  <script src="static/home.js" defer></script>
+</body>
+</html>

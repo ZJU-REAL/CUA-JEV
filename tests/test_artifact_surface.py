@@ -75,3 +75,31 @@ def test_existing_same_name_editor_is_not_mistaken_for_new_artifact(tmp_path, mo
     assert receipt.success, receipt.error
     assert surface.opened_window_handle == 8
     assert surface._verify_editor_open(open_action, receipt).passed
+
+
+def test_notepad_handoff_is_a_distinct_guarded_editor_route(tmp_path, monkeypatch):
+    visible = {"title": ""}
+    launched = []
+    surface = ArtifactSurface(
+        tmp_path / "public-note.txt", allow_open_notepad=True,
+        editor_probe=lambda: visible["title"],
+    )
+    surface.reset()
+    surface.set_acceptance(ready=True, citations=())
+    write = surface.compile(surface.capture(), "a0", "write", "Public note", "Write", 0)[0]
+    assert surface.execute(write, "obs", "write").success
+    monkeypatch.setattr("cua_jev.artifact_surface.shutil.which", lambda name: name)
+
+    def launch(argv, *, shell):
+        launched.append((argv, shell))
+        visible["title"] = "public-note.txt - Notepad"
+
+    monkeypatch.setattr("cua_jev.artifact_surface.subprocess.Popen", launch)
+    action = surface.compile(surface.capture(), "a0", "open", "", "Open", 1)[0]
+    assert action.capability == "artifact.open_notepad"
+    receipt = surface.execute(action, "obs", "open")
+    assert receipt.success, receipt.error
+    assert surface._verify_editor_open(action, receipt).passed
+    assert launched == [(["notepad.exe", str(surface.path)], False)]
+    with pytest.raises(ValueError, match="choose exactly one"):
+        ArtifactSurface(tmp_path / "other.txt", allow_open_vscode=True, allow_open_notepad=True)

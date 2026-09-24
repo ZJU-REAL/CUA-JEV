@@ -8,6 +8,7 @@ This recorder captures the Edge window plus a route/status HUD, not the desktop.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import time
@@ -28,6 +29,7 @@ from cua_jev.open_computer import OpenComputerTask
 def main(argv: list[str] | None = None) -> int:
     recorder_parser = argparse.ArgumentParser(description=__doc__, add_help=False)
     recorder_parser.add_argument("--output", type=Path)
+    recorder_parser.add_argument("--metrics-output", type=Path)
     recorder_parser.add_argument("--fps", type=int, default=12)
     recorder_parser.add_argument("--help", action="store_true")
     recording, task_argv = recorder_parser.parse_known_args(argv)
@@ -41,6 +43,8 @@ def main(argv: list[str] | None = None) -> int:
         recorder_parser.error("--fps must be 1-30")
     if recording.output.exists():
         recorder_parser.error("refusing to overwrite an existing demo video")
+    if recording.metrics_output and recording.metrics_output.exists():
+        recorder_parser.error("refusing to overwrite existing run metrics")
 
     load_local_env()
     args = _parser().parse_args(["open-computer", *task_argv])
@@ -54,8 +58,10 @@ def main(argv: list[str] | None = None) -> int:
         recorder_parser.error("set the model and Jev keys locally, never in the command line")
     if args.mcp_profile and not args.allow_mcp_actions:
         recorder_parser.error("MCP profile needs --allow-mcp-actions")
-    if args.open_artifact_vscode and not args.artifact_path:
-        recorder_parser.error("--open-artifact-vscode needs --artifact-path")
+    if (args.open_artifact_vscode or args.open_artifact_notepad) and not args.artifact_path:
+        recorder_parser.error("artifact editor handoff needs --artifact-path")
+    if args.open_artifact_vscode and args.open_artifact_notepad:
+        recorder_parser.error("select only one artifact editor")
     args.headed_browser = True
     planner = ChatModelPlanner(
         args.model_base_url, args.model,
@@ -76,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mcp_profile else None,
         artifact_surface=ArtifactSurface(
             args.artifact_path, allow_open_vscode=args.open_artifact_vscode,
+            allow_open_notepad=args.open_artifact_notepad,
         )
         if args.artifact_path else None,
         mcp_current_page_only=args.mcp_current_page_only,
@@ -99,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         state["step"] += 1
         state["channel"] = str(candidate.channel)
         state["status"] = "verified" if verification.passed else "replan"
-        if candidate.capability == "artifact.open_vscode" and verification.passed:
+        if candidate.capability in {"artifact.open_vscode", "artifact.open_notepad"} and verification.passed:
             handle = task.artifact_surface.opened_window_handle
             if handle is None:
                 raise RuntimeError("verified editor has no new window handle")
@@ -139,6 +146,18 @@ def main(argv: list[str] | None = None) -> int:
     if recording.output.exists():
         raise FileExistsError("demo output appeared during the run; refusing to overwrite")
     staging.replace(recording.output)
+    if recording.metrics_output is not None:
+        recording.metrics_output.parent.mkdir(parents=True, exist_ok=True)
+        recording.metrics_output.write_text(json.dumps({
+            "status": "success", "actions": len(result.steps),
+            "jev_calls": sum(
+                step.decision.model.startswith("jev-") for step in result.steps
+            ),
+            "model_calls": task.planner_calls,
+            "vlm_calls": 0,
+            "wall_time_ms": result.duration_ms,
+            "channels": result.channel_counts,
+        }, indent=2) + "\n", encoding="utf-8")
     print(
         f"status=success steps={len(result.steps)} wall_ms={result.duration_ms:.0f} "
         f"planner_calls={task.planner_calls} model_tokens="

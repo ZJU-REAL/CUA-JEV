@@ -17,6 +17,7 @@ SNAPSHOT = WEBSITE / "snapshot.json"
 MEDIA = WEBSITE / "media"
 TASKS = ("edge", "excel", "vscode", "explorer")
 MODES = ("hybrid", "gui-only")
+WINDOWS_DEMOS = WEBSITE / "windows_demos.json"
 PUBLIC_ROW_FIELDS = (
     "agent",
     "action_space",
@@ -37,6 +38,39 @@ def _safe_text(value: Any) -> str:
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _windows_cases() -> tuple[list[dict[str, Any]], bool]:
+    data = json.loads(WINDOWS_DEMOS.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 2 or not isinstance(data.get("cases"), list):
+        raise ValueError("Invalid Windows case catalog")
+    cases = data["cases"]
+    if len(cases) > 4 or len({item.get("id") for item in cases}) != len(cases):
+        raise ValueError("Windows case catalog must contain at most four unique cases")
+    for item in cases:
+        if item.get("verified") is not True or not 17 <= item.get("actions", -1) <= 23:
+            raise ValueError("Only verified, roughly twenty-action cases may be published")
+        if item.get("jev_calls") != item["actions"] or not 1 <= item.get("model_calls", 0):
+            raise ValueError("Windows case decision or model counts are inconsistent")
+        if (
+            len(item.get("steps", [])) != item["actions"]
+            or sum(item.get("channels", {}).values()) != item["actions"]
+        ):
+            raise ValueError("Windows case trace does not match its action mix")
+        for key in ("id", "title", "summary"):
+            _safe_text(item[key])
+        for app in item.get("apps", []):
+            _safe_text(app)
+        for step in item["steps"]:
+            _safe_text(step["title"])
+            _safe_text(step["channel"])
+            _safe_text(step.get("app", ""))
+        media_path = item.get("video", "")
+        if not re.fullmatch(r"media/windows-[a-z0-9-]+\.mp4", media_path):
+            raise ValueError("Windows case video must be a curated relative media path")
+        if not (WEBSITE / media_path).is_file():
+            raise ValueError(f"Missing reviewed Windows recording: {media_path}")
+    return cases, len(cases) == 4
 
 
 def refresh_snapshot() -> None:
@@ -148,6 +182,7 @@ def build(output: Path = ROOT / "dist-pages") -> None:
     snapshot = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
     if snapshot.get("schema_version") != 1 or set(snapshot.get("tasks", {})) != set(TASKS):
         raise ValueError("Invalid website snapshot")
+    windows_cases, windows_ready = _windows_cases()
     target = output.resolve()
     default = (ROOT / "dist-pages").resolve()
     if target.exists():
@@ -156,16 +191,21 @@ def build(output: Path = ROOT / "dist-pages") -> None:
         shutil.rmtree(target)
     target.mkdir(parents=True)
     shutil.copytree(SOURCE / "icons", target / "static" / "icons")
-    for name in ("app.js", "style.css", "logo-mark.svg", "open-task-loop.svg"):
+    for name in ("app.js", "style.css", "home.js", "home.css", "logo-mark.svg", "open-task-loop.svg"):
         shutil.copy2(SOURCE / name, target / "static" / name)
     html = (SOURCE / "index.html").read_text(encoding="utf-8")
     marker = '<html lang="en">'
     if marker not in html:
         raise ValueError("Static site mode marker cannot be installed")
-    (target / "index.html").write_text(
-        html.replace(marker, '<html lang="en" data-site-mode="static">', 1), encoding="utf-8"
-    )
+    early = html.replace(marker, '<html lang="en" data-site-mode="static">', 1)
+    (target / "early-work.html").write_text(early, encoding="utf-8")
+    home = (SOURCE / "home.html").read_text(encoding="utf-8")
+    (target / "preview.html").write_text(home, encoding="utf-8")
+    (target / "index.html").write_text(home if windows_ready else early, encoding="utf-8")
     (target / ".nojekyll").touch()
+    _write_json(target / "data" / "windows_demos.json", {
+        "schema_version": 2, "cases": windows_cases,
+    })
     demos: dict[str, dict[str, str]] = {}
     (target / "media").mkdir()
     for task in TASKS:
@@ -182,6 +222,9 @@ def build(output: Path = ROOT / "dist-pages") -> None:
         if not source.is_file():
             raise ValueError(f"Missing curated open-task media: {source}")
         shutil.copy2(source, target / "media" / name)
+    for item in windows_cases:
+        media_path = item["video"]
+        shutil.copy2(WEBSITE / media_path, target / media_path)
     _write_json(
         target / "data" / "bootstrap.json",
         {"tasks": snapshot["tasks"], "demos": demos, "captured_on": snapshot["captured_on"]},

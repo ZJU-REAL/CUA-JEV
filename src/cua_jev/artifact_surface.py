@@ -44,7 +44,8 @@ class ArtifactSurface:
 
     def __init__(
         self, path: Path, *, max_chars: int = 8000,
-        allow_open_vscode: bool = False, editor_probe: Any | None = None,
+        allow_open_vscode: bool = False, allow_open_notepad: bool = False,
+        editor_probe: Any | None = None,
         editor_launcher: Any | None = None,
     ) -> None:
         self.path = path.resolve()
@@ -52,15 +53,24 @@ class ArtifactSurface:
             raise ValueError("artifact must be a .md or .txt file")
         if not 1 <= max_chars <= 20_000:
             raise ValueError("artifact size limit is invalid")
+        if allow_open_vscode and allow_open_notepad:
+            raise ValueError("choose exactly one editor handoff target")
         self.max_chars = max_chars
         self.allow_open_vscode = allow_open_vscode
+        self.allow_open_notepad = allow_open_notepad
+        self.open_capability = (
+            "artifact.open_vscode" if allow_open_vscode
+            else "artifact.open_notepad" if allow_open_notepad else ""
+        )
         self.editor_probe = editor_probe
-        self.editor_launcher = editor_launcher or self._launch_vscode
+        self.editor_launcher = editor_launcher or (
+            self._launch_vscode if allow_open_vscode else self._launch_notepad
+        )
         self.opened_window_handle: int | None = None
         self._opened_test_editor = False
-        if allow_open_vscode:
+        if self.open_capability:
             self.supported_capabilities = frozenset({
-                "artifact.write_text", "artifact.open_vscode",
+                "artifact.write_text", self.open_capability,
             })
         self.ready = False
         self.required_citations: tuple[str, ...] = ()
@@ -86,7 +96,7 @@ class ArtifactSurface:
         if not self.path.exists():
             return ArtifactState(
                 "a0", self.path.name, False, self.ready,
-                can_open_editor=self.allow_open_vscode,
+                can_open_editor=bool(self.open_capability),
             )
         if not self.path.is_file() or self.path.stat().st_size > self.max_chars * 4:
             raise ValueError("artifact changed to an unsupported target")
@@ -95,7 +105,7 @@ class ArtifactSurface:
             "a0", self.path.name, True, self.ready,
             hashlib.sha256(text.encode("utf-8")).hexdigest(), text,
             self._editor_is_open(),
-            self.allow_open_vscode,
+            bool(self.open_capability),
         )
 
     def _editor_windows(self) -> dict[int, str]:
@@ -103,14 +113,15 @@ class ArtifactSurface:
             from pywinauto import Desktop
         except ImportError:
             return {}
+        editor_name = "Visual Studio Code" if self.allow_open_vscode else "Notepad"
         matches = Desktop(backend="uia").windows(
-            title_re=rf".*{re.escape(self.path.name)}.*Visual Studio Code.*",
+            title_re=rf".*{re.escape(self.path.name)}.*{editor_name}.*",
             visible_only=True,
         )
         return {int(item.handle): str(item.window_text()) for item in matches}
 
     def _editor_is_open(self) -> bool:
-        if not self.allow_open_vscode:
+        if not self.open_capability:
             return False
         if self.editor_probe is not None:
             return self._opened_test_editor and bool(self.editor_probe())
@@ -125,13 +136,19 @@ class ArtifactSurface:
             raise RuntimeError("VS Code CLI is not installed")
         subprocess.Popen([executable, "--new-window", str(self.path)], shell=False)
 
+    def _launch_notepad(self) -> None:
+        executable = shutil.which("notepad.exe")
+        if not executable:
+            raise RuntimeError("Windows Notepad is not installed")
+        subprocess.Popen([executable, str(self.path)], shell=False)
+
     def validate(
         self, state: ArtifactState, ref: str, operation: Any, value: Any
     ) -> tuple[str, str, str]:
         if ref != state.ref:
             raise ValueError("artifact ref changed")
         if operation == "open":
-            if not self.allow_open_vscode or not state.exists or state.editor_open or value:
+            if not self.open_capability or not state.exists or state.editor_open or value:
                 raise ValueError("editor open is not currently offered")
             return ref, "open", ""
         if operation != "write" or state.exists or not state.ready:
@@ -148,9 +165,10 @@ class ArtifactSurface:
     ) -> tuple[ActionCandidate, ...]:
         self.validate(state, ref, operation, value)
         if operation == "open":
+            editor = "VS Code" if self.allow_open_vscode else "Notepad"
             return (ActionCandidate(
-                f"option_{index}_editor", Channel.CLI, "artifact.open_vscode",
-                f"Open {self.path.name} in VS Code",
+                f"option_{index}_editor", Channel.CLI, self.open_capability,
+                f"Open {self.path.name} in {editor}",
                 {"path": str(self.path)}, Risk.READ_ONLY,
                 verifier="artifact.editor_open", intent=f"option_{index}",
             ),)
@@ -167,7 +185,7 @@ class ArtifactSurface:
     def execute(
         self, candidate: ActionCandidate, observation_id: str, decision_id: str
     ) -> ActionReceipt:
-        if candidate.capability == "artifact.open_vscode":
+        if self.open_capability and candidate.capability == self.open_capability:
             def open_editor() -> dict[str, Any]:
                 if candidate.arguments["path"] != str(self.path) or not self.path.is_file():
                     raise ValueError("artifact target changed")
@@ -190,7 +208,7 @@ class ArtifactSurface:
                                 "window_title": windows[self.opened_window_handle],
                             }
                     time.sleep(0.3)
-                raise RuntimeError("VS Code did not display the artifact")
+                raise RuntimeError("the selected editor did not display the artifact")
 
             return execute_with_receipt(candidate, observation_id, decision_id, open_editor)
 
@@ -208,7 +226,7 @@ class ArtifactSurface:
 
     def register_verifiers(self, registry: VerifierRegistry) -> None:
         registry.register("artifact.exact_text", self._verify)
-        if self.allow_open_vscode:
+        if self.open_capability:
             registry.register("artifact.editor_open", self._verify_editor_open)
 
     def _verify_editor_open(

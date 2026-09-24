@@ -692,12 +692,12 @@ class OpenBrowserTask:
                 if option.operation == "click" else Risk.LOCAL_WRITE
             )
             name = element.label or element.tag
-            description = f"{option.operation.title()} {name[:70]}"
             arguments = {
                 "ref": element.ref,
                 "index": element.index,
                 "label": element.label,
                 "tag": element.tag,
+                "href": element.href,
                 "operation": option.operation,
                 "value": option.value,
             }
@@ -706,11 +706,12 @@ class OpenBrowserTask:
                     continue
                 if option.operation == "select" and channel == Channel.GUI:
                     continue
+                verb = "Open" if is_link and channel == Channel.SCRIPT else option.operation.title()
                 result.append(
                     ActionCandidate(
                         id=f"option_{index}_{suffix}", channel=channel,
                         capability=f"browser.{option.operation}",
-                        description=f"{description} using {suffix.upper()}",
+                        description=f"{verb} {name[:70]} using {suffix.upper()}",
                         arguments=arguments, risk=risk,
                         verifier="browser.effect", intent=f"option_{index}",
                     )
@@ -774,6 +775,20 @@ class OpenBrowserTask:
         def operation() -> dict[str, Any]:
             before = self._capture()
             self._before[decision_id] = before
+            if (
+                candidate.channel == Channel.SCRIPT
+                and candidate.arguments.get("operation") == "click"
+                and candidate.arguments.get("tag") == "a"
+                and candidate.arguments.get("href")
+            ):
+                target_url = candidate.arguments["href"]
+                if self._snapshot is None or before.url != self._snapshot.url:
+                    raise RuntimeError("browser page changed since observation")
+                if _origin(target_url) != self.allowed_origin:
+                    raise RuntimeError("browser link left the allowed origin")
+                self.page.goto(target_url, wait_until="domcontentloaded")
+                return {"url": self.page.url, "element": candidate.arguments["ref"],
+                        "operation": "click"}
             if candidate.capability == "browser.visual_click":
                 if self._snapshot is None or self._visual_image is None:
                     raise RuntimeError("visual browser observation is unavailable")
@@ -812,7 +827,22 @@ class OpenBrowserTask:
                 for name in ("label", "tag")
             ):
                 raise RuntimeError("browser element changed since observation")
-            locator = self.page.locator(SELECTOR).nth(element.index)
+            live_index = element.index
+            if element.tag == "a" and element.href and candidate.channel == Channel.GUI:
+                # Responsive/dynamic pages can insert controls between capture and
+                # execution. An index-only click may silently hit a different link.
+                matched = self.page.evaluate(
+                    """request => [...document.querySelectorAll(request.selector)]
+                      .findIndex(el => el.tagName === 'A' && el.href === request.href &&
+                        (el.getAttribute('aria-label') || el.innerText || '').trim()
+                          .slice(0, 120) === request.label)""",
+                    {"selector": SELECTOR, "href": element.href, "label": element.label},
+                )
+                if isinstance(matched, int):
+                    if matched < 0:
+                        raise RuntimeError("browser link changed since observation")
+                    live_index = matched
+            locator = self.page.locator(SELECTOR).nth(live_index)
             action = candidate.arguments["operation"]
             if candidate.channel == Channel.GUI:
                 self._physical_action(locator, candidate)

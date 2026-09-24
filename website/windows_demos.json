@@ -1,0 +1,501 @@
+{
+  "schema_version": 2,
+  "cases": [
+    {
+      "id": "python-guide",
+      "verified": true,
+      "title": "Python automation field guide",
+      "summary": "Read eight live Python tutorial chapters, check the local Python runtime, write a cited guide, and open it in VS Code.",
+      "apps": [
+        "Edge",
+        "Terminal",
+        "VS Code"
+      ],
+      "video": "media/windows-python-guide.mp4",
+      "actions": 19,
+      "jev_calls": 19,
+      "model_calls": 19,
+      "vlm_calls": 0,
+      "jev_model": "jev-1.13.0",
+      "planner_model": "dashscope/qwen3.5-plus",
+      "wall_time_s": 260.8,
+      "channels": {
+        "script": 8,
+        "mcp": 8,
+        "cli": 2,
+        "api": 1
+      },
+      "recording_speed": "real-time playback",
+      "steps": [
+        {
+          "title": "Click 3. An Informal Introduction to Python using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click 9. Classes using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Click next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one official Python documentation HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Read the installed Python version",
+          "channel": "cli",
+          "app": "Terminal"
+        },
+        {
+          "title": "Create the scoped python-automation-guide.md artifact",
+          "channel": "api",
+          "app": "Files"
+        },
+        {
+          "title": "Open python-automation-guide.md in VS Code",
+          "channel": "cli",
+          "app": "VS Code"
+        }
+      ]
+    },
+    {
+      "id": "javascript-guide",
+      "verified": true,
+      "title": "JavaScript study guide",
+      "summary": "Discover eight MDN JavaScript chapters, collect live source evidence, write a cited study guide, and review it in Notepad.",
+      "apps": [
+        "Edge",
+        "Notepad"
+      ],
+      "video": "media/windows-javascript-guide.mp4",
+      "actions": 18,
+      "jev_calls": 18,
+      "model_calls": 18,
+      "vlm_calls": 0,
+      "jev_model": "jev-1.13.0",
+      "planner_model": "dashscope/qwen3.5-plus",
+      "wall_time_s": 194.2,
+      "channels": {
+        "script": 8,
+        "mcp": 8,
+        "api": 1,
+        "cli": 1
+      },
+      "recording_speed": "real-time playback",
+      "steps": [
+        {
+          "title": "Open Grammar and types using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Working with objects using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Using classes using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Indexed collections using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public MDN HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Create the scoped javascript-study-guide-windowed.txt artifact",
+          "channel": "api",
+          "app": "Files"
+        },
+        {
+          "title": "Open javascript-study-guide-windowed.txt in Notepad",
+          "channel": "cli",
+          "app": "Notepad"
+        }
+      ]
+    },
+    {
+      "id": "git-guide",
+      "verified": true,
+      "title": "Git workflow guide",
+      "summary": "Read eight Pro Git chapters, query a scoped Git workspace through CLI, draft a cited guide, and inspect it in VS Code.",
+      "apps": [
+        "Edge",
+        "Terminal",
+        "VS Code"
+      ],
+      "video": "media/windows-git-guide.mp4",
+      "actions": 21,
+      "jev_calls": 21,
+      "model_calls": 21,
+      "vlm_calls": 0,
+      "jev_model": "jev-1.13.0",
+      "planner_model": "dashscope/qwen3.5-plus",
+      "wall_time_s": 292.2,
+      "channels": {
+        "script": 10,
+        "mcp": 8,
+        "cli": 2,
+        "api": 1
+      },
+      "recording_speed": "real-time playback",
+      "steps": [
+        {
+          "title": "Open Getting a Git Repository using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open next using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapters ▾ using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Open Book using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Open Branches in a Nutshell using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Pro Git HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Read Git working-tree status",
+          "channel": "cli",
+          "app": "Terminal"
+        },
+        {
+          "title": "Create the scoped git-workflow-guide-windowed.md artifact",
+          "channel": "api",
+          "app": "Files"
+        },
+        {
+          "title": "Open git-workflow-guide-windowed.md in VS Code",
+          "channel": "cli",
+          "app": "VS Code"
+        }
+      ]
+    },
+    {
+      "id": "powershell-guide",
+      "verified": true,
+      "title": "PowerShell learning guide",
+      "summary": "Read eight live PowerShell 101 chapters, query the installed PowerShell version, write a cited guide, and inspect it in Notepad.",
+      "apps": [
+        "Edge",
+        "Terminal",
+        "Notepad"
+      ],
+      "video": "media/windows-powershell-guide.mp4",
+      "actions": 19,
+      "jev_calls": 19,
+      "model_calls": 19,
+      "vlm_calls": 0,
+      "jev_model": "jev-1.13.0",
+      "planner_model": "dashscope/qwen3.5-plus",
+      "wall_time_s": 228.9,
+      "channels": {
+        "script": 8,
+        "mcp": 8,
+        "cli": 2,
+        "api": 1
+      },
+      "recording_speed": "real-time playback",
+      "steps": [
+        {
+          "title": "Open Chapter 1 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 2 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 3 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 4 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 5 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 6 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 7 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Open Chapter 8 using DOM",
+          "channel": "script",
+          "app": "Edge"
+        },
+        {
+          "title": "Read one same-origin public Microsoft Learn HTML page via scoped MCP",
+          "channel": "mcp",
+          "app": "MCP reader"
+        },
+        {
+          "title": "Read the installed Windows PowerShell version",
+          "channel": "cli",
+          "app": "Terminal"
+        },
+        {
+          "title": "Create the scoped powershell-learning-guide-2.txt artifact",
+          "channel": "api",
+          "app": "Files"
+        },
+        {
+          "title": "Open powershell-learning-guide-2.txt in Notepad",
+          "channel": "cli",
+          "app": "Notepad"
+        }
+      ]
+    }
+  ]
+}

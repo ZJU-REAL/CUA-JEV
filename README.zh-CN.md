@@ -2,15 +2,28 @@
 
 [项目网页](https://zjureal.com/CUA-JEV/) · [English README](README.md)
 
-CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择**具体动作及其执行路线**，框架再负责安全检查、实际执行、结果验证和下一轮观察。首版不训练专用路由模型，也不依赖 VLM，提供四个已在 Windows 验证的完整任务范例及 Hybrid / GUI Only 对照实验。
+CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择**具体动作及其执行路线**，框架再负责安全检查、实际执行、结果验证和下一轮观察。项目不训练专用路由模型，现包含早期四个任务专属工作流和新增的四个“模型 + Jev”长任务录制案例。
 
 Jev 的快速、类型化决策能力，适合探索需要高频、低延迟动作选择的下游方向，例如 CUA、具身智能，以及潜在的智能驾驶场景。[RoboJEV](https://github.com/lykycy123/RoboJEV) 已在 MuJoCo 仿真中探索 Jev 控制的机器人操作；CUA-JEV 则聚焦计算机使用中的“下一步做什么、通过哪种通道执行”。
 
-> **能力边界：**这不是“给任意指令，就能操作任意软件”的通用 Agent。目前四个案例都有任务专属适配器、候选动作与终态验证器。Jev 负责受约束的选择，不负责自由生成操作脚本或直接理解图像；实验性 VLM 路径会先把截图转换为受约束的文字场景与可点击目标。
+> **能力边界：**早期四个应用任务依赖任务专属适配器；新增案例可以动态发现实时页面与动作，但仍限定单一浏览器域名、注册工具和指定输出文件。两者都不能证明“任意软件、任意任务”可靠可用。Jev 负责受约束的选择，不自由生成脚本或直接理解图像；实验性 VLM 路径会先把截图转换为文字场景与可点击目标。
 
 **平台现状：**类型化决策循环、Guard 和 trace 的设计可移植，CI 已配置 Windows、Linux、macOS 单元测试。实验性浏览器路径可改用 Playwright Chromium，但 macOS 上的真实运行仍待验证；已发布的桌面案例和 `open-desktop` 仍依赖 Windows UI Automation、Excel COM、Explorer 等接口。macOS/Linux 桌面适配器**尚未实现或验证**。
 
 ![CUA-JEV：任务适配器、Jev 决策、执行器与验证器组成的闭环](assets/architecture.svg)
+
+## 新版 Windows 录制案例
+
+[新版主页](https://zjureal.com/CUA-JEV/)展示了四次**真实、只录任务窗口**的模型 + Jev 运行。文本模型读取实时 DOM 和注册工具描述，提出有依据的下一步动作；Jev 在每一步选择具体动作及通道。同源 MCP 读取来源，受限 CLI 和文件能力完成跨应用交接。章节 URL 与点击序列并未预写；网站提供逐步记录和动作通道分布。
+
+| 案例 | 涉及应用 | 动作 / Jev 调用 / 模型调用 | 实际选择通道 |
+|---|---|---:|---|
+| Python 自动化指南 | Edge、终端、VS Code | 19 / 19 / 19 | DOM 8、MCP 8、CLI 2、文件 API 1 |
+| JavaScript 学习指南 | Edge、Notepad | 18 / 18 / 18 | DOM 8、MCP 8、CLI 1、文件 API 1 |
+| Git 工作流指南 | Edge、终端、VS Code | 21 / 21 / 21 | DOM 10、MCP 8、CLI 2、文件 API 1 |
+| PowerShell 学习指南 | Edge、终端、Notepad | 19 / 19 / 19 | DOM 8、MCP 8、CLI 2、文件 API 1 |
+
+这些都是**单次成功、有边界的资料研究→编辑器案例**，并非重复测得的成功率、速度或成本基准。四次运行使用结构化观察与文本规划模型，**VLM 调用均为零**；浏览器 GUI 路线虽可供选择，Jev 在这些录制中选择了 DOM。视觉路径、更丰富的桌面动作、陌生任务类型、macOS 和重复实验仍是下一步工作。旧版预设任务及配对比较移至网站的 [Early work 页面](https://zjureal.com/CUA-JEV/early-work.html)。
 
 ## 为什么是 Jev × CUA？
 
@@ -29,7 +42,7 @@ CUA 的动作空间天然是混合的。同一个子目标有时适合可见的�
 
 可复用的是 [`ActionCandidate`](src/cua_jev/models.py)、[`AgentRuntime`](src/cua_jev/runtime.py)、[`ActionGuard`](src/cua_jev/guard.py)、[`ExecutorRegistry`](src/cua_jev/registry.py)、观察器与能力包接口，以及评测/trace 契约；四个任务是这些接口的参考实现。
 
-### 首版支持什么
+### 早期任务专属工作流
 
 | 任务范例 | 目标 | 首版可竞争通道 |
 |---|---|---|
@@ -40,9 +53,9 @@ CUA 的动作空间天然是混合的。同一个子目标有时适合可见的�
 
 GUI Only 中，状态读取与定位仍可使用结构化接口，但**修改操作通过 PyAutoGUI 完成**；Hybrid 则让 Jev 在真实可用的 GUI 与结构化执行路线中选择。项目同时提供无密钥的 Rule 策略，用于测试和策略消融。Windows UIA、终端文本、文件系统等也是适配器可用的观察通道。
 
-## 实验与展示
+## 早期实验与展示
 
-[项目网页](https://zjureal.com/CUA-JEV/)提供四个案例视频、两组分开的比较，以及可展开的执行记录：
+[Early work 页面](https://zjureal.com/CUA-JEV/early-work.html)提供四个早期案例视频、两组分开的比较，以及可展开的执行记录：
 
 - **Jev Hybrid vs Jev GUI Only**：保持 Jev 策略与终态验证相同，比较动作空间对完成时间的影响。
 - **Jev Hybrid vs Codex Computer Use Hybrid**：两者都允许混合工具，比较实测墙钟时间和基于公开费率的模型美元成本估算。
@@ -70,7 +83,7 @@ VS Code 和 Explorer 展示了混合通道避开大量 GUI 操作的潜力；**E
 
 ![开放任务架构：实时状态、模型提出意图、框架构建候选、Jev 选路、执行验证循环](src/cua_jev/ui/static/open-task-loop.svg)
 
-[跨软件案例视频](https://zjureal.com/CUA-JEV/#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。其中 5 次通过 DOM 操作 Edge，5 次在框架内部记录引文，1 次通过文件 API 写入，1 次通过 CLI 打开 VS Code；内部记录不等同于外部计算机操作。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；这段公开录制只使用文本模型和 DOM，未使用 VLM，重复成功率与成本效果也尚未评测。
+[跨软件案例视频](https://zjureal.com/CUA-JEV/early-work.html#open-task)从 Python 官方教程首页出发，根据五个章节目标自行找到五张页面、记录可回查引文、生成指南并在 VS Code 中打开，共完成 12 次 Jev 决策；没有编码章节 URL 或点击顺序。其中 5 次通过 DOM 操作 Edge，5 次在框架内部记录引文，1 次通过文件 API 写入，1 次通过 CLI 打开 VS Code；内部记录不等同于外部计算机操作。[独立验证器](scripts/verify_research_demo.py)重新访问五个来源，核对标题、引文、链接与执行记录。该路径仍是受限的“浏览器→编辑器”任务族，**不是任意任务能力**；这段公开录制只使用文本模型和 DOM，未使用 VLM，重复成功率与成本效果也尚未评测。
 
 公开录制的单次运行实测 155.9 秒，视频为观看方便统一加速 2.5 倍；另一次成功运行耗时 307 秒，其中 287 秒等待规划模型。也出现过网关超时和模型输出不合规的失败尝试，因此目前不能以该案例宣称开放任务模式在端到端速度或可靠性上已经占优。
 
@@ -199,7 +212,8 @@ python scripts/record_v2_demos.py --task all --profile both --policy jev
 - [x] 浏览器＋CLI/MCP 组合任务不再强制依赖 Windows 窗口；加入受 schema 约束的模型填写参数并完成真实协议测试。
 - [x] 加入调用者定义的来源访问、引文产物验收、同源 MCP 网页读取与逐页去重约束，以及确定性 20 动作跨通道回归测试。
 - [x] 真实跑通并本地录制 18 动作受限长任务；加入模型自主发现来源、主题标题验收、深层链接优先显示，并完成 12 动作 Edge → VS Code 真实联调。
-- [ ] 真正跑通并录制模型＋Jev 的约 20 步陌生目标任务，随后重复测量产物质量、失败类型、动作分布、耗时、token 与成本。
+- [x] 真实录制四个 18–21 步的 Windows 模型＋Jev 案例，从私有 trace 导出 Jev／模型调用次数与动作分布，并与早期预设任务分开展示。
+- [ ] 针对留出任务和不同任务类型做重复实验，独立验证产物质量，统计失败类型、动作分布、耗时、token 与美元成本；不仅提供 GUI/VLM 路线，还需录得实际成功选择。
 - [x] 增加编辑器式跨软件回归；编辑框实时值用于新鲜度和终态核验，不进入模型可见的桌面观察。
 - [x] 在组合任务中完成一次真实的 VLM 场景融合联调；最终桌面动作仍是 UIA，视觉定位动作的收益尚未验证。
 - [ ] 扩展现有提供者接口，接入 macOS Accessibility、动态 MCP 和更多软件；突破单窗口与任务族限制，并在两种系统上的陌生跨软件任务验证。
