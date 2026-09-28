@@ -100,6 +100,37 @@ for line in sys.stdin:
     assert bridge.call("health") == {"accessibility": False}
 
 
+def test_recording_diagnostics_preserve_native_events_and_reset_on_every_call(helper):
+    bridge = helper("""
+import json, sys
+for line in sys.stdin:
+    command = json.loads(line)["command"]
+    if command == "record_stop":
+        answer = {"ok": False, "error": "stream interrupted", "recording_diagnostics": {
+            "capture_stopped": True, "events": [{"name": "stream_error", "at": 1234.5}]}}
+    elif command == "fail":
+        answer = {"ok": False, "error": "other failure", "recording_diagnostics": "invalid"}
+    else:
+        answer = {"ok": True, "result": {}}
+    print(json.dumps(answer), flush=True)
+""")
+    for following in ("health", "fail", "oversized", "nonfinite"):
+        with pytest.raises(CapabilityUnavailable, match="stream interrupted"):
+            bridge.call("record_stop")
+        assert bridge.last_recording_diagnostics == {
+            "capture_stopped": True, "events": [{"name": "stream_error", "at": 1234.5}],
+        }
+        if following == "fail":
+            with pytest.raises(CapabilityUnavailable, match="other failure"):
+                bridge.call("fail")
+        elif following in {"oversized", "nonfinite"}:
+            with pytest.raises(ValueError):
+                bridge.call("echo", value="x" * 32_000 if following == "oversized" else float("nan"))
+        else:
+            assert bridge.call("health") == {}
+        assert bridge.last_recording_diagnostics is None
+
+
 @pytest.mark.parametrize("value", ["x" * 32_000, float("nan")])
 def test_invalid_request_does_not_start_a_helper(value):
     bridge = MacBridge(binary=Path("must-not-run"))

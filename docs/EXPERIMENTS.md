@@ -65,9 +65,9 @@ They made one planner request and one Jev decision per action, with no VLM calls
 - Real selected GUI/visual routes, not just availability in a candidate list.
 - End-to-end latency, planner/Jev/VLM request counts, reported token use, and cost
   assumptions, with unknown usage left unknown.
-- Each platform separately. Mac's deterministic AX/GUI checks, model + Rule
-  short tasks, and independent TextEdit handoff validate bounded integration;
-  they are not Mac model/Jev results or Windows comparisons. See [MACOS.md](MACOS.md).
+- Each platform separately. Mac's deterministic AX/GUI checks, four-action
+  Qwen + Jev and model + Rule tasks, and independent TextEdit handoff validate
+  bounded integration; they are not repeated trials or Windows comparisons. See [MACOS.md](MACOS.md).
 
 Keep raw traces and unreviewed recordings in ignored local directories. The site
 builder reads reviewed repository data and media; publication remains separate

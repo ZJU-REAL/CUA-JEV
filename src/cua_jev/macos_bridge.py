@@ -82,14 +82,16 @@ class MacBridge:
         self.process: subprocess.Popen | None = None
         self._lock = threading.RLock()
         self._buffer = b""
+        self.last_recording_diagnostics: dict[str, Any] | None = None
 
     def call(self, command: str, **arguments: Any) -> dict[str, Any]:
-        payload = json.dumps(
-            {"command": command, **arguments}, ensure_ascii=False, allow_nan=False,
-        ).encode()
-        if len(payload) > _MAX_REQUEST_BYTES:
-            raise ValueError("native request exceeds its size bound")
         with self._lock:
+            self.last_recording_diagnostics = None
+            payload = json.dumps(
+                {"command": command, **arguments}, ensure_ascii=False, allow_nan=False,
+            ).encode()
+            if len(payload) > _MAX_REQUEST_BYTES:
+                raise ValueError("native request exceeds its size bound")
             if self.process is None:
                 self.process = subprocess.Popen(
                     [str(self.binary or native_binary())], stdin=subprocess.PIPE,
@@ -139,6 +141,9 @@ class MacBridge:
                 self._close(graceful=False)
                 raise RuntimeError("invalid macOS native response")
             if response.get("ok") is not True:
+                diagnostics = response.get("recording_diagnostics")
+                if isinstance(diagnostics, dict):
+                    self.last_recording_diagnostics = diagnostics
                 raise CapabilityUnavailable(str(response.get("error", "macOS native request failed")))
             if not isinstance(response.get("result"), dict):
                 self._close(graceful=False)

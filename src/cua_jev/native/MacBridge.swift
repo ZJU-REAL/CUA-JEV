@@ -36,6 +36,22 @@ func rectArray(_ rect: CGRect) -> [Double] {
 func jsonString(_ object: Any) throws -> String {
     String(data: try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]), encoding: .utf8)!
 }
+func screenLockStatus(_ session: [String: Any]?) -> Bool? {
+    // The public session API can return nil outside a Quartz GUI session.
+    // This observed lock key has no public SDK constant; absence or an
+    // unexpected type is unknown, never evidence that the session is unlocked.
+    guard let value = session?["CGSSessionScreenIsLocked"] as? NSNumber,
+          CFGetTypeID(value) == CFBooleanGetTypeID() else { return nil }
+    return value.boolValue
+}
+func currentScreenLockStatus() -> Bool? {
+    screenLockStatus(CGSessionCopyCurrentDictionary() as? [String: Any])
+}
+func requireUnlockedSession(_ locked: Bool? = currentScreenLockStatus()) throws {
+    if locked == true {
+        throw fail("macOS screen is locked. Unlock the current session before selecting a window or starting a recording; CUA-JEV does not unlock it.")
+    }
+}
 func requireAX() throws {
     guard AXIsProcessTrusted() else {
         throw fail("macOS Accessibility permission is required for the process launching CUA-JEV. Grant it in System Settings > Privacy & Security > Accessibility, then restart the task.")
@@ -80,17 +96,137 @@ func isDockInteractionPlane(_ info: [String: Any], at point: CGPoint) -> Bool {
     )
 }
 
+struct RecordingIssue: Error, LocalizedError, Equatable {
+    let stage: String
+    let domain: String
+    let code: Int
+    let message: String
+    init(_ error: Error, stage: String) {
+        if let issue = error as? RecordingIssue { self = issue; return }
+        let native = error as NSError
+        self.stage = stage; domain = native.domain; code = native.code
+        message = native.localizedDescription
+    }
+    static func timeout(_ stage: String) -> RecordingIssue {
+        RecordingIssue(NSError(domain: "CUAJEVRecordingTimeout", code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Recording phase exceeded its deadline"]), stage: stage)
+    }
+    var errorDescription: String? { "\(stage): \(domain) (\(code)): \(message)" }
+    var json: [String: Any] { ["stage": stage, "domain": domain, "code": code, "message": message] }
+}
+
+// ScreenCaptureKit invokes delegates on its own queues. Never read these flags
+// directly from the main actor without the same lock used by callbacks.
+final class RecordingState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var started = false
+    private var finished = false
+    private var issues: [RecordingIssue] = []
+    private var events: [[String: Any]] = []
+    func mark(_ event: String, error: Error? = nil) {
+        lock.lock(); defer { lock.unlock() }
+        if event == "started" { started = true }
+        if event == "finished" { finished = true }
+        var entry: [String: Any] = ["event": event, "at": Date().timeIntervalSince1970]
+        if let error {
+            let issue = RecordingIssue(error, stage: event)
+            issues.append(issue); entry["error"] = issue.json
+        }
+        if events.count < 64 { events.append(entry) }
+    }
+    func snapshot() -> (started: Bool, finished: Bool, issues: [RecordingIssue], events: [[String: Any]]) {
+        lock.lock(); defer { lock.unlock() }
+        return (started, finished, issues, events)
+    }
+}
+
+final class CaptureCompletion: @unchecked Sendable {
+    private let lock = NSLock()
+    private var result: Result<Void, Error>?
+    func complete(_ error: Error?) {
+        lock.lock(); defer { lock.unlock() }
+        if result == nil { result = error.map { .failure($0) } ?? .success(()) }
+    }
+    func snapshot() -> Result<Void, Error>? {
+        lock.lock(); defer { lock.unlock() }; return result
+    }
+}
+
+// Poll a callback result, not an async framework task: an uncancellable
+// stopCapture child in a task group can outlive the timeout and hang its parent.
+@MainActor
+func boundedCapture(_ stage: String, timeout: TimeInterval = 5,
+                    operation: (@escaping @Sendable (Error?) -> Void) -> Void) async throws {
+    let completion = CaptureCompletion()
+    let deadline = ProcessInfo.processInfo.systemUptime + timeout
+    operation { completion.complete($0) }
+    while true {
+        if let result = completion.snapshot() { try result.get(); return }
+        guard ProcessInfo.processInfo.systemUptime < deadline else { throw RecordingIssue.timeout(stage) }
+        try await Task.sleep(nanoseconds: 20_000_000)
+    }
+}
+
+@MainActor
+func waitForRecording(_ state: RecordingState, finished: Bool, timeout: TimeInterval) async throws {
+    let deadline = ProcessInfo.processInfo.systemUptime + timeout
+    while true {
+        let snapshot = state.snapshot()
+        if let issue = snapshot.issues.first { throw issue }
+        if finished ? snapshot.finished : snapshot.started { return }
+        guard ProcessInfo.processInfo.systemUptime < deadline else {
+            throw RecordingIssue.timeout(finished ? "finalize_output" : "start_output")
+        }
+        try await Task.sleep(nanoseconds: 20_000_000)
+    }
+}
+
+struct RecordingStopResult {
+    let captureStopped: Bool
+    let issues: [RecordingIssue]
+    let events: [[String: Any]]
+}
+
+struct RecordingFailure: Error, LocalizedError {
+    let result: RecordingStopResult
+    var errorDescription: String? { result.issues.compactMap(\.errorDescription).joined(separator: "; ") }
+    var json: [String: Any] {
+        ["capture_stopped": result.captureStopped, "issues": result.issues.map(\.json), "events": result.events]
+    }
+}
+
+@MainActor
+func finishRecording(_ state: RecordingState, finalizeTimeout: TimeInterval = 10,
+                     stopTimeout: TimeInterval = 5, remove: () throws -> Void,
+                     stop: (@escaping @Sendable (Error?) -> Void) -> Void) async -> RecordingStopResult {
+    var issues: [RecordingIssue] = []
+    var stopped = false
+    do {
+        state.mark("remove_output_requested")
+        try remove()
+        state.mark("output_removed")
+        try await waitForRecording(state, finished: true, timeout: finalizeTimeout)
+    } catch { issues.append(RecordingIssue(error, stage: "finalize_output")) }
+    // Always stop the capture, even after writer failure; keep both errors.
+    do {
+        state.mark("stop_capture_requested")
+        try await boundedCapture("stop_capture", timeout: stopTimeout, operation: stop)
+        stopped = true; state.mark("capture_stopped")
+    } catch { issues.append(RecordingIssue(error, stage: "stop_capture")) }
+    let snapshot = state.snapshot()
+    for issue in snapshot.issues where !issues.contains(issue) { issues.append(issue) }
+    return RecordingStopResult(captureStopped: stopped, issues: issues, events: snapshot.events)
+}
+
 @available(macOS 15.0, *)
 final class RecordingDelegate: NSObject, SCRecordingOutputDelegate, SCStreamDelegate {
-    var started = false
-    var finished = false
-    var failure: String?
-    func recordingOutputDidStartRecording(_ recordingOutput: SCRecordingOutput) { started = true }
-    func recordingOutputDidFinishRecording(_ recordingOutput: SCRecordingOutput) { finished = true }
+    let state = RecordingState()
+    func recordingOutputDidStartRecording(_ recordingOutput: SCRecordingOutput) { state.mark("started") }
+    func recordingOutputDidFinishRecording(_ recordingOutput: SCRecordingOutput) { state.mark("finished") }
     func recordingOutput(_ recordingOutput: SCRecordingOutput, didFailWithError error: Error) {
-        failure = error.localizedDescription
+        state.mark("recording_failed", error: error)
     }
-    func stream(_ stream: SCStream, didStopWithError error: Error) { failure = error.localizedDescription }
+    func stream(_ stream: SCStream, didStopWithError error: Error) { state.mark("stream_failed", error: error) }
 }
 
 @MainActor
@@ -105,6 +241,7 @@ final class Bridge {
     var stream: SCStream?
     var recordingDelegate: AnyObject?
     var recordingOutput: AnyObject?
+    var recordingOutputAttached = false
     let captureBackground = CGColor(gray: 0.96, alpha: 1)
     let allowedRoles: [String: String] = [
         "AXButton": "Button", "AXCheckBox": "CheckBox", "AXRadioButton": "RadioButton",
@@ -123,6 +260,7 @@ final class Bridge {
         // A failed selection must not leave the previous target available.
         window = nil; app = nil; windowID = 0; windowToken = ""
         refs = []; nextRef = 0; previousState = nil
+        try requireUnlockedSession()
         try requireAX()
         guard let pattern = request["title_pattern"] as? String, !pattern.isEmpty, pattern.count <= 240 else {
             throw fail("A bounded window title pattern is required")
@@ -162,6 +300,7 @@ final class Bridge {
     }
 
     func selected() throws -> (AXUIElement, NSRunningApplication, CGRect) {
+        try requireUnlockedSession()
         try requireAX()
         guard let window, let app, !app.isTerminated, let rect = bounds(window),
               (attr(window, kAXMinimizedAttribute) as? Bool) != true,
@@ -395,6 +534,7 @@ final class Bridge {
 
     func recordStart(_ request: [String: Any]) async throws -> [String: Any] {
         guard #available(macOS 15.0, *) else { throw fail("Window recording requires macOS 15 or newer") }
+        try requireUnlockedSession()
         guard stream == nil, let path = request["path"] as? String, path.hasPrefix("/"), path.hasSuffix(".mp4"),
               !FileManager.default.fileExists(atPath: path) else { throw fail("Recording needs a new absolute .mp4 path") }
         let (filter, config) = try await filter()
@@ -409,29 +549,39 @@ final class Bridge {
         let output = SCRecordingOutput(configuration: outputConfig, delegate: delegate)
         let stream = SCStream(filter: filter, configuration: config, delegate: delegate)
         try stream.addRecordingOutput(output)
-        try await stream.startCapture()
-        for _ in 0..<100 {
-            if let error = delegate.failure { try? await stream.stopCapture(); throw fail(error) }
-            if delegate.started { break }
-            try await Task.sleep(nanoseconds: 50_000_000)
-        }
-        guard delegate.started else { try? await stream.stopCapture(); throw fail("Recording did not start") }
         self.stream = stream; recordingDelegate = delegate; recordingOutput = output
+        recordingOutputAttached = true
+        do {
+            delegate.state.mark("start_capture_requested")
+            try await boundedCapture("start_capture") { stream.startCapture(completionHandler: $0) }
+            try await waitForRecording(delegate.state, finished: false, timeout: 5)
+        } catch {
+            // Preserve startup and cleanup failures; retained ownership also
+            // lets EOF cleanup retry if the capture never confirms its stop.
+            delegate.state.mark("start_failed", error: error)
+            do { _ = try await recordStop() } catch { throw error }
+            throw error
+        }
         return ["recording": true, "window_id": windowID, "width": config.width, "height": config.height]
     }
 
     func recordStop() async throws -> [String: Any] {
-        guard #available(macOS 15.0, *), let stream, let delegate = recordingDelegate as? RecordingDelegate else {
+        guard #available(macOS 15.0, *), let stream, let delegate = recordingDelegate as? RecordingDelegate,
+              let output = recordingOutput as? SCRecordingOutput else {
             throw fail("No window recording is active")
         }
-        defer { self.stream = nil; recordingDelegate = nil; recordingOutput = nil }
-        try await stream.stopCapture()
-        for _ in 0..<200 {
-            if let error = delegate.failure { throw fail(error) }
-            if delegate.finished { return ["recording": false, "finalized": true] }
-            try await Task.sleep(nanoseconds: 50_000_000)
+        let result = await finishRecording(delegate.state, remove: {
+            if self.recordingOutputAttached {
+                try stream.removeRecordingOutput(output)
+                self.recordingOutputAttached = false
+            }
+        }, stop: { stream.stopCapture(completionHandler: $0) })
+        if result.captureStopped {
+            self.stream = nil; recordingDelegate = nil; recordingOutput = nil
+            recordingOutputAttached = false
         }
-        throw fail("Recording did not finalize")
+        guard result.issues.isEmpty else { throw RecordingFailure(result: result) }
+        return ["recording": false, "finalized": true, "events": result.events]
     }
 
     func editorWindows(_ request: [String: Any]) throws -> [String: Any] {
@@ -466,7 +616,9 @@ final class Bridge {
 
     func handle(_ request: [String: Any]) async throws -> [String: Any] {
         switch request["command"] as? String {
-        case "health": return ["accessibility": AXIsProcessTrusted(), "screen_recording": CGPreflightScreenCaptureAccess()]
+        case "health": return ["accessibility": AXIsProcessTrusted(),
+                               "screen_recording": CGPreflightScreenCaptureAccess(),
+                               "screen_locked": currentScreenLockStatus().map { $0 as Any } ?? NSNull()]
         case "select": return try select(request)
         case "observe": return try snapshot()
         case "act": return try act(request)
@@ -537,7 +689,9 @@ struct Main {
                 let result = try await bridge.handle(request)
                 print(try jsonString(["ok": true, "result": result]))
             } catch {
-                print((try? jsonString(["ok": false, "error": error.localizedDescription])) ?? "{\"ok\":false}")
+                var response: [String: Any] = ["ok": false, "error": error.localizedDescription]
+                if let failure = error as? RecordingFailure { response["recording_diagnostics"] = failure.json }
+                print((try? jsonString(response)) ?? "{\"ok\":false}")
             }
             fflush(stdout)
         }

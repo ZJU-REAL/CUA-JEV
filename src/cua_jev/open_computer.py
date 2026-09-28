@@ -406,6 +406,20 @@ class OpenComputerTask:
             return ()
         return self.providers["m"].capture()
 
+    def _tool_result_projection(self) -> tuple[dict[str, Any], ...]:
+        """Keep durable tool facts alongside the six most recent results.
+
+        Completed local capabilities are no longer offered, so evicting their
+        only result can make required facts impossible for the planner to recover.
+        The union is bounded by six plus the number of registered capabilities;
+        selecting indices preserves chronological order without duplicating a
+        result that belongs to both groups.
+        """
+        latest = {item["capability"]: index for index, item in enumerate(self._tool_results)}
+        retained = set(latest.values()) | set(range(max(0, len(self._tool_results) - 6),
+                                                   len(self._tool_results)))
+        return tuple(self._tool_results[index] for index in sorted(retained))
+
     def _capture(self) -> ComputerSnapshot:
         browser = self.providers["b"].capture()
         self._record_visit(browser)
@@ -416,7 +430,7 @@ class OpenComputerTask:
             mcp_offers=self._active_mcp_offers(browser),
             artifact=self.providers["a"].capture() if "a" in self.providers else None,
             source_records=self._source_records(),
-            tool_results=tuple(self._tool_results[-6:]),
+            tool_results=self._tool_result_projection(),
             requirements=self._requirements(browser),
             providers=self.providers,
         )
@@ -431,7 +445,7 @@ class OpenComputerTask:
             mcp_offers=self._active_mcp_offers(browser),
             artifact=self.providers["a"].observe(history) if "a" in self.providers else None,
             source_records=self._source_records(),
-            tool_results=tuple(self._tool_results[-6:]),
+            tool_results=self._tool_result_projection(),
             requirements=self._requirements(browser),
             providers=self.providers,
         )
@@ -616,6 +630,9 @@ class OpenComputerTask:
                 "capability": candidate.capability, "result": str(summary)[:2000],
                 "verified": True,
             })
+            # Bound retained memory as well as the model projection. Only
+            # registered, verified t:/m: executions can add a capability here.
+            self._tool_results = list(self._tool_result_projection())
         if self._satisfied(self._capture()):
             return Evaluation(True, True, "acceptance_passed")
         return Evaluation(False, False, "action_verified")

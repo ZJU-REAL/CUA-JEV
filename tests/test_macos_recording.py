@@ -21,15 +21,20 @@ def recorder():
 
 
 class Bridge:
-    def __init__(self, events, *, fail_stop=False, editor_id=30):
+    def __init__(self, events, *, fail_stop=False, fail_start=False, editor_id=30, screen_locked=None):
         self.events, self.fail_stop, self.editor_id = events, fail_stop, editor_id
+        self.fail_start = fail_start
+        self.screen_locked = screen_locked
         self.selected = None
         self.path = None
+        self.last_recording_diagnostics = None
+        self.recording_events = [{"name": "recording_finished", "at": 1234.5}]
 
     def call(self, command, **args):
+        self.last_recording_diagnostics = None
         self.events.append((command, args))
         if command == "health":
-            return {"accessibility": True, "screen_recording": True}
+            return {"accessibility": True, "screen_recording": True, "screen_locked": self.screen_locked}
         if command == "select":
             window_id = {"com.google.Chrome": 10, "com.apple.TextEdit": self.editor_id}.get(
                 args["bundle_id"], 20,
@@ -40,13 +45,17 @@ class Bridge:
             }
             return self.selected
         if command == "record_start":
+            if self.fail_start:
+                self.last_recording_diagnostics = {"events": self.recording_events}
+                raise RuntimeError("recording failed to start")
             self.path = Path(args["path"])
             self.path.write_bytes(b"test recording data")
             return {"recording": True, "window_id": self.selected["window_id"], "width": 800, "height": 600}
         if command == "record_stop":
             if self.fail_stop:
+                self.last_recording_diagnostics = {"events": self.recording_events}
                 raise RuntimeError("recording failed to finalize")
-            return {"finalized": True}
+            return {"finalized": True, "events": self.recording_events}
         raise AssertionError(command)
 
     def close(self):
@@ -65,6 +74,51 @@ def task_fixture(events):
 
 def args_fixture():
     return SimpleNamespace(browser_channel="chrome", window_title="^Fixture$", app_bundle_id=None)
+
+
+@pytest.mark.parametrize("locked", [True, False, None])
+def test_recording_preflight_preserves_unknown_lock_status(recorder, tmp_path, locked):
+    recording = recorder.MacRecording(task_fixture([]), args_fixture(), tmp_path,
+                                     bridge_factory=lambda: Bridge([], screen_locked=locked))
+    if locked is True:
+        with pytest.raises(RuntimeError, match="screen is locked"):
+            recording.check_permissions()
+    else:
+        recording.check_permissions()
+    assert recording.segments == []
+
+
+def test_locked_session_records_failure_without_gui_or_api_calls(recorder, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(recorder.sys, "platform", "darwin")
+    monkeypatch.setattr(recorder, "load_local_env", lambda: None)
+    monkeypatch.setattr(recorder.os, "getenv", lambda _: "offline-fixture-key")
+    events = []
+    original_recording = recorder.MacRecording
+    monkeypatch.setattr(recorder, "MacRecording", lambda *a, **k: original_recording(
+        *a, **k, bridge_factory=lambda: Bridge(events, screen_locked=True),
+    ))
+    monkeypatch.setattr(recorder, "_chat_planner", lambda _: SimpleNamespace(close=lambda: None))
+    task = task_fixture(events)
+    task.reset = lambda: pytest.fail("must not launch GUI while locked")
+    monkeypatch.setattr(recorder, "_build_task", lambda *a: task)
+    monkeypatch.setattr(recorder, "_open_computer_runner", lambda *a: pytest.fail("must not call APIs"))
+    destination = tmp_path / "bundle"
+    assert recorder.main([
+        "--output", str(destination), "--goal", "Offline lock preflight", "--url", "https://docs.test/",
+        "--window-title", "^Fixture$", "--require-window-text-contains", "Reviewed: yes",
+        "--allow-window-text-input", "--allow-window-actions", "--local-tool-root", str(tmp_path),
+        "--artifact-path", str(tmp_path / "guide.txt"), "--open-artifact-textedit",
+        "--model-base-url", "https://model.invalid/v1", "--model", "test-model", "--policy", "jev",
+    ]) == 1
+    stage = next((tmp_path / "runs/recording-work").iterdir())
+    manifest = json.loads((stage / "manifest.json").read_text())
+    metrics = json.loads((stage / "metrics.json").read_text())
+    assert "screen is locked" in manifest["failure"]
+    assert not manifest["recording_complete"] and not manifest["segments"]
+    assert metrics["planner_requests"] == metrics["jev_reported_requests"] == 0
+    assert not destination.exists()
+    assert [command for command, _ in events] == ["health", "bridge.close", "bridge.close", "task.close"]
 
 
 def test_recordings_pin_each_window_and_mark_overlapping_coverage(recorder, tmp_path):
@@ -166,6 +220,39 @@ def test_window_cannot_change_while_recording_and_segments_are_create_only(recor
     windows.stop()
     with pytest.raises(FileExistsError):
         windows.start("native", title_pattern="Fixture")
+    windows.close()
+
+
+@pytest.mark.parametrize("operation", ["start", "stop"])
+def test_segment_preserves_failed_recording_diagnostics_before_bridge_reuse(recorder, tmp_path, operation):
+    bridge = Bridge([], fail_start=operation == "start", fail_stop=operation == "stop")
+    windows = recorder.WindowSegments(tmp_path, bridge=bridge)
+    with pytest.raises(RuntimeError, match="recording failed"):
+        windows.start("native", title_pattern="Fixture")
+        windows.stop()
+    segment = windows.segments[0]
+    assert not segment["finalized"]
+    assert segment["recording_diagnostics"] == {
+        "events": [{"name": "recording_finished", "at": 1234.5}],
+    }
+    bridge.call("health")
+    bridge.recording_events[0]["at"] = 9999
+    assert bridge.last_recording_diagnostics is None
+    assert segment["recording_diagnostics"]["events"][0]["at"] == 1234.5
+    windows.close()
+
+
+def test_finalized_segment_keeps_a_snapshot_of_native_recording_events(recorder, tmp_path):
+    bridge = Bridge([])
+    windows = recorder.WindowSegments(tmp_path, bridge=bridge)
+    windows.start("native", title_pattern="Fixture")
+    windows.stop()
+    segment = windows.segments[0]
+    assert segment["finalized"]
+    assert segment["recording_events"] == [{"name": "recording_finished", "at": 1234.5}]
+    bridge.recording_events[0]["at"] = 9999
+    assert segment["recording_events"][0]["at"] == 1234.5
+    assert "recording_diagnostics" not in segment
     windows.close()
 
 
@@ -286,6 +373,12 @@ def test_main_keeps_complete_evidence_and_promotes_only_success(
     assert "test-key-not-a-real-credential" not in (stage / "manifest.json").read_text()
     assert status == int(finalization_fails)
     assert manifest["recording_complete"] is (not finalization_fails)
+    if finalization_fails:
+        assert any(segment.get("recording_diagnostics", {}).get("events")
+                   for segment in manifest["segments"])
+    else:
+        assert all(segment["recording_events"] == [{"name": "recording_finished", "at": 1234.5}]
+                   for segment in manifest["segments"])
     assert destination.exists() is (not finalization_fails)
     assert events[-1][0] == "planner.close"
 

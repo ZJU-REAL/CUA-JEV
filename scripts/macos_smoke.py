@@ -268,6 +268,8 @@ def main(argv: list[str] | None = None) -> int:
                 health = probe.call("health")
             finally:
                 probe.close()
+            if health.get("screen_locked") is True:
+                raise RuntimeError("macOS screen is locked; unlock the current session before the smoke test")
             if not health["accessibility"]:
                 raise RuntimeError("macOS Accessibility permission is required; run cua-jev macos-doctor")
             if args.record and not health["screen_recording"]:

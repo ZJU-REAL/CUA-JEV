@@ -10,7 +10,7 @@ A general model proposes grounded next intents from live application state. The 
 
 The same intent may have a GUI, DOM, accessibility, CLI, MCP, or file-API route, depending on the active surface. Jev chooses among those typed alternatives. It does not read screenshots, generate arbitrary scripts, or replace task verification. CUA-JEV uses the existing Jev API; it does not train a new model.
 
-> **Evidence, not a generality claim.** The public showcase contains four successful, bounded Windows model + Jev runs. On macOS, live model + Rule checks cover browser, CLI, and native AX actions; separate deterministic checks cover AX and GUI, with single-window recording validated. Mac model + Jev runs remain pending. These single-run checks do not establish arbitrary-task reliability or a speed/cost advantage.
+> **Evidence, not a generality claim.** The public showcase contains four successful, bounded Windows model + Jev runs. On macOS, four-action Qwen3.8-Flash-Next + Jev and model + Rule checks cover browser, CLI, and native AX actions; separate deterministic checks cover AX and GUI. A longer Mac recording is still under validation. These single-run checks do not establish arbitrary-task reliability or a speed/cost advantage.
 
 ## How the loop works
 
@@ -60,10 +60,10 @@ Earlier Edge, Excel, VS Code, and Explorer workflows used task-specific adapters
 | Shared runtime | Typed candidates, guard, executors, traces, Rule and Jev policies | Portable unit/integration tests; CI matrix for Windows, Linux, macOS |
 | Windows | UIA/GUI desktop, browser, registered tools, editor handoff | Four recorded model + Jev cases; earlier task-specific workflows |
 | macOS browser + CLI | Chromium + scoped Python CLI | Real two-action Qwen3.8-Flash-Next + Rule smoke; keyless deterministic smoke also passes |
-| macOS native | AX/CGEvent candidates, private edit readback, exact-document probes, single-window capture/recording | Four-action model + Rule smoke (DOM 1, CLI 1, AX 2); forced AX/GUI, single-window MP4, and separate TextEdit handoff checks pass. Model + Jev tasks pending |
+| macOS native | AX/CGEvent candidates, private edit readback, exact-document probes, single-window capture/recording | Four-action Qwen + Jev and model + Rule checks (DOM 1, CLI 1, AX 2); forced AX/GUI, selected-window MP4, and separate TextEdit handoff checks pass |
 | Linux desktop | No native desktop backend | Portable tests only; no published Linux desktop result |
 
-The native Mac helper requires **macOS 14+ and Swift Command Line Tools**; native MP4 recording requires **macOS 15+**. The Mac results above are local fixture checks dated 2026-09-28, not a published long-form demo. See [MACOS.md](docs/MACOS.md) for modes, measured usage, and remaining validation.
+The native Mac helper requires **macOS 14+ and Swift Command Line Tools**; native MP4 recording requires **macOS 15+**. The Mac results above are local fixture checks dated 2026-09-28–29, not a published long-form demo. See [MACOS.md](docs/MACOS.md) for modes, measured usage, and remaining validation.
 
 ## Start without API keys or desktop permissions
 
@@ -128,7 +128,7 @@ pytest -q -ra
 python scripts/build_pages.py --build
 ```
 
-Next priorities are Mac model + Jev tasks, live multi-window recording, robust cross-channel recovery, and repeated held-out evaluation. A roughly twenty-action Mac demo remains pending; the multi-window recording bundle has only offline test coverage. Mac VLM grounding and fewer planner calls remain future work.
+Next priorities are a reviewed long Mac demo, robust cross-channel recovery, and repeated held-out evaluation. A first 23-action rehearsal exposed a lost tool fact in the generated note and a recording failure; it is retained as a failed attempt. The tool-fact retention fix has regression coverage, and recording diagnostics now preserve phase errors. Mac VLM grounding and fewer planner calls remain future work.
 
 ## Data boundaries and license
 

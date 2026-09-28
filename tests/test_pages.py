@@ -64,6 +64,12 @@ def test_pages_build_uses_relative_assets_and_snapshot(tmp_path):
     for case in catalog["cases"]:
         assert (output / case["video"]).is_file()
         assert (output / case["poster"]).is_file()
+    mac_catalog = json.loads((output / "data" / "mac_demos.json").read_text(encoding="utf-8"))
+    assert mac_catalog["schema_version"] == 1
+    for case in mac_catalog["cases"]:
+        assert (output / case["video"]).is_file()
+        assert (output / case["poster"]).is_file()
+    assert 'id="macos-cases"' in html
 
 
 @pytest.mark.parametrize("poster", ["../private.jpg", "https://example.org/photo.jpg", 42])
@@ -109,6 +115,7 @@ def test_four_verified_windows_cases_activate_new_home(tmp_path, monkeypatch):
     catalog.write_text(json.dumps({"schema_version": 2, "cases": cases}), encoding="utf-8")
     monkeypatch.setattr(builder, "WEBSITE", tmp_path / "website")
     monkeypatch.setattr(builder, "WINDOWS_DEMOS", catalog)
+    monkeypatch.setattr(builder, "MAC_DEMOS", tmp_path / "optional-mac-catalog.json")
     output = tmp_path / "pages"
     builder.build(output)
     assert "One computer-use loop" in (output / "index.html").read_text(encoding="utf-8")

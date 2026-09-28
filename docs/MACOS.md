@@ -6,12 +6,13 @@ the native backend on macOS; the browser defaults to bundled Chromium there.
 
 ## Current evidence and boundaries
 
-As of **2026-09-28**, local tests on macOS 26.3.2 / Python 3.12 established:
+As of **2026-09-29**, local tests on macOS 26.3.2 / Python 3.12 established:
 
 | Check | Planner / policy | Actions | Model requests | Wall time | Reported tokens |
 |---|---|---:|---:|---:|---:|
 | Chromium + Python CLI | Qwen3.8-Flash-Next / Rule | 2: DOM 1, CLI 1 | 2 | 5.86 s | 2,101 |
 | Browser + CLI + native fixture | Qwen3.8-Flash-Next / Rule | 4: DOM 1, CLI 1, AX 2 | 4 | 38.2 s | 10,304 |
+| Browser + CLI + native fixture | Qwen3.8-Flash-Next / Jev 1.13.0 | 4: DOM 1, CLI 1, AX 2 | 4 | 69.24 s | Planner 7,313; Jev 6,209 input + 230 output |
 | Forced native AX route | Deterministic fixture / Rule | 4: DOM 1, CLI 1, AX 2 | 0 | — | — |
 | Forced native GUI route | Deterministic fixture / Rule | 4: DOM 1, CLI 1, GUI 2 | 0 | 5.60 s | — |
 
@@ -34,11 +35,16 @@ An independent TextEdit check created a new text file, opened it in TextEdit,
 verified its exact AXDocument URL and a new window ID, rechecked that ID after
 window selection, and finalized a two-second selected-window recording. This
 was a standalone handoff check, not part of the model-planned four-action run.
-Jev credentials are not yet configured for these Mac tests, so **no Mac model +
-Jev run or roughly twenty-action demo has completed**. Portable tests additionally
+The separate four-action model + Jev smoke passed all effect and terminal checks,
+with four actual Jev decisions and a finalized native-window recording. Portable tests additionally
 cover stale state, missing permissions, exact editor-document probing, recording lifecycle, and model-usage
-accounting. The three-window recording-bundle helper has offline tests only;
-it is not evidence of a completed multi-window demo.
+accounting. The first longer rehearsal executed 23 verified actions and 23 actual Jev
+decisions, but its recording did not finalize and the note confused the
+documentation version with the observed Python version. It is retained as a
+failed attempt, not a successful demo. A regression fix preserves durable tool
+facts alongside recent MCP results; recording cleanup now has bounded phases,
+thread-safe callbacks, and diagnostic event times. A reviewed long retake is
+still required.
 
 The current desktop implementation supports AX-discovered buttons, checkboxes,
 radio buttons, and editable controls. It offers AXPress/AXValue where available
@@ -70,6 +76,9 @@ hash, a build lock, and atomic replacement. Nothing is downloaded or installed
 system-wide by that build. Compilation can take a minute on its first run.
 
 `macos-doctor` reports permission booleans without requesting or granting them.
+It also reports `screen_locked`: true, false, or null when the session state is
+unknown. A known locked session stops native selection and recording before
+model/API work; unlocking remains a user action.
 If Accessibility is false, allow the launcher (for example Codex or Terminal,
 or the helper if macOS lists it) in **System Settings → Privacy & Security →
 Accessibility**. Capture/recording also needs **Screen & System Audio Recording**.
@@ -114,8 +123,8 @@ python scripts/macos_smoke.py --record \
 Model mode defaults to `--route auto` and leaves all legal routes available;
 it rejects forced AX/GUI route flags. Rule still makes the final candidate
 selection in these commands. After configuring `TYPESAFE_API_KEY`, replace
-`--policy rule` with `--policy jev` to test actual Jev decisions. No such Mac
-Jev run has been validated yet. Each invocation uses fresh private output paths.
+`--policy rule` with `--policy jev` to test actual Jev decisions. Both policy
+modes have passed the four-action Mac smoke. Each invocation uses fresh private output paths.
 
 For a real text-model + Jev task, launch the fixture separately:
 
@@ -149,8 +158,40 @@ For cross-surface model tasks, use `open-computer` with `--window-title`,
 capability gates. `--record-desktop NEW.mp4` records **only that selected desktop
 window**, even while browser or CLI actions run; it is not a cross-application
 recording. `scripts/record_macos_computer.py` adds a separate, explicit
-three-window segment bundle, but it has only offline test coverage so far.
-A multi-window showcase must still verify each live segment before publication.
+three-window segment bundle. Its first full rehearsal failed recording and
+content review, so each live segment and the artifact must still pass a new
+review before publication.
+
+## Reproduce the documentation handoff
+
+The bounded Python onboarding task creates its own native fixture, fresh local
+workspace and trusted same-origin MCP profile. The model discovers seven chapter
+pages through live links, reads them via MCP, queries Python, writes a cited
+note, saves and reviews its filename in the native fixture, and opens the exact
+file in TextEdit. The caller provides topic and acceptance constraints, not
+chapter URLs or a prewritten click sequence. About twenty useful actions are
+expected; navigation detours and retries remain visible in the actual count.
+
+```sh
+python scripts/macos_python_demo.py \
+  --output artifacts/demos/mac-python-new-take \
+  --model-base-url "$MODEL_BASE_URL" --model "$MODEL_ID"
+
+# Only after the take completes and its artifact/content has been reviewed:
+python scripts/render_macos_demo.py artifacts/demos/mac-python-new-take \
+  --output artifacts/previews/mac-python-new-take.mp4
+```
+
+The demo launcher temporarily keeps the display and system awake while it runs;
+it does not unlock the Mac, prevent an explicit lock, or change sleep settings.
+Keep the session unlocked for native interaction and capture.
+
+The bundle retains separate browser/native window recordings and a terminal
+TextEdit clip, plus private traces and measured usage. Failed takes remain in
+`runs/recording-work/`; a failed recording is never silently promoted. Keep the
+raw bundle local. The optional renderer produces an explicitly labeled composite
+with playback speed and approximate timestamp alignment; it does not imply one
+continuous cross-application camera or a terminal recording of CLI/MCP calls.
 
 ## Execution and verification
 
@@ -202,11 +243,10 @@ CI on macOS additionally compiles the native helper and exercises permission
 reporting. The real browser test uses bundled Chromium; Windows-specific
 Edge/Excel integrations keep their existing platform/opt-in conditions.
 
-Remaining milestones are model + Jev tasks after Jev credentials are configured,
-live multi-window recording-bundle QA, optional Mac VLM
-grounding, and repeated held-out tasks including failure recovery. A roughly
-twenty-action demo comes after these, with meaningful decisions and separately
-reviewed macOS publication data.
+Remaining milestones are a reviewed long model + Jev recording, optional Mac VLM
+grounding, and repeated held-out tasks including failure recovery. The Mac
+catalog is separate and remains empty until a complete take passes recording
+and content review.
 Existing Windows videos and case catalogs are unchanged.
 
 Planner/VLM usage is recorded before validating response content, so malformed

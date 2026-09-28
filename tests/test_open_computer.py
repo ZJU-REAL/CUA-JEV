@@ -152,6 +152,39 @@ def test_three_provider_open_goal_runs_with_independent_acceptance(tmp_path):
     assert all(step.verification.passed for step in result.steps)
 
 
+def test_tool_projection_keeps_python_version_after_seven_mcp_reads(tmp_path):
+    task = environment(tmp_path)
+    task.reset()
+    version = {"capability": "cli.python_version", "result": "Python 3.12.14\n", "verified": True}
+    reads = [{"capability": "mcp.call_tool", "result": f"source {index}", "verified": True}
+             for index in range(7)]
+    task._tool_results = [version, *reads]
+    task.observe(())
+    expected = [version, *reads[1:]]
+    assert task._snapshot.for_model()["tool_results"] == expected
+    assert list(task._capture().tool_results) == expected
+    task.close()
+
+
+def test_tool_projection_is_ordered_bounded_and_does_not_duplicate_latest_results(tmp_path):
+    task = environment(tmp_path)
+    results = [
+        {"capability": capability, "result": str(index), "verified": True}
+        for index, capability in enumerate([
+            "cli.python_version", "filesystem.list", "cli.python_version",
+            *("mcp.call_tool" for _ in range(100)), "filesystem.list",
+        ])
+    ]
+    task._tool_results = results
+    projected = task._tool_result_projection()
+    # The new Python result remains; the old one and old directory listing do not.
+    assert projected == (results[2], *results[-6:])
+    assert len(projected) == 7
+    assert len({id(item) for item in projected}) == len(projected)
+    assert [int(item["result"]) for item in projected] == sorted(int(item["result"]) for item in projected)
+    task.close()
+
+
 def test_namespaced_refs_reject_unregistered_operations_and_paths(tmp_path):
     task = environment(tmp_path)
     task.reset()

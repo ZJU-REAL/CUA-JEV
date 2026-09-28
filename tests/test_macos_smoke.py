@@ -207,6 +207,7 @@ def test_model_arguments_load_local_config_and_forward_auto_mode(smoke, monkeypa
     calls = []
     monkeypatch.setattr(smoke.sys, "platform", "darwin")
     monkeypatch.setattr(smoke, "load_local_env", lambda: loaded.append(True))
+    monkeypatch.setattr(smoke, "MacBridge", lambda: pytest.fail("headless browser mode has no native helper"))
 
     def run(output, route, **kwargs):
         calls.append((route, kwargs))
@@ -222,6 +223,31 @@ def test_model_arguments_load_local_config_and_forward_auto_mode(smoke, monkeypa
     assert calls[0][1]["policy"] == "jev" and calls[0][1]["model"] == "test"
     assert calls[0][1]["desktop"] is False and calls[0][1]["record"] is False
     assert json.loads(capsys.readouterr().out)["status"] == "success"
+
+
+def test_locked_native_session_stops_before_fixture_or_api(smoke, monkeypatch):
+    closed = []
+    monkeypatch.setattr(smoke.sys, "platform", "darwin")
+    monkeypatch.setattr(smoke, "load_local_env", lambda: None)
+    monkeypatch.setattr(smoke, "MacBridge", lambda: SimpleNamespace(
+        call=lambda _: {"screen_locked": True, "accessibility": True, "screen_recording": True},
+        close=lambda: closed.append(True),
+    ))
+    monkeypatch.setattr(smoke, "run", lambda *a, **k: pytest.fail("must not call the model or Jev"))
+    monkeypatch.setattr(smoke.subprocess, "Popen", lambda *a, **k: pytest.fail("must not launch GUI"))
+    arguments = ["--model-base-url", "https://mock.invalid/v1", "--model", "test", "--policy", "jev"]
+    with pytest.raises(RuntimeError, match="screen is locked"):
+        smoke.main(arguments)
+    assert closed == [True]
+
+
+def test_headless_browser_only_never_initializes_native_helper(smoke, monkeypatch):
+    monkeypatch.setattr(smoke.sys, "platform", "darwin")
+    monkeypatch.setattr(smoke, "load_local_env", lambda: None)
+    monkeypatch.setattr(smoke, "MacBridge", lambda: pytest.fail("headless browser mode has no native helper"))
+    monkeypatch.setattr(smoke, "native_binary", lambda: pytest.fail("must not require Swift"))
+    monkeypatch.setattr(smoke, "run", lambda *a, **k: {"status": "success"})
+    assert smoke.main(["--browser-only"]) == 0
 
 
 def test_recording_run_finalizes_native_and_closes_owned_browser(smoke, tmp_path, monkeypatch):

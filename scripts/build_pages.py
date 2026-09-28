@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import shutil
 from datetime import date
@@ -18,6 +19,7 @@ MEDIA = WEBSITE / "media"
 TASKS = ("edge", "excel", "vscode", "explorer")
 MODES = ("hybrid", "gui-only")
 WINDOWS_DEMOS = WEBSITE / "windows_demos.json"
+MAC_DEMOS = WEBSITE / "mac_demos.json"
 PUBLIC_ROW_FIELDS = (
     "agent",
     "action_space",
@@ -79,6 +81,102 @@ def _windows_cases() -> tuple[list[dict[str, Any]], bool]:
             if not (WEBSITE / poster_path).is_file():
                 raise ValueError(f"Missing reviewed Windows poster: {poster_path}")
     return cases, len(cases) == 4
+
+
+def _mac_cases() -> list[dict[str, Any]]:
+    """Accept one explicitly reviewed Mac recording, never raw run metadata."""
+    if not MAC_DEMOS.exists():
+        return []
+    data = json.loads(MAC_DEMOS.read_text(encoding="utf-8"))
+    if (
+        not isinstance(data, dict) or set(data) != {"schema_version", "cases"}
+        or type(data["schema_version"]) is not int or data["schema_version"] != 1
+        or not isinstance(data["cases"], list) or len(data["cases"]) > 1
+    ):
+        raise ValueError("Invalid macOS case catalog")
+    fields = {
+        "id", "verified", "title", "summary", "apps", "video", "poster", "actions",
+        "jev_calls", "model_calls", "vlm_calls", "wall_time_s", "channels", "routes",
+        "planner_model", "jev_model", "recording_scope", "timing_note", "steps",
+    }
+    channels = {"script", "api", "gui", "cli", "mcp"}
+
+    def public_text(value: Any, limit: int = 2000) -> None:
+        text = _safe_text(value)
+        if not text.strip() or len(text) > limit:
+            raise ValueError("Invalid macOS public text")
+
+    def count(value: Any) -> bool:
+        return type(value) is int and 0 <= value <= 1_000_000
+
+    for item in data["cases"]:
+        if not isinstance(item, dict) or set(item) != fields:
+            raise ValueError("macOS case must contain only the reviewed public fields")
+        if item["id"] != "python-onboarding" or item["verified"] is not True:
+            raise ValueError("Only the verified macOS onboarding case may be published")
+        for key in ("title", "summary", "planner_model", "jev_model", "recording_scope", "timing_note"):
+            public_text(item[key])
+        if not item["jev_model"].startswith("jev-") or "fallback" in item["jev_model"].casefold():
+            raise ValueError("macOS showcase requires a Jev-selected run")
+        if not isinstance(item["apps"], list) or not 1 <= len(item["apps"]) <= 10:
+            raise ValueError("Invalid macOS application list")
+        for app in item["apps"]:
+            public_text(app, 100)
+        if (
+            not all(count(item[key]) for key in ("actions", "jev_calls", "model_calls", "vlm_calls"))
+            or not 1 <= item["actions"] <= 100 or item["jev_calls"] < item["actions"]
+            or item["model_calls"] < 1
+            or type(item["wall_time_s"]) not in (int, float)
+            or not math.isfinite(item["wall_time_s"]) or item["wall_time_s"] <= 0
+        ):
+            raise ValueError("Invalid macOS action, request, or timing metrics")
+        for key, allowed in (("channels", channels), ("routes", {"ax", "gui"})):
+            values = item[key]
+            if not isinstance(values, dict) or not set(values) <= allowed or not all(
+                count(value) for value in values.values()
+            ):
+                raise ValueError("Invalid macOS channel or native-route counts")
+        if sum(item["channels"].values()) != item["actions"]:
+            raise ValueError("macOS channel counts do not match the actions")
+        steps = item["steps"]
+        if not isinstance(steps, list) or len(steps) != item["actions"]:
+            raise ValueError("macOS steps do not match the actions")
+        actual_channels = dict.fromkeys(channels, 0)
+        actual_routes = {"ax": 0, "gui": 0}
+        for step in steps:
+            if (
+                not isinstance(step, dict) or not {"title", "channel"} <= set(step)
+                or not set(step) <= {"title", "channel", "app", "route"}
+                or not isinstance(step["channel"], str) or step["channel"] not in channels
+            ):
+                raise ValueError("Invalid macOS public action step")
+            public_text(step["title"])
+            if "app" in step:
+                public_text(step["app"], 100)
+            route = step.get("route")
+            if "route" in step and (
+                not isinstance(route, str) or route not in actual_routes
+                or step["channel"] != {"ax": "api", "gui": "gui"}[route]
+            ):
+                raise ValueError("Invalid macOS native route for action channel")
+            if step["channel"] == "gui" and route != "gui":
+                raise ValueError("macOS GUI steps must identify their native route")
+            actual_channels[step["channel"]] += 1
+            if route:
+                actual_routes[route] += 1
+        if any(actual_channels[key] != item["channels"].get(key, 0) for key in channels) or any(
+            actual_routes[key] != item["routes"].get(key, 0) for key in actual_routes
+        ):
+            raise ValueError("macOS steps disagree with channel or native-route counts")
+        for key, extension in (("video", "mp4"), ("poster", "jpg")):
+            if item[key] != f"media/macos-python-onboarding.{extension}":
+                raise ValueError("macOS media must use its curated relative path")
+            source = WEBSITE / item[key]
+            if source.is_symlink() or not source.resolve().is_relative_to(WEBSITE.resolve()):
+                raise ValueError("macOS media must remain inside the reviewed website directory")
+            if not source.is_file():
+                raise ValueError(f"Missing reviewed macOS {key}")
+    return data["cases"]
 
 
 def refresh_snapshot() -> None:
@@ -191,6 +289,7 @@ def build(output: Path = ROOT / "dist-pages") -> None:
     if snapshot.get("schema_version") != 1 or set(snapshot.get("tasks", {})) != set(TASKS):
         raise ValueError("Invalid website snapshot")
     windows_cases, windows_ready = _windows_cases()
+    mac_cases = _mac_cases()
     target = output.resolve()
     default = (ROOT / "dist-pages").resolve()
     if target.exists():
@@ -209,11 +308,12 @@ def build(output: Path = ROOT / "dist-pages") -> None:
     (target / "early-work.html").write_text(early, encoding="utf-8")
     home = (SOURCE / "home.html").read_text(encoding="utf-8")
     (target / "preview.html").write_text(home, encoding="utf-8")
-    (target / "index.html").write_text(home if windows_ready else early, encoding="utf-8")
+    (target / "index.html").write_text(home if windows_ready or mac_cases else early, encoding="utf-8")
     (target / ".nojekyll").touch()
     _write_json(target / "data" / "windows_demos.json", {
         "schema_version": 2, "cases": windows_cases,
     })
+    _write_json(target / "data" / "mac_demos.json", {"schema_version": 1, "cases": mac_cases})
     demos: dict[str, dict[str, str]] = {}
     (target / "media").mkdir()
     for task in TASKS:
@@ -230,7 +330,7 @@ def build(output: Path = ROOT / "dist-pages") -> None:
         if not source.is_file():
             raise ValueError(f"Missing curated open-task media: {source}")
         shutil.copy2(source, target / "media" / name)
-    for item in windows_cases:
+    for item in windows_cases + mac_cases:
         media_path = item["video"]
         shutil.copy2(WEBSITE / media_path, target / media_path)
         if item.get("poster"):

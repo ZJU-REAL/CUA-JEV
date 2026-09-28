@@ -145,6 +145,19 @@ h2 { margin: 0; font-size: clamp(36px,3.6vw,50px); font-weight: 600; line-height
 .step-drawer li span { color: var(--muted); }
 .case-method { margin-top: 30px; padding: 17px 0; border-block: 1px solid var(--line); }
 .case-method summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; }
+.mac-grid { display: grid; gap: 30px; }
+.mac-case { display: grid; grid-template-columns: minmax(0,1.14fr) minmax(0,1fr); }
+.mac-case .case-detail { min-width: 0; }
+.mac-case .case-summary { min-height: 0; }
+.mac-case .step-drawer { grid-column: 1 / -1; margin-top: 0; }
+.mac-case .step-drawer ol { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 42px; }
+.mac-capture-notes { display: grid; gap: 18px; padding: 22px 24px; }
+.mac-capture-notes p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.mac-capture-notes strong { display: block; margin-bottom: 5px; color: var(--ink); font: 600 10px/1.5 var(--mono); letter-spacing: .04em; }
+.mac-native-routes { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.mac-native-routes strong { color: var(--ink); font-weight: 600; }
+.mac-models { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.mac-evidence-note { max-width: 920px; margin: 24px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
 .method-copy { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; padding-top: 10px; }
 .method-copy p { margin: 10px 0 5px; color: var(--muted); font-size: 12px; line-height: 1.9; }
 .method-copy strong { color: var(--ink); font-weight: 600; }
@@ -248,6 +261,10 @@ footer > div a:hover { color: var(--green); text-decoration: underline; }
   .principle-grid h3 { font-size: 19px; }
   .principle-grid p { font-size: 13px; }
   .windows-grid, .platform-grid { gap: 22px; }
+  .mac-case { grid-template-columns: 1fr; }
+  .mac-case .case-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .mac-case .step-drawer ol { grid-template-columns: 1fr; }
+  .mac-capture-notes { padding: 20px; }
   .case-detail { padding: 22px 18px; }
   .case-detail h3 { font-size: 22px; }
   .case-summary { min-height: 140px; font-size: 13px; }

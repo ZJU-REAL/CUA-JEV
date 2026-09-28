@@ -14,7 +14,7 @@
   <header class="masthead">
     <a class="brand" href="#top" aria-label="CUA-JEV home"><img src="static/logo-mark.svg" alt="" width="36" height="36"><strong>CUA-JEV</strong><span>REAL LAB</span></a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" hidden>Menu <span aria-hidden="true">+</span></button>
-    <nav id="main-nav" aria-label="Main navigation"><a href="#approach">The approach</a><a href="#windows-cases">Recordings</a><a href="#limits">Project status</a><a class="nav-source" href="https://github.com/ZJU-REAL/CUA-JEV">GitHub <span aria-hidden="true">↗</span></a></nav>
+    <nav id="main-nav" aria-label="Main navigation"><a href="#approach">The approach</a><a href="#windows-cases">Windows</a><a href="#macos-cases">macOS</a><a href="#limits">Project status</a><a class="nav-source" href="https://github.com/ZJU-REAL/CUA-JEV">GitHub <span aria-hidden="true">↗</span></a></nav>
   </header>
 
   <main id="main">
@@ -43,7 +43,7 @@
 
     <div class="evidence-strip section-wrap" aria-label="Project at a glance">
       <a href="#windows-cases"><span class="evidence-number">04</span><span><strong>Recorded Windows cases</strong><small>Real model + Jev workflows</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
-      <a href="#limits"><span class="evidence-symbol" aria-hidden="true">⌘</span><span><strong>macOS native checks passed</strong><small>Model + Rule · AX / GUI · window recording</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
+      <a href="#macos-cases"><span class="evidence-symbol" aria-hidden="true">⌘</span><span><strong>A separate macOS evidence track</strong><small>Model + Jev smoke · AX / GUI checks</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
       <a href="https://github.com/ZJU-REAL/CUA-JEV"><span class="evidence-symbol" aria-hidden="true">{ }</span><span><strong>Open, inspectable runtime</strong><small>Typed actions · guards · verification</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
     </div>
 
@@ -65,11 +65,19 @@
       <details class="case-method"><summary>How to read these results</summary><div class="method-copy"><p><strong>One card, one run.</strong> Actions count committed operations. Jev calls count policy decisions; model calls count planner requests. VLM requests are shown separately. The four runs used DOM, MCP, CLI, and file API routes; they executed no GUI actions and made no VLM calls.</p><p><strong>Recordings and timing.</strong> Videos show task windows only. Local path bars may be covered and a brief editor launch may be cut. Measured wall time comes from the raw run, so it may differ from the video length. These cases do not establish arbitrary-task reliability, lower model frequency, or a cost advantage.</p></div></details>
     </section>
 
+    <section class="case-section mac-section section-wrap" id="macos-cases" aria-labelledby="mac-cases-title">
+      <div class="section-heading"><div><p class="eyebrow">03 / macOS EVIDENCE</p><h2 id="mac-cases-title">Another platform.<br>Its own evidence.</h2></div><p>Mac recordings are reviewed separately from the Windows cases. Each published run includes its actual action routes, recording scope, and timing notes.</p></div>
+      <div id="mac-case-status" class="case-status" role="status" aria-live="polite">Loading the macOS recording catalog…</div>
+      <div id="mac-grid" class="mac-grid" aria-busy="true"></div>
+      <noscript><p class="case-status">Enable JavaScript to view reviewed macOS recordings, or <a href="data/mac_demos.json">read the separate macOS catalog</a>.</p></noscript>
+      <p class="mac-evidence-note">An individual successful run is an integration result. It does not establish a success rate, a platform comparison, or a speed or cost advantage.</p>
+    </section>
+
     <section class="status-section section-wrap" id="limits" aria-labelledby="status-title">
-      <div class="section-heading"><div><p class="eyebrow">03 / CURRENT PROJECT STATUS</p><h2 id="status-title">Built. Tested.<br>Still being explored.</h2></div><p>Implementation, deterministic checks, and model-driven application runs answer different questions. Here is where the evidence stands today.</p></div>
+      <div class="section-heading"><div><p class="eyebrow">04 / CURRENT PROJECT STATUS</p><h2 id="status-title">Built. Tested.<br>Still being explored.</h2></div><p>Implementation, deterministic checks, and model-driven application runs answer different questions. Here is where the evidence stands today.</p></div>
       <div class="platform-grid">
         <article class="platform-card"><div class="platform-head"><span class="platform-label">WINDOWS</span><span class="state-tag verified">Recorded cases</span></div><h3>A complete loop,<br>on bounded workflows.</h3><p>Four successful local runs combine model planning, Jev decisions, guarded execution, and task-level verification.</p><ul><li>18–21 actions in each published run</li><li>Browser research, scoped tools, and editor handoff</li><li>Repeat trials and unfamiliar tasks remain future work</li></ul><a href="#windows-cases">Inspect the recordings <span aria-hidden="true">↗</span></a></article>
-        <article class="platform-card"><div class="platform-head"><span class="platform-label">macOS</span><span class="state-tag pending">Live fixture checks</span></div><h3>Native routes,<br>tested in short workflows.</h3><p>A real model + Rule run verified four actions across DOM, CLI, and AX. Separate deterministic checks passed both native AX and GUI routes.</p><ul><li>Single-window recording finalized and reviewed</li><li>TextEdit exact-document handoff passed a separate live check</li><li>Mac model + Jev and a roughly 20-action demo remain pending</li></ul><a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/docs/MACOS.md">Read the macOS evidence <span aria-hidden="true">↗</span></a></article>
+        <article class="platform-card"><div class="platform-head"><span class="platform-label">macOS</span><span class="state-tag pending">Live integration checks</span></div><h3>Native routes,<br>with independent checks.</h3><p>A real Qwen + Jev fixture run verified four actions across DOM, CLI, and AX. Separate deterministic checks passed both native AX and GUI routes.</p><ul><li>Single-window recording finalized and reviewed</li><li>TextEdit exact-document handoff passed a separate live check</li><li>Broader tasks and repeat trials remain to be evaluated</li></ul><a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/docs/MACOS.md">Read the macOS evidence <span aria-hidden="true">↗</span></a></article>
       </div>
       <div class="research-note"><span class="note-label">OPEN QUESTION</span><p><strong>When does visual grounding help?</strong> Screenshot/VLM targeting remains experimental. Broader live testing is needed to establish its reliability and benefit; the four published Windows runs provide no visual-route evidence.</p></div>
       <a class="archive-link" href="early-work.html">Explore the earlier task-specific experiments <span aria-hidden="true">→</span></a>

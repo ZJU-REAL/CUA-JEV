@@ -20,6 +20,7 @@ import sys
 import time
 from collections import Counter
 from collections.abc import Callable
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -103,6 +104,9 @@ class WindowSegments:
             segment["pixel_size"] = [result.get("width"), result.get("height")]
         except BaseException as exc:
             segment["error"] = f"{type(exc).__name__}: {exc}"
+            diagnostics = getattr(self.bridge, "last_recording_diagnostics", None)
+            if isinstance(diagnostics, dict):
+                segment["recording_diagnostics"] = deepcopy(diagnostics)
             raise
 
     def stop(self) -> None:
@@ -112,6 +116,8 @@ class WindowSegments:
         segment["stop_requested_at"] = time.time()
         try:
             result = self.bridge.call("record_stop")
+            if isinstance(result.get("events"), list):
+                segment["recording_events"] = deepcopy(result["events"])
             if result.get("finalized") is not True:
                 raise RuntimeError("native recording did not confirm finalization")
             path = self.directory / segment["file"]
@@ -120,6 +126,9 @@ class WindowSegments:
             segment["finalized"] = True
         except BaseException as exc:
             segment["error"] = f"{type(exc).__name__}: {exc}"
+            diagnostics = getattr(self.bridge, "last_recording_diagnostics", None)
+            if isinstance(diagnostics, dict):
+                segment["recording_diagnostics"] = deepcopy(diagnostics)
             raise
         finally:
             segment["stopped_at"] = time.time()
@@ -139,6 +148,7 @@ class MacRecording:
         self.final_hold = final_hold
         self.transitions: list[dict[str, Any]] = []
         self.editor_started = False
+        self.action_count = 0
         self.editor_handoff: dict[str, Any] | None = None
 
     @property
@@ -162,10 +172,15 @@ class MacRecording:
 
     def check_permissions(self) -> None:
         health = self.browser.bridge.call("health")
+        if health.get("screen_locked") is True:
+            raise RuntimeError("macOS screen is locked; unlock the current session before recording")
         if health.get("accessibility") is not True or health.get("screen_recording") is not True:
             raise RuntimeError("Accessibility and Screen Recording permissions are required")
 
     def after_evaluate(self, candidate: Any, receipt: Any, verification: Any, outcome: Any) -> None:
+        self.action_count += 1
+        print(f"Action {self.action_count}: {candidate.capability} "
+              f"verified={verification.passed}", flush=True)
         if candidate.capability == "artifact.open_textedit" and verification.passed:
             expected = self.task.artifact_surface.opened_window_handle
             title = receipt.output.get("window_title")
@@ -372,7 +387,8 @@ def main(argv: list[str] | None = None) -> int:
         "segments": segments, "transitions": recording.transitions if recording else [],
         "trace": "trace.jsonl", "metrics": "metrics.json",
         "artifact": str(args.artifact_path.resolve()),
-        "failure": f"{type(failure).__name__}: {failure}" if failure else None,
+        "failure": (f"{type(failure).__name__}: {failure}" if failure else
+                    result.reason if result and not result.success else None),
     })
     if failure is not None and not isinstance(failure, Exception):
         print(f"Interrupted; private evidence remains in {staging.resolve()}")
