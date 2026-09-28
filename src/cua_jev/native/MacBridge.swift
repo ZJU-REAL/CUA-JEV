@@ -54,6 +54,32 @@ func infoBounds(_ info: [String: Any]) -> CGRect? {
     return CGRect(dictionaryRepresentation: dict)
 }
 
+// Dock exposes a transparent, display-sized interaction plane on recent macOS.
+// Its bounding rectangle is not evidence that the target pixels are occluded.
+// Match the genuine system component narrowly; foreground and AX hit identity
+// are still required after this CG-window prefilter.
+func isDockInteractionPlane(bundleID: String?, bundlePath: String?, name: String?,
+                            layer: Int?, rect: CGRect?, displayBounds: [CGRect]) -> Bool {
+    guard bundleID == "com.apple.dock", bundlePath == "/System/Library/CoreServices/Dock.app",
+          name == "Dock", layer == 20, let rect else { return false }
+    return displayBounds.contains { $0 == rect }
+}
+
+func isDockInteractionPlane(_ info: [String: Any], at point: CGPoint) -> Bool {
+    guard let pid = info[kCGWindowOwnerPID as String] as? Int32,
+          let application = NSRunningApplication(processIdentifier: pid) else { return false }
+    var displays = [CGDirectDisplayID](repeating: 0, count: 16)
+    var count: UInt32 = 0
+    guard CGGetDisplaysWithPoint(point, 16, &displays, &count) == .success else { return false }
+    return isDockInteractionPlane(
+        bundleID: application.bundleIdentifier,
+        bundlePath: application.bundleURL?.standardizedFileURL.path,
+        name: info[kCGWindowName as String] as? String,
+        layer: info[kCGWindowLayer as String] as? Int,
+        rect: infoBounds(info), displayBounds: displays.prefix(Int(count)).map(CGDisplayBounds)
+    )
+}
+
 @available(macOS 15.0, *)
 final class RecordingDelegate: NSObject, SCRecordingOutputDelegate, SCStreamDelegate {
     var started = false
@@ -189,15 +215,17 @@ final class Bridge {
                 settable.boolValue
             let enabled = (attr(element, kAXEnabledAttribute) as? Bool) ?? false
             var guiAvailable = false
+            var guiUnavailableReason = enabled ? "" : "Control is disabled"
             if enabled {
                 do {
                     try foreground(CGPoint(x: box.midX, y: box.midY), target: element)
                     guiAvailable = true
-                } catch { /* Keep AX routes; do not advertise an obscured GUI route. */ }
+                } catch { guiUnavailableReason = error.localizedDescription }
             }
             controls.append([
                 "ref": refFor(element), "name": String(name.prefix(120)), "role": role,
                 "control_type": kind, "enabled": enabled, "gui_available": guiAvailable,
+                "gui_unavailable_reason": guiUnavailableReason,
                 "rectangle": rectArray(box), "can_invoke": supported.contains(kAXPressAction),
                 "can_set_text": canSet, "actions": supported.filter { $0 == kAXPressAction },
                 "private_value": kind == "Edit" ? String(string(element, kAXValueAttribute).prefix(4000)) : "",
@@ -235,7 +263,9 @@ final class Bridge {
             throw fail("Selected window is no longer visible")
         }
         if infos.prefix(index).contains(where: {
-            (($0[kCGWindowAlpha as String] as? Double) ?? 1) > 0 && infoBounds($0)?.contains(point) == true
+            (($0[kCGWindowAlpha as String] as? Double) ?? 1) > 0 &&
+            infoBounds($0)?.contains(point) == true &&
+            !(target != nil && isDockInteractionPlane($0, at: point))
         }) { throw fail("GUI target is obscured by another window") }
         if let target {
             var hit: AXUIElement?
@@ -281,6 +311,9 @@ final class Bridge {
             let chunk = Array(units[offset..<end])
             for down in [true, false] {
                 let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: down)!
+                // Newly constructed events can inherit the preceding Command+A
+                // modifier flags. Unicode input must be unmodified text.
+                event.flags = []
                 event.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: chunk)
                 event.post(tap: .cghidEventTap)
             }
@@ -482,6 +515,7 @@ final class FixtureDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
+#if !CUA_JEV_NATIVE_TESTS
 @main
 struct Main {
     @MainActor static func main() async {
@@ -510,3 +544,4 @@ struct Main {
         if bridge.stream != nil { _ = try? await bridge.recordStop() }
     }
 }
+#endif

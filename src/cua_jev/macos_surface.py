@@ -215,7 +215,8 @@ class MacAccessibilitySurface:
                 # Exclude geometry-only changes from action-effect evidence.
                 def semantic(state):
                     return (state.window_title, state.native["text"], [
-                        {k: v for k, v in item.items() if k not in {"rectangle", "gui_available"}}
+                        {k: v for k, v in item.items()
+                         if k not in {"rectangle", "gui_available", "gui_unavailable_reason"}}
                         for item in state.native["controls"]
                     ])
                 passed = semantic(before) != semantic(after)

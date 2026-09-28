@@ -6,21 +6,39 @@ the native backend on macOS; the browser defaults to bundled Chromium there.
 
 ## Current evidence and boundaries
 
-As of 2026-09-26, development on macOS 26.3.2 / Python 3.12 established:
+As of **2026-09-28**, local tests on macOS 26.3.2 / Python 3.12 established:
 
-- The Swift native helper compiles and reports actual system permissions.
-- A **real Chromium + Python CLI** integration completed two independently
-  verified actions in 1.61 seconds. Its planner was a deterministic fixture and
-  its policy was Rule: this is **not** a model/Jev run or performance benchmark.
-- Portable tests cover native surface composition, separate AX/GUI candidates,
-  text readback, stale state, missing permissions, foreground errors, exact
-  editor-document probing, recording lifecycle, and model-usage accounting.
-- The development host has screen recording permission but initially lacked
-  Accessibility permission. Live AX/GUI actions, TextEdit handoff, and MP4
-  recording therefore remain **unverified** until that system permission is
-  granted and the native smoke below passes.
-- Model/Jev credentials and a text-model gateway have not yet been configured on
-  this host. No model + Jev macOS result, long demo, or cost claim is published.
+| Check | Planner / policy | Actions | Model requests | Wall time | Reported tokens |
+|---|---|---:|---:|---:|---:|
+| Chromium + Python CLI | Qwen3.8-Flash-Next / Rule | 2: DOM 1, CLI 1 | 2 | 5.86 s | 2,101 |
+| Browser + CLI + native fixture | Qwen3.8-Flash-Next / Rule | 4: DOM 1, CLI 1, AX 2 | 4 | 38.2 s | 10,304 |
+| Forced native AX route | Deterministic fixture / Rule | 4: DOM 1, CLI 1, AX 2 | 0 | — | — |
+| Forced native GUI route | Deterministic fixture / Rule | 4: DOM 1, CLI 1, GUI 2 | 0 | 5.60 s | — |
+
+The model-planned native run passed independent terminal checks and finalized
+its selected-window MP4. The forced GUI run also completed its recording.
+Reviewed GUI frames show the expected saved text, including Chinese characters.
+A separate synthetic Qwen3.8-Flash-Next plan probe passed before the live tests;
+that probe alone is not application-execution evidence. Keyless browser + CLI
+checks continue to pass.
+
+These are short, local integration checks, **not repeated reliability trials or
+performance benchmarks**. Tokens are provider-reported usage, not billed cost;
+different modes and attempts must not be treated as paired comparisons. Earlier
+GUI attempts exposed a false obstruction from the Dock's display-sized system
+plane and inherited Command modifiers on Unicode events; both were corrected.
+Other attempts stopped on actual obstruction or focus loss, as required by the
+guards. The successful checks are not a claim that every attempted run passed.
+
+An independent TextEdit check created a new text file, opened it in TextEdit,
+verified its exact AXDocument URL and a new window ID, rechecked that ID after
+window selection, and finalized a two-second selected-window recording. This
+was a standalone handoff check, not part of the model-planned four-action run.
+Jev credentials are not yet configured for these Mac tests, so **no Mac model +
+Jev run or roughly twenty-action demo has completed**. Portable tests additionally
+cover stale state, missing permissions, exact editor-document probing, recording lifecycle, and model-usage
+accounting. The three-window recording-bundle helper has offline tests only;
+it is not evidence of a completed multi-window demo.
 
 The current desktop implementation supports AX-discovered buttons, checkboxes,
 radio buttons, and editable controls. It offers AXPress/AXValue where available
@@ -80,6 +98,25 @@ Their private JSONL traces and recordings live under ignored `runs/macos-smoke/`
 Each desktop run requires both the browser URL and the exact saved-note result,
 as well as actual CLI, fill, and click capability execution.
 
+To use actual model proposals in the same bounded fixture, configure the model
+key in the local `.env`, then supply the model endpoint and ID explicitly:
+
+```sh
+# MODEL_BASE_URL and MODEL_ID refer to your local configuration.
+python scripts/macos_smoke.py --browser-only \
+  --model-base-url "$MODEL_BASE_URL" --model "$MODEL_ID" --policy rule
+
+# Browser + CLI + native fixture, with a selected-window recording.
+python scripts/macos_smoke.py --record \
+  --model-base-url "$MODEL_BASE_URL" --model "$MODEL_ID" --policy rule
+```
+
+Model mode defaults to `--route auto` and leaves all legal routes available;
+it rejects forced AX/GUI route flags. Rule still makes the final candidate
+selection in these commands. After configuring `TYPESAFE_API_KEY`, replace
+`--policy rule` with `--policy jev` to test actual Jev decisions. No such Mac
+Jev run has been validated yet. Each invocation uses fresh private output paths.
+
 For a real text-model + Jev task, launch the fixture separately:
 
 ```sh
@@ -111,8 +148,9 @@ For cross-surface model tasks, use `open-computer` with `--window-title`,
 `--allow-window-text-input`, `--allow-window-actions`, and independent URL/window/
 capability gates. `--record-desktop NEW.mp4` records **only that selected desktop
 window**, even while browser or CLI actions run; it is not a cross-application
-recording. A future multi-window showcase must add explicit window switching
-and verify each segment before publication.
+recording. `scripts/record_macos_computer.py` adds a separate, explicit
+three-window segment bundle, but it has only offline test coverage so far.
+A multi-window showcase must still verify each live segment before publication.
 
 ## Execution and verification
 
@@ -130,8 +168,12 @@ and verify each segment before publication.
   be on a display and unobscured, and an AX hit test to identify the same control.
   AX and CGEvent use desktop points; screenshot pixels are not used as click
   coordinates. This avoids multiplying Retina coordinates twice.
+- The obstruction filter narrowly recognizes the real system Dock's named,
+  display-sized layer-20 interaction plane. Other covering windows still block
+  input, and the exception requires a target with independent AX hit identity.
 - GUI text input uses Command+A and Unicode CGEvents without replacing the clipboard;
-  the AX route sets the editable control's AXValue directly.
+  Unicode events explicitly clear inherited modifiers. The AX route sets the
+  editable control's AXValue directly.
   Verification reads the actual AX value. Click verification requires semantic
   state changes; geometry changes alone do not count. Task completion is checked
   separately against caller-supplied gates.
@@ -160,11 +202,11 @@ CI on macOS additionally compiles the native helper and exercises permission
 reporting. The real browser test uses bundled Chromium; Windows-specific
 Edge/Excel integrations keep their existing platform/opt-in conditions.
 
-Remaining milestones are live AX/GUI failure-path testing after permission,
-real model/Jev tasks after local credentials are configured, live TextEdit and
-video QA, optional Mac VLM grounding, explicit recording-window switching,
-and repeated held-out tasks. A roughly twenty-action demo comes after these,
-with meaningful decisions and separately reviewed macOS publication data.
+Remaining milestones are model + Jev tasks after Jev credentials are configured,
+live multi-window recording-bundle QA, optional Mac VLM
+grounding, and repeated held-out tasks including failure recovery. A roughly
+twenty-action demo comes after these, with meaningful decisions and separately
+reviewed macOS publication data.
 Existing Windows videos and case catalogs are unchanged.
 
 Planner/VLM usage is recorded before validating response content, so malformed

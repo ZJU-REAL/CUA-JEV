@@ -297,6 +297,26 @@ def test_background_or_obscured_control_only_offers_real_ax_route():
     assert [candidate.channel for candidate in candidates] == [Channel.API]
 
 
+def test_occlusion_diagnostics_alone_do_not_verify_a_click_effect():
+    bridge = NativeFixture()
+    original = bridge.call
+
+    def call(command, **arguments):
+        if command == "act":
+            bridge.state["controls"][1]["gui_available"] = False
+            bridge.state["controls"][1]["gui_unavailable_reason"] = "GUI target is obscured"
+            return {"ref": arguments["ref"], "operation": "click", "route": "ax"}
+        return original(command, **arguments)
+
+    bridge.call = call
+    item = surface(bridge)
+    item.reset()
+    candidate = item.compile(item.observe(()), "c1", "click", "", "Save", 0)[0]
+    receipt = item.execute(candidate, "observation", "decision")
+    assert receipt.success
+    assert not item.verify_effect(candidate, receipt).passed
+
+
 def test_recording_finalize_error_still_closes_browser_and_other_providers(tmp_path):
     closed = []
 

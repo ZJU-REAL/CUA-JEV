@@ -10,7 +10,7 @@
 
 同一意图可以有 GUI、DOM、可访问性、CLI、MCP 或文件 API 等路线，具体取决于当前后端。Jev 在类型化候选中作选择，不直接理解截图、生成任意脚本或代替任务验收。本项目使用现有 Jev API，不训练新的模型。
 
-> **当前证据边界：**公开展示的是四条成功的、受约束的 Windows 模型＋Jev 运行。macOS 已有原生后端实现，并通过无密钥的真实浏览器＋CLI 冒烟测试；原生动作和 Mac 模型/Jev 任务仍待实测。这些成果尚不能证明任意任务可靠性，也不能证明普遍的速度或成本优势。
+> **当前证据边界：**公开展示的是四条成功的、受约束的 Windows 模型＋Jev 运行。macOS 的真实模型＋Rule 测试已覆盖浏览器、CLI 和原生 AX 动作；独立的确定性测试通过 AX、GUI 路线，并完成单窗口录像验证。Mac 模型＋Jev 运行仍待进行。这些单次检查尚不能证明任意任务可靠性，也不能证明普遍的速度或成本优势。
 
 ## 运行机制
 
@@ -59,11 +59,11 @@
 |---|---|---|
 | 共享运行时 | 类型化候选、guard、执行器、trace、Rule 与 Jev 策略 | 可移植单元/集成测试；Windows、Linux、macOS CI 矩阵 |
 | Windows | UIA/GUI 桌面、浏览器、注册工具、编辑器交接 | 四条模型＋Jev 录像及早期任务专用工作流 |
-| macOS 浏览器＋CLI | Chromium 与受限 Python CLI | 确定性规划器＋Rule 策略的真实两动作测试 |
-| macOS 原生 | AX/CGEvent 候选、编辑值私有回读、确切文档探测、单窗口截图/录制 | helper 编译与离线测试；真实 AX/GUI、录像和模型＋Jev 任务待验证 |
+| macOS 浏览器＋CLI | Chromium 与受限 Python CLI | Qwen3.8-Flash-Next＋Rule 的真实两动作测试；无密钥确定性测试也已通过 |
+| macOS 原生 | AX/CGEvent 候选、编辑值私有回读、确切文档探测、单窗口截图/录制 | 四动作模型＋Rule 测试（DOM 1、CLI 1、AX 2）、强制 AX/GUI 路线、单窗口 MP4 及独立 TextEdit 交接检查通过；模型＋Jev 任务待验证 |
 | Linux 桌面 | 尚无原生桌面后端 | 仅可移植测试，无公开 Linux 桌面结果 |
 
-Mac 原生 helper 需要 **macOS 14+ 和 Swift Command Line Tools**；原生 MP4 录制需要 **macOS 15+**。系统权限与本地 API 配置是后续独立验证阶段，详见 [MACOS.md](docs/MACOS.md)。
+Mac 原生 helper 需要 **macOS 14+ 和 Swift Command Line Tools**；原生 MP4 录制需要 **macOS 15+**。上述 Mac 证据来自 2026-09-28 的本地测试窗口，尚无公开长流程演示；运行模式、测得用量与待验证项见 [MACOS.md](docs/MACOS.md)。
 
 ## 不需要密钥或桌面权限的上手流程
 
@@ -128,7 +128,7 @@ pytest -q -ra
 python scripts/build_pages.py --build
 ```
 
-接下来的优先项是 Mac 原生路线实测、独立验收的模型/Jev 任务、跨通道失败恢复，以及留出任务的重复评测。更广泛的窗口组合、Mac VLM 定位与减少规划调用仍待实现和验证。
+接下来的优先项是 Mac 模型＋Jev 任务、多窗口录像实测、跨通道失败恢复，以及留出任务的重复评测。约二十动作的 Mac 演示仍未运行，多窗口录制 bundle 目前只有离线测试覆盖；Mac VLM 定位与减少规划调用仍待实现和验证。
 
 ## 数据边界与许可
 
