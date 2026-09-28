@@ -6,6 +6,7 @@ import hashlib
 import re
 import shutil
 import subprocess
+import sys
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -45,6 +46,7 @@ class ArtifactSurface:
     def __init__(
         self, path: Path, *, max_chars: int = 8000,
         allow_open_vscode: bool = False, allow_open_notepad: bool = False,
+        allow_open_textedit: bool = False,
         editor_probe: Any | None = None,
         editor_launcher: Any | None = None,
     ) -> None:
@@ -53,21 +55,25 @@ class ArtifactSurface:
             raise ValueError("artifact must be a .md or .txt file")
         if not 1 <= max_chars <= 20_000:
             raise ValueError("artifact size limit is invalid")
-        if allow_open_vscode and allow_open_notepad:
+        if sum((allow_open_vscode, allow_open_notepad, allow_open_textedit)) > 1:
             raise ValueError("choose exactly one editor handoff target")
         self.max_chars = max_chars
         self.allow_open_vscode = allow_open_vscode
         self.allow_open_notepad = allow_open_notepad
+        self.allow_open_textedit = allow_open_textedit
         self.open_capability = (
             "artifact.open_vscode" if allow_open_vscode
-            else "artifact.open_notepad" if allow_open_notepad else ""
+            else "artifact.open_notepad" if allow_open_notepad
+            else "artifact.open_textedit" if allow_open_textedit else ""
         )
         self.editor_probe = editor_probe
         self.editor_launcher = editor_launcher or (
-            self._launch_vscode if allow_open_vscode else self._launch_notepad
+            self._launch_vscode if allow_open_vscode else
+            self._launch_textedit if allow_open_textedit else self._launch_notepad
         )
         self.opened_window_handle: int | None = None
         self._opened_test_editor = False
+        self._mac_editor_bridge = None
         if self.open_capability:
             self.supported_capabilities = frozenset({
                 "artifact.write_text", self.open_capability,
@@ -87,7 +93,9 @@ class ArtifactSurface:
         self._opened_test_editor = False
 
     def close(self) -> None:
-        pass
+        if self._mac_editor_bridge is not None:
+            self._mac_editor_bridge.close()
+            self._mac_editor_bridge = None
 
     def observe(self, history: Sequence[StepResult]) -> ArtifactState:
         return self.capture()
@@ -109,6 +117,16 @@ class ArtifactSurface:
         )
 
     def _editor_windows(self) -> dict[int, str]:
+        if sys.platform == "darwin" and not self.allow_open_notepad:
+            from .macos_bridge import MacBridge
+
+            if self._mac_editor_bridge is None:
+                self._mac_editor_bridge = MacBridge()
+            result = self._mac_editor_bridge.call(
+                "editor_windows", path=str(self.path),
+                bundle_id="com.microsoft.VSCode" if self.allow_open_vscode else "com.apple.TextEdit",
+            )
+            return {int(key): value for key, value in result["windows"].items()}
         try:
             from pywinauto import Desktop
         except ImportError:
@@ -142,6 +160,11 @@ class ArtifactSurface:
             raise RuntimeError("Windows Notepad is not installed")
         subprocess.Popen([executable, str(self.path)], shell=False)
 
+    def _launch_textedit(self) -> None:
+        if sys.platform != "darwin":
+            raise RuntimeError("TextEdit handoff requires macOS")
+        subprocess.Popen(["/usr/bin/open", "-b", "com.apple.TextEdit", str(self.path)], shell=False)
+
     def validate(
         self, state: ArtifactState, ref: str, operation: Any, value: Any
     ) -> tuple[str, str, str]:
@@ -165,7 +188,8 @@ class ArtifactSurface:
     ) -> tuple[ActionCandidate, ...]:
         self.validate(state, ref, operation, value)
         if operation == "open":
-            editor = "VS Code" if self.allow_open_vscode else "Notepad"
+            editor = ("VS Code" if self.allow_open_vscode else
+                      "TextEdit" if self.allow_open_textedit else "Notepad")
             return (ActionCandidate(
                 f"option_{index}_editor", Channel.CLI, self.open_capability,
                 f"Open {self.path.name} in {editor}",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -15,6 +16,7 @@ from .episode import EpisodeConfig, EpisodeRunner
 from .executors import ControlExecutor, FileSystemExecutor
 from .experiment import ExperimentRunner
 from .guard import ActionGuard
+from .macos_surface import MacAccessibilitySurface, MacDesktopTask
 from .mcp_surface import McpToolSurface
 from .model_planner import ChatModelPlanner
 from .models import Channel
@@ -35,7 +37,9 @@ from .verify import VerifierRegistry
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cua-jev", description="Typed hybrid action routing with Jev")
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("doctor", help="Report optional Windows capability availability")
+    sub.add_parser("doctor", help="Report optional platform capability availability")
+    sub.add_parser("macos-doctor", help="Build the native helper and check macOS permissions")
+    sub.add_parser("macos-fixture", help="Open the dedicated local macOS test window")
     demo = sub.add_parser("demo", help="Run the reproducible multi-channel routing demo")
     demo.add_argument("--policy", choices=("rule", "jev"), default="rule")
     demo.add_argument("--workspace", default="demo-workspace")
@@ -91,7 +95,8 @@ def _parser() -> argparse.ArgumentParser:
     open_browser.add_argument("--policy", choices=("rule", "jev"), default="jev")
     open_browser.add_argument("--headed", action="store_true")
     open_browser.add_argument(
-        "--browser-channel", choices=("msedge", "chrome", "chromium"), default="msedge"
+        "--browser-channel", choices=("msedge", "chrome", "chromium"),
+        default="chromium" if sys.platform == "darwin" else "msedge"
     )
     open_browser.add_argument("--allow-form-input", action="store_true")
     open_browser.add_argument("--allow-external-actions", action="store_true")
@@ -114,10 +119,14 @@ def _parser() -> argparse.ArgumentParser:
     open_browser.add_argument("--max-steps", type=int, default=20)
     open_browser.add_argument("--trace", help="Opt-in local trace; may contain task data")
     open_desktop = sub.add_parser(
-        "open-desktop", help="Experimental open-goal loop for one Windows UIA window"
+        "open-desktop", help="Experimental open-goal loop for one native desktop window"
     )
     open_desktop.add_argument("--goal", required=True)
     open_desktop.add_argument("--window-title", required=True, help="Regex matching one visible window")
+    open_desktop.add_argument("--app-bundle-id", help="macOS bundle ID to narrow window selection")
+    open_desktop.add_argument("--require-window-text-contains", default="")
+    open_desktop.add_argument("--require-window-title-contains", default="")
+    open_desktop.add_argument("--record-desktop", type=Path, help="macOS selected-window MP4, create only")
     open_desktop.add_argument("--model-base-url", required=True)
     open_desktop.add_argument("--model", required=True)
     open_desktop.add_argument("--allow-insecure-model-http", action="store_true")
@@ -140,17 +149,20 @@ def _parser() -> argparse.ArgumentParser:
     open_desktop.add_argument("--max-steps", type=int, default=20)
     open_desktop.add_argument("--trace", help="Opt-in local trace; may contain window data")
     computer = sub.add_parser(
-        "open-computer", help="Experimental browser + selected Windows window + local-tool loop"
+        "open-computer", help="Experimental browser + optional native window + local-tool loop"
     )
     computer.add_argument("--goal", required=True)
     computer.add_argument("--url", required=True)
     computer.add_argument("--window-title", help="Optional regex matching one visible window")
+    computer.add_argument("--app-bundle-id", help="macOS application bundle ID to narrow window selection")
+    computer.add_argument("--record-desktop", type=Path, help="macOS selected-window MP4, create only")
     computer.add_argument("--model-base-url", required=True)
     computer.add_argument("--model", required=True)
     computer.add_argument("--allow-insecure-model-http", action="store_true")
     computer.add_argument("--use-env-proxy", action="store_true")
     computer.add_argument("--policy", choices=("rule", "jev"), default="jev")
-    computer.add_argument("--browser-channel", choices=("msedge", "chrome", "chromium"), default="msedge")
+    computer.add_argument("--browser-channel", choices=("msedge", "chrome", "chromium"),
+        default="chromium" if sys.platform == "darwin" else "msedge")
     computer.add_argument("--headed-browser", action="store_true")
     computer.add_argument("--allow-form-input", action="store_true")
     computer.add_argument("--allow-browser-actions", action="store_true")
@@ -198,6 +210,9 @@ def _parser() -> argparse.ArgumentParser:
         help="Offer the verified new artifact for opening in Windows Notepad",
     )
     computer.add_argument("--artifact-contains", action="append", default=[])
+    computer.add_argument(
+        "--open-artifact-textedit", action="store_true", help="Verified macOS TextEdit handoff"
+    )
     computer.add_argument("--require-url-contains", default="")
     computer.add_argument("--require-window-title-contains", default="")
     computer.add_argument("--require-window-text-contains", default="")
@@ -377,6 +392,19 @@ def _chat_planner(args: argparse.Namespace, *, model: str | None = None) -> Chat
 def main(argv: list[str] | None = None) -> int:
     load_local_env()
     args = _parser().parse_args(argv)
+    if args.command in {"macos-doctor", "macos-fixture"}:
+        import subprocess
+
+        from .macos_bridge import MacBridge, native_binary
+
+        if args.command == "macos-fixture":
+            return subprocess.call([str(native_binary()), "--fixture"])
+        bridge = MacBridge()
+        try:
+            print(json.dumps(bridge.call("health"), indent=2))
+        finally:
+            bridge.close()
+        return 0
     if args.command == "doctor":
         print(json.dumps(doctor(), indent=2, ensure_ascii=False))
         return 0
@@ -473,6 +501,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 0 if result.success else 1
     if args.command == "open-desktop":
+        if sys.platform == "darwin" and (args.vision_model or args.allow_visual_clicks):
+            raise SystemExit(
+                "macOS supports AX-grounded AX/GUI actions; desktop VLM is not yet enabled"
+            )
+        if sys.platform == "darwin" and not (
+            args.require_window_text_contains or args.require_window_title_contains
+        ):
+            raise SystemExit("macOS desktop tasks require a caller-supplied window text or title gate")
+        if sys.platform != "darwin" and (args.app_bundle_id or args.record_desktop):
+            raise SystemExit("--app-bundle-id and --record-desktop require macOS")
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
         if args.vision_model and not args.allow_screenshot_upload:
@@ -484,14 +522,25 @@ def main(argv: list[str] | None = None) -> int:
         planner = _chat_planner(args)
         vision_planner = _chat_planner(args, model=args.vision_model) if args.vision_model else None
         try:
-            environment = OpenDesktopTask(
+            desktop_kwargs = dict(
                 goal=args.goal, window_title_re=args.window_title, planner=planner,
                 allow_text_input=args.allow_text_input,
                 allow_button_actions=args.allow_button_actions,
-                vision_grounder=vision_planner, vision_mode=args.vision_mode,
-                allow_screenshot_upload=args.allow_screenshot_upload,
-                allow_visual_clicks=args.allow_visual_clicks,
             )
+            if sys.platform == "darwin":
+                environment = MacDesktopTask(
+                    **desktop_kwargs, bundle_id=args.app_bundle_id, record_path=args.record_desktop,
+                    required_text=args.require_window_text_contains,
+                    required_title=args.require_window_title_contains,
+                )
+            else:
+                environment = OpenDesktopTask(
+                    **desktop_kwargs, vision_grounder=vision_planner, vision_mode=args.vision_mode,
+                    allow_screenshot_upload=args.allow_screenshot_upload,
+                    allow_visual_clicks=args.allow_visual_clicks,
+                    required_text=args.require_window_text_contains,
+                    required_title=args.require_window_title_contains,
+                )
             result = _open_desktop_runner(args).run(environment)
         finally:
             planner.close()
@@ -511,12 +560,19 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, indent=2, ensure_ascii=False))
         return 0 if result.success else 1
     if args.command == "open-computer":
+        if sys.platform == "darwin" and (args.desktop_vision_model or args.allow_desktop_visual_clicks):
+            raise SystemExit(
+                "macOS supports AX-grounded AX/GUI actions; desktop VLM is not yet enabled"
+            )
+        if sys.platform != "darwin" and (args.app_bundle_id or args.record_desktop):
+            raise SystemExit("--app-bundle-id and --record-desktop require macOS")
         if args.max_steps < 1:
             raise SystemExit("--max-steps must be positive")
         if not args.window_title and (
             args.require_window_title_contains or args.require_window_text_contains
             or args.allow_window_text_input or args.allow_window_actions
             or args.desktop_vision_model or args.allow_desktop_visual_clicks
+            or args.app_bundle_id or args.record_desktop
         ):
             raise SystemExit("desktop options and window gates require --window-title")
         if args.mcp_profile and not args.allow_mcp_actions:
@@ -529,7 +585,11 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("--open-artifact-vscode requires --artifact-path")
         if args.open_artifact_notepad and not args.artifact_path:
             raise SystemExit("--open-artifact-notepad requires --artifact-path")
-        if args.open_artifact_vscode and args.open_artifact_notepad:
+        if args.open_artifact_textedit and (not args.artifact_path or sys.platform != "darwin"):
+            raise SystemExit("--open-artifact-textedit requires macOS and --artifact-path")
+        if args.open_artifact_notepad and sys.platform == "darwin":
+            raise SystemExit("Notepad is a Windows editor; use --open-artifact-textedit on macOS")
+        if sum((args.open_artifact_vscode, args.open_artifact_notepad, args.open_artifact_textedit)) > 1:
             raise SystemExit("select only one artifact editor")
         if (args.browser_vision_model or args.desktop_vision_model) and not args.allow_screenshot_upload:
             raise SystemExit("vision models require --allow-screenshot-upload")
@@ -561,6 +621,12 @@ def main(argv: list[str] | None = None) -> int:
                 allow_screenshot_upload=args.allow_screenshot_upload,
                 allow_visual_clicks=args.allow_browser_visual_clicks,
             )
+            desktop_surface = MacAccessibilitySurface(
+                window_title_re=args.window_title, bundle_id=args.app_bundle_id,
+                allow_text_input=args.allow_window_text_input,
+                allow_button_actions=args.allow_window_actions,
+                record_path=args.record_desktop,
+            ) if args.window_title and sys.platform == "darwin" else None
             desktop = OpenDesktopTask(
                 goal=args.goal, window_title_re=args.window_title, planner=planner,
                 allow_text_input=args.allow_window_text_input,
@@ -569,15 +635,17 @@ def main(argv: list[str] | None = None) -> int:
                 vision_mode=args.desktop_vision_mode,
                 allow_screenshot_upload=args.allow_screenshot_upload,
                 allow_visual_clicks=args.allow_desktop_visual_clicks,
-            ) if args.window_title else None
+            ) if args.window_title and sys.platform != "darwin" else None
             environment = OpenComputerTask(
-                goal=args.goal, browser=browser, desktop=desktop, planner=planner,
+                goal=args.goal, browser=browser, desktop=desktop, desktop_surface=desktop_surface,
+                planner=planner,
                 local_tool_root=args.local_tool_root,
                 mcp_surface=McpToolSurface.from_profile(args.mcp_profile)
                 if args.mcp_profile else None,
                 artifact_surface=ArtifactSurface(
                     args.artifact_path, allow_open_vscode=args.open_artifact_vscode,
                     allow_open_notepad=args.open_artifact_notepad,
+                    allow_open_textedit=args.open_artifact_textedit,
                 )
                 if args.artifact_path else None,
                 mcp_current_page_only=args.mcp_current_page_only,

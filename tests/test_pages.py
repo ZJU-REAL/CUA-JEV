@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 
 def _builder():
     source = Path(__file__).resolve().parents[1] / "scripts" / "build_pages.py"
@@ -61,6 +63,30 @@ def test_pages_build_uses_relative_assets_and_snapshot(tmp_path):
     assert len(catalog["cases"]) == 4
     for case in catalog["cases"]:
         assert (output / case["video"]).is_file()
+        assert (output / case["poster"]).is_file()
+
+
+@pytest.mark.parametrize("poster", ["../private.jpg", "https://example.org/photo.jpg", 42])
+def test_pages_rejects_unreviewed_poster_paths(tmp_path, monkeypatch, poster):
+    builder = _builder()
+    catalog = json.loads(builder.WINDOWS_DEMOS.read_text(encoding="utf-8"))
+    catalog["cases"][0]["poster"] = poster
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps(catalog), encoding="utf-8")
+    monkeypatch.setattr(builder, "WINDOWS_DEMOS", path)
+    with pytest.raises(ValueError, match="poster must be a curated relative"):
+        builder._windows_cases()
+
+
+def test_pages_rejects_missing_poster(tmp_path, monkeypatch):
+    builder = _builder()
+    catalog = json.loads(builder.WINDOWS_DEMOS.read_text(encoding="utf-8"))
+    catalog["cases"][0]["poster"] = "media/windows-missing.jpg"
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps(catalog), encoding="utf-8")
+    monkeypatch.setattr(builder, "WINDOWS_DEMOS", path)
+    with pytest.raises(ValueError, match="Missing reviewed Windows poster"):
+        builder._windows_cases()
 
 
 def test_four_verified_windows_cases_activate_new_home(tmp_path, monkeypatch):

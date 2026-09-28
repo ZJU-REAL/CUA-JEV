@@ -3,7 +3,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-_LOCAL_ENV_KEYS = {"TYPESAFE_API_KEY", "CUA_JEV_MODEL", "CUA_JEV_API_URL"}
+_LOCAL_ENV_KEYS = {
+    "TYPESAFE_API_KEY", "CUA_JEV_MODEL", "CUA_JEV_API_URL",
+    "CUA_JEV_MODEL_API_KEY", "CUA_JEV_PLANNER_API_KEY",
+}
 
 
 def load_local_env(path: str | Path = ".env") -> bool:

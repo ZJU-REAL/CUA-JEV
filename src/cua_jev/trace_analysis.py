@@ -24,11 +24,12 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
     """Report empirical outcomes and route probabilities from JSONL traces.
 
     Partial runs are counted separately from completed episodes. Probabilities
-    are aggregated over candidate IDs belonging to the same channel.
+    are aggregated over candidate IDs belonging to the same channel. Overlapping
+    exports are deduplicated by run ID and sequence, never by payload alone.
     """
     if not paths:
         raise ValueError("at least one trace path is required")
-    runs: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    runs: dict[str, dict[int, dict[str, Any]]] = defaultdict(dict)
     for raw_path in paths:
         path = Path(raw_path)
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -38,9 +39,18 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
                 event = json.loads(line)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"invalid JSONL in {path.name} line {number}") from exc
-            if not isinstance(event, dict) or not isinstance(event.get("run_id"), str):
+            if (
+                not isinstance(event, dict)
+                or not isinstance(event.get("run_id"), str)
+                or type(event.get("sequence")) is not int
+                or event["sequence"] < 0
+            ):
                 raise ValueError(f"invalid trace event in {path.name} line {number}")
-            runs[event["run_id"]].append(event)
+            events = runs[event["run_id"]]
+            sequence = event["sequence"]
+            if sequence in events and events[sequence] != event:
+                raise ValueError(f"conflicting trace event in {path.name} line {number}")
+            events[sequence] = event
 
     durations: list[float] = []
     decision_ms: list[float] = []
@@ -52,12 +62,13 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
     route_masses: dict[str, list[float]] = defaultdict(list)
     statuses: Counter[str] = Counter()
     token_usage: dict[str, Counter[str]] = defaultdict(Counter)
+    model_requests: Counter[str] = Counter()
     complete = 0
     decisions = 0
     for events in runs.values():
         candidate_channels: dict[str, str] = {}
         candidate_routes: dict[str, str] = {}
-        for event in sorted(events, key=lambda item: item.get("sequence", 0)):
+        for _, event in sorted(events.items()):
             kind, payload = event.get("kind"), event.get("payload")
             if not isinstance(payload, dict):
                 continue
@@ -128,6 +139,9 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
             elif kind in {"model_usage", "policy_exchange"}:
                 role = payload.get("role", "jev" if kind == "policy_exchange" else None)
                 usage = payload.get("usage")
+                requests = payload.get("requests")
+                if isinstance(role, str) and type(requests) is int and requests >= 0:
+                    model_requests[role] += requests
                 if isinstance(role, str) and isinstance(usage, dict):
                     for name in ("prompt_tokens", "completion_tokens", "total_tokens"):
                         value = usage.get(name)
@@ -136,6 +150,7 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
 
     return {
         "runs_seen": len(runs),
+        "model_requests": dict(model_requests),
         "completed_episodes": complete,
         "successes": statuses["success"],
         "success_rate": round(statuses["success"] / complete, 4) if complete else None,

@@ -130,6 +130,19 @@ class DesktopSnapshot:
         }
         return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
 
+    def acceptance_text(self) -> str:
+        return "\n".join((self.text, *(item.name for item in self.controls), *self.edit_values))
+
+    def for_model(self) -> dict[str, Any]:
+        state = self.to_dict()
+        state["controls"] = [{
+            key: value for key, value in control.items()
+            if key in {"ref", "name", "control_type", "enabled", "can_invoke", "can_set_text"}
+        } for control in state["controls"]]
+        for key in ("window_handle", "visual_region", "visual_image_hash"):
+            state.pop(key, None)
+        return state
+
     def fingerprint(self) -> str:
         state = {**self.to_dict(), "edit_values": self.edit_values}
         return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
@@ -220,6 +233,8 @@ class OpenDesktopTask:
         vision_mode: str = "fallback",
         allow_screenshot_upload: bool = False,
         allow_visual_clicks: bool = False,
+        required_text: str = "",
+        required_title: str = "",
     ) -> None:
         if not goal.strip() or not window_title_re.strip():
             raise ValueError("goal and window title regex are required")
@@ -228,6 +243,8 @@ class OpenDesktopTask:
         if vision_grounder is not None and not allow_screenshot_upload:
             raise ValueError("vision requires explicit screenshot-upload consent")
         self.goal = goal.strip()
+        self.required_text = required_text
+        self.required_title = required_title
         self.window_title_re = window_title_re
         self.planner = planner
         self.window = window
@@ -347,6 +364,11 @@ class OpenDesktopTask:
             self._plan, self._used = previous_plan, previous_used
 
     def _satisfied(self, snapshot: DesktopSnapshot) -> bool:
+        if self.required_text or self.required_title:
+            return (not self.required_text or self.required_text.casefold() in
+                    snapshot.acceptance_text().casefold()) and (
+                not self.required_title or self.required_title.casefold() in snapshot.window_title.casefold()
+            )
         if self._plan is None:
             return False
         expected = self._plan.success_value.casefold()

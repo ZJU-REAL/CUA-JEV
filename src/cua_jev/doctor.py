@@ -11,9 +11,17 @@ def doctor() -> dict[str, Any]:
     return {
         "python": sys.version.split()[0],
         "platform": sys.platform,
+        "macos": {
+            "native_platform": sys.platform == "darwin",
+            "swift_compiler": bool(shutil.which("swiftc")),
+            "permission_check": "cua-jev macos-doctor" if sys.platform == "darwin" else None,
+        },
         "jev": {
             "configured": bool(os.getenv("TYPESAFE_API_KEY")),
             "model": os.getenv("CUA_JEV_MODEL", "jev-1.13.0"),
+        },
+        "planner": {
+            "configured": bool(os.getenv("CUA_JEV_MODEL_API_KEY") or os.getenv("CUA_JEV_PLANNER_API_KEY")),
         },
         "capabilities": {
             "filesystem": True,

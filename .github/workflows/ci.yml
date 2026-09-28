@@ -20,4 +20,7 @@ jobs:
       # The suite starts a real stdio MCP fixture, so CI must install the MCP extra.
       - run: python -m pip install -e ".[dev,mcp]"
       - run: ruff check .
+      - name: Compile native macOS helper and check permission reporting
+        if: runner.os == 'macOS'
+        run: cua-jev macos-doctor
       - run: pytest --cov=cua_jev --cov-report=term-missing

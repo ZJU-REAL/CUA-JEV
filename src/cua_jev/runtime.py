@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -19,6 +20,10 @@ class StepResult:
     verification: Verification
 
 
+class StepDeadlineExceeded(TimeoutError):
+    """The episode budget expired before another action could be dispatched."""
+
+
 class AgentRuntime:
     def __init__(
         self,
@@ -35,7 +40,13 @@ class AgentRuntime:
         self.verifiers = verifiers or VerifierRegistry()
         self.trace = trace or JsonlTrace()
 
-    def step(self, observation: Observation, candidates: Sequence[ActionCandidate]) -> StepResult:
+    def step(
+        self, observation: Observation, candidates: Sequence[ActionCandidate],
+        *, deadline: float | None = None,
+    ) -> StepResult:
+        """Choose and execute one action; deadline uses the monotonic clock."""
+        if deadline is not None and time.monotonic() >= deadline:
+            raise StepDeadlineExceeded("episode timeout before policy decision")
         self.trace.append("observation", observation.to_dict())
         self.trace.append("candidates", {"items": [candidate.to_dict() for candidate in candidates]})
         decision = self.policy.choose(observation, candidates)
@@ -69,6 +80,10 @@ class AgentRuntime:
                 "checks": ["fresh_observation", "offered_candidate", "risk", "paths", "preconditions"],
             },
         )
+        # A remote decision or guard may outlast the episode budget. Never
+        # dispatch its action just because the observation began in time.
+        if deadline is not None and time.monotonic() >= deadline:
+            raise StepDeadlineExceeded("episode timeout before action execution")
         receipt = self.executors.execute(candidate, observation.observation_id, decision.decision_id)
         self.trace.append("receipt", receipt.to_dict())
         verification = self.verifiers.verify(candidate, receipt)

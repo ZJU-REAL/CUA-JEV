@@ -78,6 +78,17 @@ class ChatModelPlanner:
         self.planning_wall_ms = 0.0
         self.vision_wall_ms = 0.0
         self.vision_calls = 0
+        self.planning_requests = 0
+        self.vision_requests = 0
+
+    def _record_usage(self, data: Any) -> None:
+        # Account for billed responses even when their content fails validation.
+        self.last_usage = data.get("usage", {}) if isinstance(data, dict) else {}
+        if not isinstance(self.last_usage, dict):
+            self.last_usage = {}
+        for name, value in self.last_usage.items():
+            if type(value) is int and value >= 0:
+                self.usage_totals[name] = self.usage_totals.get(name, 0) + value
 
     def close(self) -> None:
         if self._owns_client:
@@ -140,11 +151,13 @@ class ChatModelPlanner:
         }
         started = time.perf_counter()
         try:
+            self.vision_requests += 1
             response = self.client.post(
                 f"{self.base_url}/chat/completions", headers=self._headers(), json=body
             )
             response.raise_for_status()
             data = response.json()
+            self._record_usage(data)
         except (httpx.HTTPError, ValueError) as exc:
             raise RuntimeError(f"vision request failed ({type(exc).__name__})") from None
         finally:
@@ -167,15 +180,12 @@ class ChatModelPlanner:
                 f"vision model returned invalid targets or scene ({type(exc).__name__})"
             ) from None
         self.vision_calls += 1
-        self.last_usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
-        for name, value in self.last_usage.items():
-            if isinstance(value, int) and value >= 0:
-                self.usage_totals[name] = self.usage_totals.get(name, 0) + value
         return scene
 
     def plan(
         self, goal: str, snapshot: BrowserSnapshot | Any, recent_actions: Sequence[dict[str, Any]]
     ) -> Any:
+        from .macos_surface import MacSnapshot, validate_mac_option
         from .open_computer import ComputerPlan, ComputerSnapshot
         from .open_desktop import DesktopPlan, DesktopSnapshot
         from .open_workspace import WorkspacePlan, WorkspaceSnapshot
@@ -187,15 +197,15 @@ class ChatModelPlanner:
                 '"value":"only for fill/select"}],"success":{"kind":"url_contains|'
                 'title_contains|text_contains","value":"..."}}'
             )
-        elif isinstance(snapshot, DesktopSnapshot):
-            medium = "Windows UI Automation"
+        elif isinstance(snapshot, (DesktopSnapshot, MacSnapshot)):
+            medium = "macOS Accessibility" if isinstance(snapshot, MacSnapshot) else "Windows UI Automation"
             schema = (
                 '{"subgoal":"...","options":[{"ref":"c0 or v0","operation":"click|fill",'
                 '"value":"only for fill"}],"success":{"kind":"window_title_contains|'
                 'text_contains|control_exists","value":"..."}}'
             )
         elif isinstance(snapshot, ComputerSnapshot):
-            medium = "one same-origin browser, one selected Windows window, and registered tools"
+            medium = "one same-origin browser, an optional accessibility window, and registered tools"
             schema = (
                 '{"subgoal":"...","options":[{"ref":"EXACT_ALLOWED_REF",'
                 '"operation":"SUPPORTED_OPERATION","value":"only when needed"}]}'
@@ -335,7 +345,7 @@ class ChatModelPlanner:
                     "clue, invoke the offered MCP tool before navigating away."
                 )
         model_state = (
-            snapshot.for_model() if isinstance(snapshot, ComputerSnapshot)
+            snapshot.for_model() if isinstance(snapshot, (ComputerSnapshot, MacSnapshot))
             else snapshot.to_dict()
         )
         user_state = {
@@ -393,11 +403,13 @@ class ChatModelPlanner:
         try:
             for attempt in range(2):
                 try:
+                    self.planning_requests += 1
                     response = self.client.post(
                         f"{self.base_url}/chat/completions", headers=self._headers(), json=body
                     )
                     response.raise_for_status()
                     data = response.json()
+                    self._record_usage(data)
                     break
                 except (httpx.TimeoutException, httpx.ConnectError) as exc:
                     if attempt:
@@ -426,12 +438,13 @@ class ChatModelPlanner:
             self.last_raw = raw if isinstance(raw, dict) else None
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise ValueError(f"model returned an invalid planning response ({type(exc).__name__})") from None
-        self.last_usage = data.get("usage", {}) if isinstance(data.get("usage"), dict) else {}
-        for name, value in self.last_usage.items():
-            if isinstance(value, int) and value >= 0:
-                self.usage_totals[name] = self.usage_totals.get(name, 0) + value
         if isinstance(snapshot, BrowserSnapshot):
             return BrowserPlan.from_dict(raw, snapshot)
+        if isinstance(snapshot, MacSnapshot):
+            plan = DesktopPlan.from_dict(raw, snapshot)
+            for option in plan.options:
+                validate_mac_option(snapshot, option.ref, option.operation, option.value)
+            return plan
         if isinstance(snapshot, DesktopSnapshot):
             return DesktopPlan.from_dict(raw, snapshot)
         if isinstance(snapshot, ComputerSnapshot):

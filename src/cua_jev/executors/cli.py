@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -16,7 +17,7 @@ class RegisteredCliExecutor:
     def __init__(self, timeout_s: float = 30) -> None:
         self.timeout_s = timeout_s
         self._commands: dict[str, CommandFactory] = {
-            "cli.python_version": lambda _: ["python", "--version"],
+            "cli.python_version": lambda _: [sys.executable, "--version"],
             "cli.powershell_version": lambda _: [
                 "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
                 "Write-Output ('PowerShell ' + $PSVersionTable.PSVersion.ToString())",

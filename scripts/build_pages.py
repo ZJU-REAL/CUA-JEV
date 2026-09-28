@@ -70,6 +70,14 @@ def _windows_cases() -> tuple[list[dict[str, Any]], bool]:
             raise ValueError("Windows case video must be a curated relative media path")
         if not (WEBSITE / media_path).is_file():
             raise ValueError(f"Missing reviewed Windows recording: {media_path}")
+        poster_path = item.get("poster")
+        if poster_path is not None:
+            if not isinstance(poster_path, str) or not re.fullmatch(
+                r"media/windows-[a-z0-9-]+\.jpg", poster_path
+            ):
+                raise ValueError("Windows case poster must be a curated relative media path")
+            if not (WEBSITE / poster_path).is_file():
+                raise ValueError(f"Missing reviewed Windows poster: {poster_path}")
     return cases, len(cases) == 4
 
 
@@ -225,6 +233,8 @@ def build(output: Path = ROOT / "dist-pages") -> None:
     for item in windows_cases:
         media_path = item["video"]
         shutil.copy2(WEBSITE / media_path, target / media_path)
+        if item.get("poster"):
+            shutil.copy2(WEBSITE / item["poster"], target / item["poster"])
     _write_json(
         target / "data" / "bootstrap.json",
         {"tasks": snapshot["tasks"], "demos": demos, "captured_on": snapshot["captured_on"]},

@@ -3,56 +3,81 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="CUA-JEV combines model planning, guarded action candidates, and Jev decisions for verifiable computer-use workflows. Explore real Windows recordings and their traces.">
-  <title>CUA-JEV · Model planning, Jev decisions, real computer use</title>
+  <meta name="theme-color" content="#132b3b">
+  <meta name="description" content="CUA-JEV connects model intent, legal action routes, Jev decisions, and independent verification. Explore four recorded Windows workflows and the current macOS development status.">
+  <title>CUA-JEV · One computer-use loop. Many ways to act.</title>
+  <link rel="icon" href="static/logo-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="static/home.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="masthead">
-    <a class="brand" href="#top" aria-label="CUA-JEV home"><img src="static/logo-mark.svg" alt="REAL Lab" width="40" height="40"><strong>CUA-JEV</strong></a>
-    <nav aria-label="Main navigation"><a href="#approach">Approach</a><a href="#windows-cases">Windows cases</a><a href="early-work.html">Early work</a></nav>
-    <a class="source-link" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">Source code <span aria-hidden="true">↗</span></a>
+    <a class="brand" href="#top" aria-label="CUA-JEV home"><img src="static/logo-mark.svg" alt="" width="36" height="36"><strong>CUA-JEV</strong><span>REAL LAB</span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" hidden>Menu <span aria-hidden="true">+</span></button>
+    <nav id="main-nav" aria-label="Main navigation"><a href="#approach">The approach</a><a href="#windows-cases">Recordings</a><a href="#limits">Project status</a><a class="nav-source" href="https://github.com/ZJU-REAL/CUA-JEV">GitHub <span aria-hidden="true">↗</span></a></nav>
   </header>
 
   <main id="main">
-    <section class="hero" id="top">
+    <section class="hero section-wrap" id="top" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow">REAL LAB · OPEN RESEARCH FRAMEWORK</p>
-        <h1>One computer-use loop.<br><em>Many ways to act.</em></h1>
-        <p class="lead">A text model interprets the live task and proposes grounded actions. The framework turns them into legal GUI and tool candidates. <strong>Jev chooses the next concrete action</strong>; guards and verifiers close the loop.</p>
-        <div class="hero-actions"><a class="button primary" href="#windows-cases">Explore the recordings <span aria-hidden="true">↗</span></a><a class="button secondary" href="#approach">How it works</a></div>
-        <p class="scope-line">Windows implementation · recorded case studies, not a claim of arbitrary-task reliability</p>
+        <p class="eyebrow"><span class="tiny-mark" aria-hidden="true"></span> OPEN RESEARCH · HYBRID COMPUTER USE</p>
+        <h1 id="hero-title">One computer-use loop.<br><em>Many ways to act.</em></h1>
+        <p class="lead">Models propose the intent. <strong>Jev chooses the action and the route.</strong> A scoped runtime executes it, checks the result, and brings fresh evidence back into the loop.</p>
+        <div class="hero-actions"><a class="button primary" href="#windows-cases">Watch the workflows <span aria-hidden="true">↗</span></a><a class="button text-button" href="https://github.com/ZJU-REAL/CUA-JEV">Explore the code <span aria-hidden="true">→</span></a></div>
+        <p class="scope-line">Research software. Bounded tasks. Inspectable evidence.</p>
       </div>
-      <aside class="hero-diagram" aria-label="Model and Jev decision flow">
-        <div class="diagram-head"><span>CUA-JEV RUNTIME</span><b>Observe → choose → verify</b></div>
-        <div class="diagram-stage"><span class="stage-num">01</span><div><b>Live context</b><small>DOM · accessibility · files · optional VLM</small></div></div>
-        <div class="diagram-stage"><span class="stage-num">02</span><div><b>Model proposes</b><small>Subgoal and grounded action options</small></div></div>
-        <div class="diagram-core"><span class="stage-num">03</span><div><b>Jev selects</b><small>One intent × execution route</small></div><span class="core-pulse" aria-hidden="true"></span></div>
-        <div class="diagram-stage"><span class="stage-num">04</span><div><b>Execute &amp; verify</b><small>Scoped tool call, independent result check</small></div></div>
-        <div class="diagram-channels" aria-label="Supported action channels"><span>GUI</span><span>DOM</span><span>UIA</span><span>CLI</span><span>MCP</span><span>API</span></div>
+      <aside class="hero-diagram" aria-labelledby="diagram-title">
+        <div class="diagram-head"><span><i aria-hidden="true"></i> THE RUNTIME</span><span>ONE STEP AT A TIME</span></div>
+        <h2 id="diagram-title" class="sr-only">The computer-use decision loop</h2>
+        <ol class="runtime-flow">
+          <li class="flow-observe"><span class="stage-num">01</span><div><strong>Observe the live state</strong><small>DOM, accessibility, and scoped files</small></div><span class="flow-symbol" aria-hidden="true">↗</span></li>
+          <li><span class="stage-num">02</span><div><strong>Model proposes intent</strong><small>A subgoal, grounded in visible references</small></div></li>
+          <li class="flow-candidates"><span class="stage-num">03</span><div><strong>Compile legal candidates</strong><small>Intent × available execution route</small><div class="route-chips" aria-label="Example execution routes"><span>DOM</span><span>AX / UIA</span><span>GUI</span><span>CLI</span><span>MCP</span><span>API</span></div></div></li>
+          <li class="flow-jev"><span class="stage-num">04</span><div><strong>Jev selects one action</strong><small>A concrete choice from the legal set</small></div><span class="selection-dot" aria-hidden="true"></span></li>
+          <li><span class="stage-num">05</span><div><strong>Guard &amp; execute</strong><small>Enforce scope and state preconditions</small></div></li>
+          <li class="flow-verify"><span class="stage-num">06</span><div><strong>Verify independently</strong><small>Check the effect and the task’s acceptance gates</small></div></li>
+        </ol>
+        <div class="loop-return"><span aria-hidden="true">↶</span> Fresh observation closes the loop</div>
       </aside>
     </section>
 
-    <section class="intro-band" id="approach">
-      <div><p class="eyebrow">THE IDEA</p><h2>Generalize the decision loop.<br>Keep execution grounded.</h2></div>
-      <div class="intro-copy"><p>The model handles interpretation and candidate generation. Jev compares those candidates, including alternative routes for the same intent. The runtime constrains scope, executes the selected route, then checks the changed application state.</p><p>Structured observations are the reliable path today. Screenshot/VLM grounding is available experimentally, but visual-click success across varied applications has not yet been established.</p></div>
+    <div class="evidence-strip section-wrap" aria-label="Project at a glance">
+      <a href="#windows-cases"><span class="evidence-number">04</span><span><strong>Recorded Windows cases</strong><small>Real model + Jev workflows</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
+      <a href="#limits"><span class="evidence-symbol" aria-hidden="true">⌘</span><span><strong>macOS backend in progress</strong><small>Native implementation · live tests pending</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
+      <a href="https://github.com/ZJU-REAL/CUA-JEV"><span class="evidence-symbol" aria-hidden="true">{ }</span><span><strong>Open, inspectable runtime</strong><small>Typed actions · guards · verification</small></span><span class="evidence-arrow" aria-hidden="true">↗</span></a>
+    </div>
+
+    <section class="approach section-wrap" id="approach" aria-labelledby="approach-title">
+      <div class="section-heading"><div><p class="eyebrow">01 / THE APPROACH</p><h2 id="approach-title">Planning is only<br>the start.</h2></div><p>One intent can have several ways to reach the application. CUA-JEV makes those routes explicit, so the decision and its outcome can both be inspected.</p></div>
+      <div class="principle-grid">
+        <article><span class="principle-index">01 <span aria-hidden="true">/</span> INTERPRET</span><h3>Ground the proposal.</h3><p>The text model proposes a subgoal and intents against the observed state. The framework resolves references and compiles only the available, legal routes.</p></article>
+        <article><span class="principle-index">02 <span aria-hidden="true">/</span> CHOOSE</span><h3>Separate intent from route.</h3><p>Jev chooses one concrete intent × route candidate. A DOM action, accessibility operation, or scoped tool can serve the same task when the surface supports it.</p></article>
+        <article><span class="principle-index">03 <span aria-hidden="true">/</span> VERIFY</span><h3>Check what changed.</h3><p>Guards constrain execution. Effect checks and independent terminal gates evaluate the resulting application state before the episode can report success.</p></article>
+      </div>
     </section>
 
-    <section class="case-section" id="windows-cases">
-      <div class="section-heading"><div><p class="eyebrow">WINDOWS · RECORDED WORKFLOWS</p><h2>Watch the decisions unfold.</h2></div><p>Each case below is backed by a successful local episode, its Jev trace, and a window-only recording. Counts describe that run, not an average or a benchmark.</p></div>
-      <div id="case-status" class="case-status" role="status">Loading verified cases…</div>
-      <div id="windows-grid" class="windows-grid" aria-live="polite"></div>
-      <details class="case-method"><summary>Recording and metrics notes</summary><p>Action mix counts committed actions by execution channel. “Jev calls” counts policy decisions; “model calls” counts planner requests, with VLM calls shown separately. Recordings show only task windows; local path bars may be covered and a brief editor launch may be cut. Wall time comes from the raw run, not edited video length. One run per case does not establish a success rate or cost advantage.</p></details>
+    <section class="case-section section-wrap" id="windows-cases" aria-labelledby="cases-title">
+      <div class="section-heading"><div><p class="eyebrow">02 / THE RECORDED EVIDENCE</p><h2 id="cases-title">Watch the decisions<br>unfold.</h2></div><p>Four bounded Windows workflows, each with a task-window recording and an action-by-action account. These are individual successful runs, not a success-rate benchmark.</p></div>
+      <div class="case-context"><span><i aria-hidden="true"></i> WINDOWS CASE STUDIES</span><p>Executed routes: DOM · MCP · CLI · file API</p></div>
+      <div id="case-status" class="case-status" role="status" aria-live="polite">Loading the recorded cases…</div>
+      <div id="windows-grid" class="windows-grid" aria-busy="true"></div>
+      <noscript><p class="case-status">Enable JavaScript to view the recordings and action breakdowns, or <a href="data/windows_demos.json">read the published case data</a>.</p></noscript>
+      <details class="case-method"><summary>How to read these results</summary><div class="method-copy"><p><strong>One card, one run.</strong> Actions count committed operations. Jev calls count policy decisions; model calls count planner requests. VLM requests are shown separately. The four runs used DOM, MCP, CLI, and file API routes; they executed no GUI actions and made no VLM calls.</p><p><strong>Recordings and timing.</strong> Videos show task windows only. Local path bars may be covered and a brief editor launch may be cut. Measured wall time comes from the raw run, so it may differ from the video length. These cases do not establish arbitrary-task reliability, lower model frequency, or a cost advantage.</p></div></details>
     </section>
 
-    <section class="limits-section" id="limits">
-      <div><p class="eyebrow">RESEARCH STATUS</p><h2>What the evidence does—and does not—show.</h2></div>
-      <div class="limit-grid"><article><span>01 / Proven locally</span><h3>End-to-end Windows cases</h3><p>Real model planning, Jev decisions, guarded execution, and task-level verification in recorded workflows.</p></article><article><span>02 / Still experimental</span><h3>Visual grounding</h3><p>VLM-derived targets are supported, but visual route reliability and benefit need broader live testing.</p></article><article><span>03 / Next</span><h3>Broader generality</h3><p>More unfamiliar tasks, applications, repeat trials, and macOS work after the Windows study.</p></article></div>
-      <a class="archive-link" href="early-work.html">See the earlier task-specific experiments <span aria-hidden="true">↗</span></a>
+    <section class="status-section section-wrap" id="limits" aria-labelledby="status-title">
+      <div class="section-heading"><div><p class="eyebrow">03 / CURRENT PROJECT STATUS</p><h2 id="status-title">Built. Tested.<br>Still being explored.</h2></div><p>Implementation, deterministic checks, and model-driven application runs answer different questions. Here is where the evidence stands today.</p></div>
+      <div class="platform-grid">
+        <article class="platform-card"><div class="platform-head"><span class="platform-label">WINDOWS</span><span class="state-tag verified">Recorded cases</span></div><h3>A complete loop,<br>on bounded workflows.</h3><p>Four successful local runs combine model planning, Jev decisions, guarded execution, and task-level verification.</p><ul><li>18–21 actions in each published run</li><li>Browser research, scoped tools, and editor handoff</li><li>Repeat trials and unfamiliar tasks remain future work</li></ul><a href="#windows-cases">Inspect the recordings <span aria-hidden="true">↗</span></a></article>
+        <article class="platform-card"><div class="platform-head"><span class="platform-label">macOS</span><span class="state-tag pending">Implementation + smoke</span></div><h3>Native surfaces,<br>with live validation next.</h3><p>The backend implements Accessibility actions, guarded GUI input, and single-window capture and recording.</p><ul><li>Chromium + Python: 2 verified smoke actions</li><li>That smoke uses a deterministic planner and Rule policy</li><li>Native AX / GUI / recording and model + Jev runs await live testing</li></ul><a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/docs/MACOS.md">Read the macOS guide <span aria-hidden="true">↗</span></a></article>
+      </div>
+      <div class="research-note"><span class="note-label">OPEN QUESTION</span><p><strong>When does visual grounding help?</strong> Screenshot/VLM targeting remains experimental. Broader live testing is needed to establish its reliability and benefit; the four published Windows runs provide no visual-route evidence.</p></div>
+      <a class="archive-link" href="early-work.html">Explore the earlier task-specific experiments <span aria-hidden="true">→</span></a>
     </section>
+
+    <section class="get-started section-wrap" aria-labelledby="start-title"><div><p class="eyebrow">MAKE THE LOOP YOUR OWN</p><h2 id="start-title">Start with the evidence.<br>Then explore the runtime.</h2><p>Setup, platform notes, architecture, and reproducible checks live in the repository.</p></div><a class="button" href="https://github.com/ZJU-REAL/CUA-JEV#readme">Read the project guide <span aria-hidden="true">↗</span></a></section>
   </main>
-  <footer><span>CUA-JEV · REAL Lab</span><a href="https://github.com/ZJU-REAL/CUA-JEV">GitHub</a><a href="early-work.html">Early work</a></footer>
+  <footer class="section-wrap"><a class="footer-brand" href="#top">CUA-JEV <span>REAL Lab</span></a><p>An open research framework for hybrid computer use.</p><div><a href="https://github.com/ZJU-REAL/CUA-JEV">GitHub</a><a href="early-work.html">Early work</a><a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/LICENSE">Apache 2.0</a></div></footer>
   <script src="static/home.js" defer></script>
 </body>
 </html>

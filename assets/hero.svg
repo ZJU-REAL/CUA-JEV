@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560" role="img" aria-labelledby="title desc">
+<title id="title">CUA-JEV — One intent. Multiple routes. Verified actions.</title>
+<desc id="desc">Architecture illustration, not a recorded decision: a grounded intent becomes legal action candidates; Jev selects a route, then the runtime guards, executes, and verifies.</desc>
+<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#fff" stroke-opacity=".045"/></pattern><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="m1 1 5 3-5 3" fill="none" stroke="#50c9b0" stroke-width="1.6"/></marker></defs>
+<rect width="1440" height="560" rx="24" fill="#132b3b"/><rect width="1440" height="560" rx="24" fill="url(#grid)"/>
+<path d="M42 42h38M42 42v38M1398 518h-38M1398 518v-38" fill="none" stroke="#50c9b0" stroke-width="2"/>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="76" y="103" font-size="19" font-weight="700" letter-spacing="3" fill="#88d8c7">ZJU-REAL / COMPUTER USE</text>
+<text x="70" y="210" font-size="86" font-weight="700" letter-spacing="-4" fill="#f6f5ef">CUA-JEV</text>
+<text x="76" y="280" font-size="34" fill="#f6f5ef">One intent. Multiple routes.</text><text x="76" y="329" font-size="34" fill="#50c9b0">Verified actions.</text>
+<text x="76" y="392" font-size="21" fill="#adbec7">Grounded planning meets typed action selection.</text>
+<path d="M76 444h490" stroke="#395060"/><text x="76" y="480" font-size="18" letter-spacing="1.4" fill="#adbec7">OBSERVE · SELECT · VERIFY · REPEAT</text>
+<text x="738" y="103" font-size="16" letter-spacing="2" fill="#adbec7">CONCEPTUAL ACTION FRONTIER</text>
+<rect x="734" y="132" width="272" height="70" rx="12" fill="#203c4c" stroke="#577181"/><text x="758" y="175" font-size="22" fill="#f6f5ef">Grounded next intent</text>
+<path d="M870 202v37M770 264v-25h406v25M974 239v25" fill="none" stroke="#577181" stroke-width="2"/>
+<rect x="698" y="264" width="144" height="72" rx="12" fill="#203c4c" stroke="#577181"/><text x="770" y="309" text-anchor="middle" font-size="24" fill="#c2ced4">GUI</text><rect x="902" y="264" width="144" height="72" rx="12" fill="#50c9b0" stroke="#50c9b0"/><text x="974" y="309" text-anchor="middle" font-size="24" fill="#132b3b">DOM</text><rect x="1106" y="264" width="144" height="72" rx="12" fill="#203c4c" stroke="#577181"/><text x="1178" y="309" text-anchor="middle" font-size="24" fill="#c2ced4">API</text>
+<path d="M974 336v66" fill="none" stroke="#50c9b0" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1080" y="153" width="170" height="49" rx="24" fill="none" stroke="#50c9b0"/><text x="1165" y="184" text-anchor="middle" font-size="20" font-weight="700" fill="#50c9b0">Jev selects</text>
+<path d="M1165 202v25h-191v30" fill="none" stroke="#50c9b0" stroke-width="2" stroke-dasharray="4 5"/>
+<rect x="798" y="410" width="353" height="70" rx="12" fill="#203c4c" stroke="#50c9b0"/><circle cx="834" cy="445" r="13" fill="#50c9b0"/><path d="m827 445 5 5 9-11" fill="none" stroke="#132b3b" stroke-width="2.4"/><text x="862" y="453" font-size="22" fill="#f6f5ef">Guard · execute · verify</text>
+</g></svg>

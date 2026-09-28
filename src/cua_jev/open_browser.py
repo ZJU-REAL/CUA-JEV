@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -402,6 +403,7 @@ class OpenBrowserTask:
         allow_screenshot_upload: bool = False,
         allow_visual_clicks: bool = False,
         browser_channel: str = "msedge",
+        physical_gui: bool | None = None,
         local_tool_root: Path | None = None,
         required_tool: str = "",
         required_url_contains: str = "",
@@ -420,6 +422,7 @@ class OpenBrowserTask:
         self.planner = planner
         self.page = page
         self.headed = headed
+        self.physical_gui = headed and (sys.platform == "win32" if physical_gui is None else physical_gui)
         self.allow_form_input = allow_form_input
         self.allow_external_actions = allow_external_actions
         self.screen = screen or ScreenController()
@@ -702,7 +705,7 @@ class OpenBrowserTask:
                 "value": option.value,
             }
             for channel, suffix in ((Channel.SCRIPT, "dom"), (Channel.GUI, "gui")):
-                if channel == Channel.GUI and not self.headed:
+                if channel == Channel.GUI and not self.physical_gui:
                     continue
                 if option.operation == "select" and channel == Channel.GUI:
                     continue
@@ -761,7 +764,7 @@ class OpenBrowserTask:
 
             bindings[Channel.API] = FileSystemExecutor()
             bindings[Channel.CLI] = RegisteredCliExecutor()
-        if self.headed:
+        if self.physical_gui:
             bindings[Channel.GUI] = self
         return bindings
 

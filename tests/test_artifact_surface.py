@@ -103,3 +103,40 @@ def test_notepad_handoff_is_a_distinct_guarded_editor_route(tmp_path, monkeypatc
     assert launched == [(["notepad.exe", str(surface.path)], False)]
     with pytest.raises(ValueError, match="choose exactly one"):
         ArtifactSurface(tmp_path / "other.txt", allow_open_vscode=True, allow_open_notepad=True)
+
+
+def test_textedit_handoff_uses_exact_document_probe_and_new_window(tmp_path, monkeypatch):
+    monkeypatch.setattr("cua_jev.artifact_surface.sys.platform", "darwin")
+    visible = {}
+    probes = []
+
+    class Probe:
+        def call(self, command, **args):
+            probes.append((command, args))
+            return {"windows": visible.copy()}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr("cua_jev.macos_bridge.MacBridge", Probe)
+    launched = []
+
+    def launch(argv, **kwargs):
+        launched.append(argv)
+        visible["12"] = "note.txt"
+
+    monkeypatch.setattr("cua_jev.artifact_surface.subprocess.Popen", launch)
+    surface = ArtifactSurface(tmp_path / "note.txt", allow_open_textedit=True)
+    surface.reset()
+    surface.set_acceptance(ready=True, citations=())
+    write = surface.compile(surface.capture(), "a0", "write", "Test", "Write", 0)[0]
+    assert surface.execute(write, "obs", "write").success
+    candidate = surface.compile(surface.capture(), "a0", "open", "", "Open", 1)[0]
+    receipt = surface.execute(candidate, "obs", "open")
+    assert receipt.success and surface._verify_editor_open(candidate, receipt).passed
+    assert candidate.capability == "artifact.open_textedit"
+    assert launched == [["/usr/bin/open", "-b", "com.apple.TextEdit", str(surface.path)]]
+    assert all(args == {"path": str(surface.path), "bundle_id": "com.apple.TextEdit"} for _, args in probes)
+    visible.clear()
+    assert not surface._verify_editor_open(candidate, receipt).passed
+    surface.close()

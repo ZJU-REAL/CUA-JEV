@@ -444,6 +444,7 @@ def test_candidate_generation_filters_external_and_button_actions():
             ]
         ),
         headed=True,
+        physical_gui=True,
     )
     environment.reset()
     observation = environment.observe(())
@@ -655,9 +656,9 @@ def test_real_browser_snapshot_and_dom_execution_without_external_site():
     playwright_api = pytest.importorskip("playwright.sync_api")
     with playwright_api.sync_playwright() as playwright:
         try:
-            browser = playwright.chromium.launch(channel="msedge", headless=True)
+            browser = playwright.chromium.launch(headless=True)
         except Exception as exc:
-            pytest.skip(f"Edge browser unavailable: {type(exc).__name__}")
+            pytest.skip(f"Chromium browser unavailable: {type(exc).__name__}")
         page = browser.new_page()
 
         def fixture(route):
@@ -688,3 +689,13 @@ def test_real_browser_snapshot_and_dom_execution_without_external_site():
         assert result.status == EpisodeStatus.SUCCESS
         assert result.steps[0].verification.passed
         browser.close()
+
+
+def test_macos_visible_browser_does_not_offer_windows_physical_driver(monkeypatch):
+    monkeypatch.setattr("cua_jev.open_browser.sys.platform", "darwin")
+    item = task(headed=True)
+    item.reset()
+    options = item.candidates(item.observe(()), ())
+    assert options and all(option.channel != Channel.GUI for option in options)
+    assert Channel.GUI not in item.executor_bindings()
+    item.close()

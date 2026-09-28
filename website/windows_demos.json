@@ -122,7 +122,8 @@
           "channel": "cli",
           "app": "VS Code"
         }
-      ]
+      ],
+      "poster": "media/windows-python-guide.jpg"
     },
     {
       "id": "javascript-guide",
@@ -239,7 +240,8 @@
           "channel": "cli",
           "app": "Notepad"
         }
-      ]
+      ],
+      "poster": "media/windows-javascript-guide.jpg"
     },
     {
       "id": "git-guide",
@@ -372,7 +374,8 @@
           "channel": "cli",
           "app": "VS Code"
         }
-      ]
+      ],
+      "poster": "media/windows-git-guide.jpg"
     },
     {
       "id": "powershell-guide",
@@ -495,7 +498,8 @@
           "channel": "cli",
           "app": "Notepad"
         }
-      ]
+      ],
+      "poster": "media/windows-powershell-guide.jpg"
     }
   ]
 }

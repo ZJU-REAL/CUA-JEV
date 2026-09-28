@@ -16,12 +16,13 @@ from typing import Any, Protocol
 from urllib.parse import urldefrag
 
 from .artifact_surface import ArtifactState, ArtifactSurface
+from .desktop_state import DesktopState
 from .episode import Evaluation
 from .local_tools import ScopedReadOnlyTools, ToolOffer
 from .mcp_surface import McpCallOffer, McpToolSurface
 from .models import ActionCandidate, ActionReceipt, Channel, Observation, Verification
 from .open_browser import BrowserSnapshot, OpenBrowserTask
-from .open_desktop import DesktopSnapshot, OpenDesktopTask
+from .open_desktop import OpenDesktopTask
 from .runtime import StepResult
 from .surface_providers import (
     ActionSurface,
@@ -42,7 +43,7 @@ def _page_key(url: str) -> str:
 @dataclass(frozen=True)
 class ComputerSnapshot:
     browser: BrowserSnapshot
-    desktop: DesktopSnapshot | None
+    desktop: DesktopState | None
     tool_offers: tuple[ToolOffer, ...]
     tool_results: tuple[dict[str, Any], ...]
     requirements: dict[str, Any]
@@ -94,14 +95,11 @@ class ComputerSnapshot:
             element["href"] = element.get("href", "")[:240]
         for key in ("visual_image_hash", "visual_viewport"):
             browser.pop(key, None)
-        desktop = state["desktop"]
-        if desktop is not None:
-            desktop["controls"] = [{
-                key: value for key, value in control.items()
-                if key in {"ref", "name", "control_type", "enabled", "can_invoke", "can_set_text"}
-            } for control in desktop["controls"]]
-            for key in ("window_handle", "visual_region", "visual_image_hash"):
-                desktop.pop(key, None)
+        if self.desktop is not None:
+            desktop = self.desktop.for_model()
+            for key in ("controls", "visual_targets"):
+                desktop[key] = [{**item, "ref": f"d:{item['ref']}"} for item in desktop[key]]
+            state["desktop"] = desktop
         return state
 
     def fingerprint(self) -> str:
@@ -367,8 +365,23 @@ class OpenComputerTask:
         }
 
     def close(self) -> None:
+        failures = []
         for provider in reversed(tuple(self.providers.values())):
-            provider.close()
+            try:
+                provider.close()
+            except Exception as exc:
+                failures.append(exc)
+        if failures:
+            raise RuntimeError(f"surface cleanup failed: {failures[0]}") from failures[0]
+
+    def model_adapters(self) -> tuple[tuple[str, Any], ...]:
+        desktop = self.providers.get("d")
+        desktop_task = getattr(desktop, "task", desktop)
+        return (
+            ("planner", self.planner),
+            ("browser_vision", self.browser.vision_grounder),
+            ("desktop_vision", getattr(desktop_task, "vision_grounder", None)),
+        )
 
     def _active_tool_offers(self) -> tuple[ToolOffer, ...]:
         if "t" not in self.providers:
@@ -439,11 +452,7 @@ class OpenComputerTask:
             in desktop.window_title.casefold()),
             not self.required_window_text_contains or (
                 desktop is not None and
-            self.required_window_text_contains.casefold() in (
-                desktop.text + "\n" + "\n".join(
-                    item.name for item in desktop.controls
-                ) + "\n" + "\n".join(desktop.edit_values)
-            ).casefold()),
+            self.required_window_text_contains.casefold() in desktop.acceptance_text().casefold()),
             all(item in self._completed_capabilities for item in self.required_capabilities),
             all(item in self._visits for item in self.required_visits),
             len(self._discovered_sources) >= self.min_verified_sources,

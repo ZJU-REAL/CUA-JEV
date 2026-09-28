@@ -257,3 +257,24 @@ def test_vision_scene_extracts_json_wrapped_in_model_commentary():
     )
     assert scene.summary == "A simple settings page."
     assert scene.targets[0].ref == "v0"
+
+
+@pytest.mark.parametrize("vision", [True, False])
+def test_invalid_model_content_still_accounts_for_reported_tokens(vision):
+    planner = ChatModelPlanner(
+        "https://test.example/v1", "test",
+        client=httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, json={
+            "choices": [{"message": {"content": "invalid content"}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120},
+        }))),
+    )
+    with pytest.raises(ValueError):
+        if vision:
+            planner.perceive_scene(
+                "Finish", "Window", "", WindowImage(b"\xff\xd8", bytes(4096), (0, 0, 100, 100))
+            )
+        else:
+            planner.plan("Finish", BrowserSnapshot.capture(FakePage()), [])
+    assert planner.usage_totals["total_tokens"] == 120
+    assert planner.vision_requests + planner.planning_requests == 1
+    assert planner.vision_calls == 0

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import inspect
+import math
 import os
+import sys
 import time
 from collections import Counter
 from collections.abc import Callable, Sequence
@@ -11,7 +13,7 @@ from typing import Protocol
 
 from .errors import CuaJevError
 from .models import ActionCandidate, ActionReceipt, Observation, Verification, state_fingerprint
-from .runtime import AgentRuntime, StepResult
+from .runtime import AgentRuntime, StepDeadlineExceeded, StepResult
 
 
 class EpisodeStatus(StrEnum):
@@ -61,6 +63,15 @@ class EpisodeConfig:
     unchanged_limit: int = 3
     repeated_action_limit: int = 3
 
+    def __post_init__(self) -> None:
+        for name in ("max_steps", "unchanged_limit", "repeated_action_limit"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if (type(self.timeout_s) not in (int, float)
+                or not math.isfinite(self.timeout_s) or self.timeout_s <= 0):
+            raise ValueError("timeout_s must be a positive finite number")
+
 
 @dataclass(frozen=True)
 class EpisodeResult:
@@ -106,53 +117,23 @@ class EpisodeRunner:
 
     def run(self, environment: TaskEnvironment, *, reset: bool = True) -> EpisodeResult:
         started = time.time()
+        deadline = time.monotonic() + self.config.timeout_s
         history: list[StepResult] = []
-        fingerprints: list[str] = []
-        actions: list[str] = []
-        parameters = inspect.signature(self.runtime_factory).parameters
-        runtime = self.runtime_factory(environment) if parameters else self.runtime_factory()
+        runtime: AgentRuntime | None = None
         status = EpisodeStatus.ENVIRONMENT_ERROR
         reason = "episode did not start"
+        failures: list[str] = []
+        interrupted = True
         try:
+            parameters = inspect.signature(self.runtime_factory).parameters
+            runtime = self.runtime_factory(environment) if parameters else self.runtime_factory()
             if reset:
                 environment.reset()
-            for _ in range(self.config.max_steps):
-                if time.time() - started > self.config.timeout_s:
-                    status, reason = EpisodeStatus.TIMEOUT, "episode timeout"
-                    break
-                observation = environment.observe(history)
-                observation = self._with_recent_actions(observation, history)
-                fingerprint = state_fingerprint(observation)
-                if self._is_stuck(fingerprints, actions):
-                    status, reason = EpisodeStatus.STUCK, "state/action repetition limit reached"
-                    break
-                candidates = tuple(environment.candidates(observation, history))
-                if not candidates:
-                    status, reason = EpisodeStatus.TASK_FAILURE, "environment offered no legal actions"
-                    break
-                result = runtime.step(observation, candidates)
-                history.append(result)
-                fingerprints.append(fingerprint)
-                actions.append(result.decision.candidate_id)
-                candidate = next(item for item in candidates if item.id == result.decision.candidate_id)
-                evaluation = environment.evaluate(observation, candidate, result.receipt, result.verification)
-                runtime.trace.append(
-                    "evaluation",
-                    {
-                        "success": evaluation.success,
-                        "terminal": evaluation.terminal,
-                        "reason": evaluation.reason,
-                        "details": evaluation.details,
-                    },
-                )
-                if evaluation.success:
-                    status, reason = EpisodeStatus.SUCCESS, evaluation.reason
-                    break
-                if evaluation.terminal:
-                    status, reason = EpisodeStatus.TASK_FAILURE, evaluation.reason
-                    break
-            else:
-                status, reason = EpisodeStatus.MAX_STEPS, "maximum step budget exhausted"
+            status, reason = self._run_steps(environment, runtime, history, deadline)
+            interrupted = False
+        except StepDeadlineExceeded as exc:
+            status, reason = EpisodeStatus.TIMEOUT, str(exc)
+            interrupted = False
         except CuaJevError as exc:
             name = type(exc).__name__
             status = {
@@ -160,34 +141,118 @@ class EpisodeRunner:
                 "GuardRejected": EpisodeStatus.GUARD_REJECTED,
             }.get(name, EpisodeStatus.EXECUTION_ERROR)
             reason = f"{name}: {exc}"
+            interrupted = False
         except Exception as exc:
             status, reason = EpisodeStatus.ENVIRONMENT_ERROR, f"{type(exc).__name__}: {exc}"
-        ended = time.time()
+            interrupted = False
+        finally:
+            # Telemetry and demo presentation must never bypass resource cleanup.
+            # Cancellation still propagates, after releasing the owned resources.
+            try:
+                if runtime is not None and not interrupted:
+                    try:
+                        self._record_model_usage(environment, runtime)
+                        completion_hold = _completion_hold_seconds()
+                        if completion_hold:
+                            time.sleep(completion_hold)
+                    except Exception as exc:
+                        failures.append(f"finalization failed: {type(exc).__name__}: {exc}")
+            finally:
+                active_exception = sys.exception()
+                cleanup_interrupt: BaseException | None = None
+                resources = (runtime.policy, environment) if runtime is not None else (environment,)
+                for resource in resources:
+                    try:
+                        close = getattr(resource, "close", None)
+                        if close:
+                            close()
+                    except Exception as exc:
+                        failures.append(f"cleanup failed: {type(exc).__name__}: {exc}")
+                    except BaseException as exc:
+                        # A cancellation during one close must not leak the
+                        # remaining resources or suppress an earlier interrupt.
+                        if cleanup_interrupt is None:
+                            cleanup_interrupt = exc
+                if cleanup_interrupt is not None and active_exception is None:
+                    raise cleanup_interrupt
+        if failures:
+            status = EpisodeStatus.ENVIRONMENT_ERROR
+            reason = "; ".join((reason, *failures))
         counts = Counter(str(step.receipt.channel) for step in history)
-        result = EpisodeResult(environment.name, status, reason, tuple(history), started, ended, dict(counts))
-        runtime.trace.append("episode", result.to_dict())
-        for role, adapter in (
+        result = EpisodeResult(
+            environment.name, status, reason, tuple(history), started, time.time(), dict(counts),
+        )
+        if runtime is not None:
+            runtime.trace.append("episode", result.to_dict())
+        return result
+
+    def _run_steps(
+        self, environment: TaskEnvironment, runtime: AgentRuntime,
+        history: list[StepResult], deadline: float,
+    ) -> tuple[EpisodeStatus, str]:
+        fingerprints: list[str] = []
+        actions: list[str] = []
+        for _ in range(self.config.max_steps):
+            if time.monotonic() >= deadline:
+                return EpisodeStatus.TIMEOUT, "episode timeout"
+            observation = environment.observe(history)
+            if time.monotonic() >= deadline:
+                return EpisodeStatus.TIMEOUT, "episode timeout after observation"
+            observation = self._with_recent_actions(observation, history)
+            fingerprint = state_fingerprint(observation)
+            if self._is_stuck(fingerprints, actions):
+                return EpisodeStatus.STUCK, "state/action repetition limit reached"
+            candidates = tuple(environment.candidates(observation, history))
+            if time.monotonic() >= deadline:
+                return EpisodeStatus.TIMEOUT, "episode timeout after planning"
+            if not candidates:
+                return EpisodeStatus.TASK_FAILURE, "environment offered no legal actions"
+            result = runtime.step(observation, candidates, deadline=deadline)
+            history.append(result)
+            fingerprints.append(fingerprint)
+            actions.append(result.decision.candidate_id)
+            candidate = next(item for item in candidates if item.id == result.decision.candidate_id)
+            evaluation = environment.evaluate(observation, candidate, result.receipt, result.verification)
+            runtime.trace.append(
+                "evaluation",
+                {
+                    "success": evaluation.success,
+                    "terminal": evaluation.terminal,
+                    "reason": evaluation.reason,
+                    "details": evaluation.details,
+                },
+            )
+            # Executors have their own I/O limits; an in-flight action cannot be
+            # rolled back at the deadline. Keep its receipt, but report timeout.
+            if time.monotonic() >= deadline:
+                return EpisodeStatus.TIMEOUT, "episode timeout after action verification"
+            if evaluation.success:
+                return EpisodeStatus.SUCCESS, evaluation.reason
+            if evaluation.terminal:
+                return EpisodeStatus.TASK_FAILURE, evaluation.reason
+        return EpisodeStatus.MAX_STEPS, "maximum step budget exhausted"
+
+    @staticmethod
+    def _record_model_usage(environment: TaskEnvironment, runtime: AgentRuntime) -> None:
+        adapters = (
             ("planner", getattr(environment, "planner", None)),
             ("vision", getattr(environment, "vision_grounder", None)),
-        ):
+        )
+        model_adapters = getattr(environment, "model_adapters", None)
+        if model_adapters is not None:
+            adapters = model_adapters()
+        for role, adapter in adapters:
             usage = getattr(adapter, "usage_totals", None)
-            if isinstance(usage, dict) and usage:
+            requests = (getattr(adapter, "planning_requests", 0)
+                        + getattr(adapter, "vision_requests", 0))
+            if isinstance(usage, dict) and (usage or requests):
                 runtime.trace.append("model_usage", {
                     "role": role,
                     "model": str(getattr(adapter, "model", "unknown")),
                     "usage": {key: value for key, value in usage.items()
                               if isinstance(key, str) and type(value) is int and value >= 0},
+                    "requests": requests,
                 })
-        completion_hold = _completion_hold_seconds()
-        if completion_hold:
-            time.sleep(completion_hold)
-        close = getattr(runtime.policy, "close", None)
-        if close:
-            close()
-        close_environment = getattr(environment, "close", None)
-        if close_environment:
-            close_environment()
-        return result
 
     def _is_stuck(self, fingerprints: Sequence[str], actions: Sequence[str]) -> bool:
         state_stuck = (
@@ -218,6 +283,7 @@ def _completion_hold_seconds() -> float:
     """Keep visible apps alive briefly so demo recorders can capture terminal state."""
     raw = os.getenv("CUA_JEV_COMPLETION_HOLD_SECONDS", "0")
     try:
-        return min(max(float(raw), 0.0), 5.0)
+        value = float(raw)
+        return min(max(value, 0.0), 5.0) if math.isfinite(value) else 0.0
     except ValueError:
         return 0.0
