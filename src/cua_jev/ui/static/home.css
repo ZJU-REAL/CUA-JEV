@@ -14,7 +14,7 @@
   --pick-bg: #eef5fd;
   --pick-line: #b8d2f1;
   --ok: #1c7a46;
-  --max: 1160px;
+  --max: 1240px;
   --sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --win: "Segoe UI Variable Text", "Segoe UI", var(--sans);
   --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, Menlo, monospace;
@@ -69,8 +69,10 @@ h3 { margin: 0; font-weight: 600; }
 .cj-win-ctl i { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 34px; font-style: normal; font-size: 11px; color: #444; }
 
 /* ---------- hero ---------- */
-.cj-hero { padding-top: 64px; padding-bottom: 80px; }
-.cj-hero-copy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 24px 56px; align-items: end; }
+.cj-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 56px; align-items: center; padding-top: 64px; padding-bottom: 80px; }
+.cj-hero-copy { display: block; }
+.cj-hero-r { margin-top: 22px; }
+.cj-hero .cj-lead { font-size: 16px; }
 .cj-wordmark { margin: 0; line-height: 0; }
 .cj-wordmark img { display: block; width: min(100%, 360px); height: auto; }
 .cj-pitch { margin: 20px 0 0; font-size: clamp(23px, 2.4vw, 28px); line-height: 1.25; font-weight: 600; letter-spacing: -.015em; }
@@ -82,7 +84,7 @@ h3 { margin: 0; font-weight: 600; }
 .cj-btn-main:hover { background: #2d343d; }
 
 /* browser window (hero + figure share the chrome) */
-.cj-hero-fig { margin: 44px 0 0; min-width: 0; }
+.cj-hero-fig { margin: 0; min-width: 0; }
 .cj-browser { position: relative; border-radius: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 24px 56px rgba(20, 28, 40, .13); }
 .cj-ico { width: 15px; height: 15px; flex: none; color: #3d3d3d; }
 .cj-ico-off { color: #b5b5b5; }
@@ -107,12 +109,12 @@ h3 { margin: 0; font-weight: 600; }
 .cj-hero-fig.is-load .cj-br-load { opacity: 1; width: 100%; transition: width .8s ease-out; }
 .cj-hero-fig.is-nav .cj-br-load { opacity: 0; transition: opacity .3s; }
 /* the real "next" link in the capture: CSS x 1110–1137, y 24–37 of 1280 × 560 */
-.cj-br-uline { position: absolute; left: 86.7%; top: 6.85%; width: 2.15%; height: 1px; background: #1f1f1f; opacity: 0; }
+.cj-br-uline { position: absolute; left: 84.55%; top: 4.85%; width: 2.41%; height: 1px; background: #1f1f1f; opacity: 0; }
 .cj-hero-fig.is-hover:not(.is-nav) .cj-br-uline { opacity: 1; transition: opacity 0s .95s; }
 .cj-br-ptr { position: absolute; z-index: 2; left: 64%; top: 46%; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .3)); opacity: 0; transition: left 1s cubic-bezier(.4, .1, .2, 1), top 1s cubic-bezier(.4, .1, .2, 1), opacity .3s; }
 .cj-hero-fig.is-ptr .cj-br-ptr { opacity: 1; }
-.cj-hero-fig.is-hover .cj-br-ptr { left: 87.6%; top: 4.6%; }
-.cj-ripple { position: absolute; left: 87.75%; top: 5.4%; width: 0; height: 0; }
+.cj-hero-fig.is-hover .cj-br-ptr { left: 85.6%; top: 3.6%; }
+.cj-ripple { position: absolute; left: 85.75%; top: 4.1%; width: 0; height: 0; }
 .cj-ripple::before, .cj-ripple::after { content: ""; position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--blue); opacity: 0; }
 .cj-hero-fig.is-click .cj-ripple::before { animation: cj-ripple .8s ease-out both; }
 .cj-hero-fig.is-click .cj-ripple::after { animation: cj-ripple .8s ease-out .2s both; }
@@ -318,8 +320,10 @@ h3 { margin: 0; font-weight: 600; }
 .cj-foot-in small { flex-basis: 100%; font-size: 12.5px; }
 
 /* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .cj-hero { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+}
 @media (max-width: 1020px) {
-  .cj-hero-copy { grid-template-columns: minmax(0, 1fr); align-items: start; }
   .cj-pane { width: 250px; }
   .cj-idea { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .cj-case { grid-template-columns: minmax(0, 1fr); }
@@ -360,3 +364,4 @@ h3 { margin: 0; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+@media (min-width: 761px) { .cj-hero .cj-pane { width: 212px; } }
