@@ -193,7 +193,8 @@ def build(output: Path = ROOT / "dist-pages") -> None:
     shutil.copytree(SOURCE / "icons", target / "static" / "icons")
     for name in (
         "app.js", "style.css", "home.js", "home.css", "logo-mark.svg", "open-task-loop.svg", "title.svg",
-        "hero-intro.jpg", "hero-controlflow.jpg", "fig-index.jpg", "fig-chapter3.jpg", "fig-stdlib.jpg", "fig-editor.jpg",
+        "hero-intro.jpg", "hero-controlflow.jpg",
+        "fig-index.jpg", "fig-chapter3.jpg", "fig-stdlib.jpg", "fig-editor.jpg",
     ):
         shutil.copy2(SOURCE / name, target / "static" / name)
     html = (SOURCE / "index.html").read_text(encoding="utf-8")
