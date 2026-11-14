@@ -1,6 +1,21 @@
-# <img src="src/cua_jev/ui/static/logo-mark.svg" width="44" alt="ZJU-REAL Lab logo"> CUA-JEV: Jev for Computer Use
+<div align="center">
+
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/title-dark.svg">
+    <img src="assets/title.svg" alt="CUA-JEV" width="320">
+  </picture>
+</h1>
+
+### Jev for Computer Use
 
 [Webpage](https://zjureal.com/CUA-JEV/) · [Watch demos](https://zjureal.com/CUA-JEV/#windows-cases) · [中文文档](README.zh-CN.md)
+
+</div>
+
+<p align="center">
+  <img src="assets/hero.jpg" alt="CUA-JEV: a robot at a computer picks one of five routes — GUI, DOM, CLI, MCP or File — for its next step, and a second robot verifies the result before the loop repeats" width="100%">
+</p>
 
 CUA-JEV is an open-source reference framework for Jev-powered computer use. A task adapter turns structured state from the browser, desktop UI, office applications, terminal, or filesystem into **legal, executable, verifiable** action candidates. [Jev](https://docs.typesafe.ai/introduction) selects a **concrete action and its execution route**; the framework guards and executes that choice, verifies the resulting state, and observes again. The project includes four earlier task-specific workflows and four newer recorded model + Jev Windows case studies, without training a task-specific router.
 

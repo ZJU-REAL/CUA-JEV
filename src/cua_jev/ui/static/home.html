@@ -3,56 +3,224 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="CUA-JEV combines model planning, guarded action candidates, and Jev decisions for verifiable computer-use workflows. Explore real Windows recordings and their traces.">
-  <title>CUA-JEV · Model planning, Jev decisions, real computer use</title>
-  <link rel="stylesheet" href="static/home.css">
+  <meta name="description" content="CUA-JEV: a text model proposes grounded actions, task adapters turn them into legal intent × channel candidates, and Jev picks the concrete action and its execution route. Real Windows recordings with full decision traces.">
+  <title>CUA-JEV · Jev for computer use</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="static/home.css?v=20261114n">
 </head>
-<body>
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="masthead">
-    <a class="brand" href="#top" aria-label="CUA-JEV home"><img src="static/logo-mark.svg" alt="REAL Lab" width="40" height="40"><strong>CUA-JEV</strong></a>
-    <nav aria-label="Main navigation"><a href="#approach">Approach</a><a href="#windows-cases">Windows cases</a><a href="early-work.html">Early work</a></nav>
-    <a class="source-link" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">Source code <span aria-hidden="true">↗</span></a>
+<body class="cj-body">
+  <a class="cj-skip" href="#main">Skip to content</a>
+
+  <header class="cj-nav">
+    <div class="cj-nav-in">
+      <a class="cj-brand" href="#top" aria-label="CUA-JEV home"><img src="static/title.svg?v=20261114n" alt="CUA-JEV" width="127" height="26"></a>
+      <nav class="cj-nav-links" aria-label="Sections">
+        <a href="#idea">Idea</a><a href="#how">How it works</a><a href="#windows-cases">Recordings</a><a href="#quick-start">Quick start</a>
+      </nav>
+      <a class="cj-nav-gh" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+    </div>
   </header>
 
   <main id="main">
-    <section class="hero" id="top">
-      <div class="hero-copy">
-        <p class="eyebrow">REAL LAB · OPEN RESEARCH FRAMEWORK</p>
-        <h1>One computer-use loop.<br><em>Many ways to act.</em></h1>
-        <p class="lead">A text model interprets the live task and proposes grounded actions. The framework turns them into legal GUI and tool candidates. <strong>Jev chooses the next concrete action</strong>; guards and verifiers close the loop.</p>
-        <div class="hero-actions"><a class="button primary" href="#windows-cases">Explore the recordings <span aria-hidden="true">↗</span></a><a class="button secondary" href="#approach">How it works</a></div>
-        <p class="scope-line">Windows implementation · recorded case studies, not a claim of arbitrary-task reliability</p>
+    <!-- ============ HERO ============ -->
+    <section class="cj-hero" id="top">
+      <div class="cj-hero-copy">
+        <div class="cj-hero-l">
+          <h1 class="cj-wordmark"><img src="static/title.svg?v=20261114n" alt="CUA-JEV" width="360" height="74"><span class="cj-sr">: Jev for computer use</span></h1>
+          <p class="cj-pitch">One computer-use loop.<br>Many ways to act.</p>
+        </div>
+        <div class="cj-hero-r">
+          <p class="cj-lead">A text model proposes grounded actions; adapters expand them into legal GUI, DOM, UIA, COM, CLI, MCP and file-API candidates. <strong>Jev picks the action and its route</strong>, then a guard and an independent verifier close the loop.</p>
+          <div class="cj-actions">
+            <a class="cj-btn cj-btn-main" href="#windows-cases">Watch recordings</a>
+            <a class="cj-btn" href="#how">How it works</a>
+            <a class="cj-btn" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">Code <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
       </div>
-      <aside class="hero-diagram" aria-label="Model and Jev decision flow">
-        <div class="diagram-head"><span>CUA-JEV RUNTIME</span><b>Observe → choose → verify</b></div>
-        <div class="diagram-stage"><span class="stage-num">01</span><div><b>Live context</b><small>DOM · accessibility · files · optional VLM</small></div></div>
-        <div class="diagram-stage"><span class="stage-num">02</span><div><b>Model proposes</b><small>Subgoal and grounded action options</small></div></div>
-        <div class="diagram-core"><span class="stage-num">03</span><div><b>Jev selects</b><small>One intent × execution route</small></div><span class="core-pulse" aria-hidden="true"></span></div>
-        <div class="diagram-stage"><span class="stage-num">04</span><div><b>Execute &amp; verify</b><small>Scoped tool call, independent result check</small></div></div>
-        <div class="diagram-channels" aria-label="Supported action channels"><span>GUI</span><span>DOM</span><span>UIA</span><span>CLI</span><span>MCP</span><span>API</span></div>
-      </aside>
+
+      <figure class="cj-hero-fig" id="cj-hero-fig">
+        <div class="cj-browser cj-win" role="img" aria-label="A browser on the Python tutorial chapter 3 with a CUA-JEV side pane. The model's subgoal is to continue to the next chapter; Jev chooses a DOM click on the 'next' link over a GUI click and an MCP read; the guard passes, the pointer clicks 'next', chapter 4 loads, and the verifier passes.">
+          <div class="cj-br-tabs">
+            <span class="cj-br-tab"><svg class="cj-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 1.5V5H13" fill="none" stroke="currentColor" stroke-width="1.1"/></svg><span class="cj-br-tab-t" data-hk="title">3. An Informal Introduction to Python</span><span class="cj-br-x" aria-hidden="true">✕</span></span>
+            <span class="cj-br-new" aria-hidden="true">+</span>
+            <span class="cj-win-ctl" aria-hidden="true"><i>─</i><i>▢</i><i>✕</i></span>
+          </div>
+          <div class="cj-br-tool">
+            <svg class="cj-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3.5M7.5 4 3.5 8l4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            <svg class="cj-ico cj-ico-off" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            <svg class="cj-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.6 9.2A4.8 4.8 0 1 1 11.3 4.4" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M12 1.8v3.4H8.6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            <span class="cj-br-addr"><svg class="cj-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.1"/></svg><span data-hk="url">https://docs.python.org/3/tutorial/introduction.html</span></span>
+            <svg class="cj-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.1" fill="currentColor"/><circle cx="8" cy="8" r="1.1" fill="currentColor"/><circle cx="12.5" cy="8" r="1.1" fill="currentColor"/></svg>
+          </div>
+          <div class="cj-br-body">
+            <div class="cj-br-view">
+              <span class="cj-br-load" aria-hidden="true"></span>
+              <img class="cj-br-page" src="static/hero-intro.jpg?v=20261114n" alt="" width="820" height="359">
+              <img class="cj-br-page cj-br-page-b" src="static/hero-controlflow.jpg?v=20261114n" alt="" width="820" height="359">
+              <span class="cj-br-uline" aria-hidden="true"></span>
+              <span class="cj-ripple" aria-hidden="true"></span>
+              <svg class="cj-br-ptr" viewBox="0 0 16 22" width="15" height="21" aria-hidden="true"><path d="M1.5 1.5v16l4.1-3.7 2.8 6.3 2.6-1.2-2.8-6.1 5.6-.4z" fill="#fff" stroke="#111" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            </div>
+            <aside class="cj-pane" aria-hidden="true">
+              <div class="cj-pane-head"><span class="cj-insp-dot"></span>CUA-JEV<span class="cj-insp-step">step 3 / 19</span></div>
+              <div class="cj-pane-in">
+                <p class="cj-insp-goal" data-hs="0"><span class="cj-insp-k">Subgoal</span>Continue to the next chapter</p>
+                <ul class="cj-insp-cands">
+                  <li class="is-pick" data-hs="1" style="--i:0"><span class="cj-ch" data-ch="script">DOM</span><span class="cj-insp-c">Click “next”</span><span class="cj-insp-s" data-hs="3">chosen</span></li>
+                  <li data-hs="1" style="--i:1"><span class="cj-ch" data-ch="gui">GUI</span><span class="cj-insp-c">Click “next” (PyAutoGUI)</span></li>
+                  <li data-hs="1" style="--i:2"><span class="cj-ch" data-ch="mcp">MCP</span><span class="cj-insp-c">Read this page</span></li>
+                </ul>
+                <p class="cj-insp-jev" data-hs="2"><span class="cj-insp-pulse"></span><b>Jev</b>&nbsp;choice<span class="cj-insp-arrow" data-hs="3">DOM click</span></p>
+              </div>
+              <div class="cj-insp-foot"><span data-hs="4"><b>✓</b> Guard</span><span data-hs="8"><b>✓</b> Verify · chapter 4 loaded</span></div>
+            </aside>
+          </div>
+        </div>
+      </figure>
     </section>
 
-    <section class="intro-band" id="approach">
-      <div><p class="eyebrow">THE IDEA</p><h2>Generalize the decision loop.<br>Keep execution grounded.</h2></div>
-      <div class="intro-copy"><p>The model handles interpretation and candidate generation. Jev compares those candidates, including alternative routes for the same intent. The runtime constrains scope, executes the selected route, then checks the changed application state.</p><p>Structured observations are the reliable path today. Screenshot/VLM grounding is available experimentally, but visual-click success across varied applications has not yet been established.</p></div>
+    <!-- ============ IDEA ============ -->
+    <section class="cj-sec" id="idea">
+      <div class="cj-idea">
+        <div class="cj-idea-copy">
+          <h2>Same intent, several routes.</h2>
+          <p>Opening a page, writing a file or running a check can go through the mouse and keyboard, or through DOM, UI Automation, COM, CLI, MCP or a file API.</p>
+          <p>CUA-JEV turns this into <strong>constrained action selection</strong>: adapters offer only routes that are legal right now, and <a href="https://docs.typesafe.ai/introduction" target="_blank" rel="noreferrer">Jev</a>'s typed <code>choice</code> API picks one. Guards and verifiers stay in deterministic code.</p>
+        </div>
+        <div class="cj-matrix-card">
+          <p class="cj-card-title">Routes offered by each task path</p>
+          <div class="cj-matrix-scroll">
+            <table class="cj-matrix">
+              <thead><tr><th scope="col">Task path</th><th scope="col"><span class="cj-ch" data-ch="gui">GUI</span></th><th scope="col"><span class="cj-ch" data-ch="script">DOM</span></th><th scope="col"><span class="cj-ch" data-ch="uia">UIA</span></th><th scope="col"><span class="cj-ch" data-ch="com">COM</span></th><th scope="col"><span class="cj-ch" data-ch="cli">CLI</span></th><th scope="col"><span class="cj-ch" data-ch="mcp">MCP</span></th><th scope="col"><span class="cj-ch" data-ch="api">File API</span></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Edge · demo-store checkout</th><td>●</td><td>●</td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><th scope="row">Excel · metrics &amp; charts</th><td>●</td><td></td><td></td><td>●</td><td></td><td></td><td></td></tr>
+                <tr><th scope="row">VS Code · repair failing tests</th><td>●</td><td></td><td></td><td></td><td>●</td><td>●</td><td>●</td></tr>
+                <tr><th scope="row">Explorer · release artifacts</th><td>●</td><td></td><td></td><td></td><td>●</td><td>●</td><td>●</td></tr>
+                <tr><th scope="row">One Windows app window</th><td>●</td><td></td><td>●</td><td></td><td></td><td></td><td></td></tr>
+                <tr class="cj-matrix-new"><th scope="row">Recorded model + Jev cases</th><td>○</td><td>●</td><td></td><td></td><td>●</td><td>●</td><td>●</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="cj-card-foot">● offered · ○ offered, never chosen in the recordings</p>
+        </div>
+      </div>
     </section>
 
-    <section class="case-section" id="windows-cases">
-      <div class="section-heading"><div><p class="eyebrow">WINDOWS · RECORDED WORKFLOWS</p><h2>Watch the decisions unfold.</h2></div><p>Each case below is backed by a successful local episode, its Jev trace, and a window-only recording. Counts describe that run, not an average or a benchmark.</p></div>
-      <div id="case-status" class="case-status" role="status">Loading verified cases…</div>
-      <div id="windows-grid" class="windows-grid" aria-live="polite"></div>
-      <details class="case-method"><summary>Recording and metrics notes</summary><p>Action mix counts committed actions by execution channel. “Jev calls” counts policy decisions; “model calls” counts planner requests, with VLM calls shown separately. Recordings show only task windows; local path bars may be covered and a brief editor launch may be cut. Wall time comes from the raw run, not edited video length. One run per case does not establish a success rate or cost advantage.</p></details>
+    <!-- ============ METHOD FIGURE ============ -->
+    <section class="cj-sec" id="how">
+      <div class="cj-head">
+        <h2>Observe, propose, choose, guard, run, verify, repeat.</h2>
+        <p>Five real steps from the Python guide run.</p>
+      </div>
+
+      <div class="cj-fig" id="cj-fig">
+        <div class="cj-fig-top">
+          <button class="cj-fig-play" type="button" aria-pressed="true" aria-label="Pause animation"><span class="cj-fig-play-i" aria-hidden="true"></span></button>
+          <div class="cj-fig-tabs" role="tablist" aria-label="Recorded steps"></div>
+        </div>
+        <ol class="cj-fig-rail" aria-hidden="true">
+          <li>Observe</li><li>Propose</li><li>Expand</li><li>Jev picks</li><li>Guard</li><li>Execute</li><li>Verify</li><li>Trace</li>
+        </ol>
+        <div class="cj-sc" aria-hidden="true">
+          <div class="cj-sc-win cj-sc-br cj-win" data-w="br">
+            <div class="cj-br-tabs">
+              <span class="cj-br-tab"><svg class="cj-ico" viewBox="0 0 16 16"><path d="M4 1.5h5.5L13 5v9.5H4z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 1.5V5H13" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span class="cj-br-tab-t" data-k="title"></span><span class="cj-br-x">✕</span></span>
+              <span class="cj-br-new">+</span>
+              <span class="cj-win-ctl"><i>─</i><i>▢</i><i>✕</i></span>
+            </div>
+            <div class="cj-br-tool">
+              <svg class="cj-ico" viewBox="0 0 16 16"><path d="M13 8H3.5M7.5 4 3.5 8l4 4" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+              <svg class="cj-ico" viewBox="0 0 16 16"><path d="M12.6 9.2A4.8 4.8 0 1 1 11.3 4.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 1.8v3.4H8.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+              <span class="cj-br-addr"><svg class="cj-ico" viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7" fill="none" stroke="currentColor" stroke-width="1.2"/></svg><span data-k="url"></span></span>
+            </div>
+            <div class="cj-sc-view" data-host="view">
+              <img class="cj-sc-img" data-k="imgA" src="static/fig-index.jpg?v=20261114n" alt="" width="700" height="339">
+              <img class="cj-sc-img cj-sc-img-b" data-k="imgB" src="static/fig-chapter3.jpg?v=20261114n" alt="" width="700" height="339">
+              <div class="cj-sc-sheet" data-k="sheet">
+                <p class="cj-sc-sheet-h"><i class="cj-glyph">M</i>MCP reader · read_page</p>
+                <p class="cj-sc-sheet-u">docs.python.org/3/tutorial/introduction.html</p>
+                <p class="cj-sc-sheet-l" style="--i:0">“3. An Informal Introduction to Python”</p>
+                <p class="cj-sc-sheet-l" style="--i:1">In the following examples, input and output are distinguished by the presence or absence of prompts…</p>
+                <p class="cj-sc-sheet-l" style="--i:2">evidence record → state</p>
+              </div>
+            </div>
+          </div>
+          <div class="cj-sc-win cj-sc-doc cj-win" data-w="doc">
+            <div class="cj-win-bar"><span class="cj-win-app"><i class="cj-glyph">F</i>python-automation-guide.md</span><span class="cj-win-ctl"><i>─</i><i>▢</i><i>✕</i></span></div>
+            <div class="cj-sc-doc-body" data-host="doc"><ol class="cj-sc-doc-lines" data-k="doc"></ol></div>
+          </div>
+          <div class="cj-sc-win cj-sc-term cj-win" data-w="term">
+            <div class="cj-win-bar"><span class="cj-win-app"><i class="cj-glyph">&gt;_</i>Terminal</span><span class="cj-win-ctl"><i>─</i><i>▢</i><i>✕</i></span></div>
+            <pre class="cj-sc-term-body" data-host="term" data-k="term"></pre>
+          </div>
+          <div class="cj-sc-win cj-sc-ed cj-win" data-w="ed">
+            <div class="cj-win-bar"><span class="cj-win-app"><i class="cj-glyph">{}</i>python-automation-guide.md · Editor</span><span class="cj-win-ctl"><i>─</i><i>▢</i><i>✕</i></span></div>
+            <img src="static/fig-editor.jpg?v=20261114n" alt="" width="700" height="283">
+          </div>
+          <div class="cj-sc-bub" data-k="bubble"><span class="cj-sc-bub-who">Model</span><span class="cj-sc-bub-t" data-k="goal"></span></div>
+          <div class="cj-sc-over" data-k="over"></div>
+        </div>
+        <ol class="cj-sc-trace" data-k="trace" aria-label="Trace lines"></ol>
+      </div>
     </section>
 
-    <section class="limits-section" id="limits">
-      <div><p class="eyebrow">RESEARCH STATUS</p><h2>What the evidence does—and does not—show.</h2></div>
-      <div class="limit-grid"><article><span>01 / Proven locally</span><h3>End-to-end Windows cases</h3><p>Real model planning, Jev decisions, guarded execution, and task-level verification in recorded workflows.</p></article><article><span>02 / Still experimental</span><h3>Visual grounding</h3><p>VLM-derived targets are supported, but visual route reliability and benefit need broader live testing.</p></article><article><span>03 / Next</span><h3>Broader generality</h3><p>More unfamiliar tasks, applications, repeat trials, and macOS work after the Windows study.</p></article></div>
-      <a class="archive-link" href="early-work.html">See the earlier task-specific experiments <span aria-hidden="true">↗</span></a>
+    <!-- ============ RECORDINGS ============ -->
+    <section class="cj-sec" id="windows-cases">
+      <div class="cj-head">
+        <h2>Four research-to-editor tasks, every step chosen by Jev.</h2>
+        <p>Each run starts from a live documentation site, with no chapter URLs or click sequence written in advance.</p>
+      </div>
+      <div class="cj-cases-status" id="cj-cases-status" role="status">Loading recorded cases…</div>
+      <div class="cj-cases" id="cj-cases" aria-live="polite"></div>
+      <p class="cj-onenote">Single recorded runs; candidate lists in the figures are illustrative.</p>
+    </section>
+
+    <!-- ============ QUICK START ============ -->
+    <section class="cj-sec" id="quick-start">
+      <div class="cj-head">
+        <h2>Run it on Windows with Python 3.11+.</h2>
+      </div>
+      <div class="cj-qs">
+        <article class="cj-qs-card">
+          <h3><span class="cj-qs-n">1</span>Install and try the keyless Rule baseline</h3>
+          <div class="cj-code"><button class="cj-copy" type="button">Copy</button><pre><code>py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev,all,ui]"
+playwright install chromium
+cua-jev doctor
+cua-jev demo --policy rule
+cua-jev suite --task vscode --policy rule --profile adaptive --open-vscode</code></pre></div>
+        </article>
+        <article class="cj-qs-card">
+          <h3><span class="cj-qs-n">2</span>Switch the policy to Jev</h3>
+          <div class="cj-code"><button class="cj-copy" type="button">Copy</button><pre><code>Copy-Item .env.example .env
+# Set TYPESAFE_API_KEY=... in .env (never commit it)
+cua-jev jev-smoke
+cua-jev suite --task vscode --policy jev --profile adaptive --open-vscode</code></pre></div>
+          <p><code>--task edge|excel|vscode|explorer|all</code> picks a workflow; <code>--profile adaptive</code> is Hybrid, <code>--profile visible</code> is GUI Only.</p>
+        </article>
+        <article class="cj-qs-card">
+          <h3><span class="cj-qs-n">3</span>Open the local read-only showcase</h3>
+          <div class="cj-code"><button class="cj-copy" type="button">Copy</button><pre><code>cua-jev-ui
+# http://127.0.0.1:8768</code></pre></div>
+          <p>Open-task commands (<code>open-browser</code>, <code>open-desktop</code>, <code>open-workspace</code>, <code>open-computer</code>) are experimental; see the <a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/docs/OPEN_TASKS.md" target="_blank" rel="noreferrer">open-task notes</a>.</p>
+        </article>
+      </div>
     </section>
   </main>
-  <footer><span>CUA-JEV · REAL Lab</span><a href="https://github.com/ZJU-REAL/CUA-JEV">GitHub</a><a href="early-work.html">Early work</a></footer>
-  <script src="static/home.js" defer></script>
+
+  <footer class="cj-foot">
+    <div class="cj-foot-in">
+      <img src="static/title.svg?v=20261114n" alt="CUA-JEV" width="88" height="18">
+      <span>REAL Lab, Zhejiang University</span>
+      <a href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">GitHub</a>
+      <small>Jev is a TypeSafe AI model, used through its public API.</small>
+    </div>
+  </footer>
+  <script src="static/home.js?v=20261114n" defer></script>
 </body>
 </html>

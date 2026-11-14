@@ -191,7 +191,10 @@ def build(output: Path = ROOT / "dist-pages") -> None:
         shutil.rmtree(target)
     target.mkdir(parents=True)
     shutil.copytree(SOURCE / "icons", target / "static" / "icons")
-    for name in ("app.js", "style.css", "home.js", "home.css", "logo-mark.svg", "open-task-loop.svg"):
+    for name in (
+        "app.js", "style.css", "home.js", "home.css", "logo-mark.svg", "open-task-loop.svg", "title.svg",
+        "hero-intro.jpg", "hero-controlflow.jpg", "fig-index.jpg", "fig-chapter3.jpg", "fig-stdlib.jpg", "fig-editor.jpg",
+    ):
         shutil.copy2(SOURCE / name, target / "static" / name)
     html = (SOURCE / "index.html").read_text(encoding="utf-8")
     marker = '<html lang="en">'
@@ -225,6 +228,9 @@ def build(output: Path = ROOT / "dist-pages") -> None:
     for item in windows_cases:
         media_path = item["video"]
         shutil.copy2(WEBSITE / media_path, target / media_path)
+        poster = (WEBSITE / media_path).with_suffix(".jpg")
+        if poster.is_file():
+            shutil.copy2(poster, (target / media_path).with_suffix(".jpg"))
     _write_json(
         target / "data" / "bootstrap.json",
         {"tasks": snapshot["tasks"], "demos": demos, "captured_on": snapshot["captured_on"]},

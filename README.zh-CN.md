@@ -1,6 +1,21 @@
-# <img src="src/cua_jev/ui/static/logo-mark.svg" width="44" alt="ZJU-REAL Lab logo"> CUA-JEV: Jev for Computer Use
+<div align="center">
+
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/title-dark.svg">
+    <img src="assets/title.svg" alt="CUA-JEV" width="320">
+  </picture>
+</h1>
+
+### Jev for Computer Use
 
 [项目网页](https://zjureal.com/CUA-JEV/) · [观看 Demo](https://zjureal.com/CUA-JEV/#windows-cases) · [English README](README.md)
+
+</div>
+
+<p align="center">
+  <img src="assets/hero.jpg" alt="CUA-JEV：机器人在电脑前为下一步从 GUI、DOM、CLI、MCP、File 五条执行路线中选择一条，另一个机器人验证结果后进入下一轮" width="100%">
+</p>
 
 CUA-JEV 是一个面向 Computer-Use Agent（CUA）的开源参考框架。它把浏览器、桌面 UI、办公软件、终端和文件系统的结构化状态，转换为一组**当前合法、可执行、可验证**的候选动作；[Jev](https://docs.typesafe.ai/introduction) 从中选择**具体动作及其执行路线**，框架再负责安全检查、实际执行、结果验证和下一轮观察。项目不训练专用路由模型，现包含早期四个任务专属工作流和新增的四个“模型 + Jev”长任务录制案例。
 
