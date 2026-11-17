@@ -12,6 +12,9 @@ dist-pages/
 .env
 .env.*
 !.env.example
+/private/
+HANDOFF_PRIVATE_*.md
+*.private.json
 runs/
 .runs/
 artifacts/

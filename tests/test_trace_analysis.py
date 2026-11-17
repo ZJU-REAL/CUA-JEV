@@ -46,3 +46,15 @@ def test_trace_analysis_rejects_empty_or_invalid_files(tmp_path):
     path.write_text("not-json\n", encoding="utf-8")
     with pytest.raises(ValueError, match="invalid JSONL"):
         analyze_traces([path])
+
+
+def test_provider_input_output_usage_is_counted_once_without_inventing_total(tmp_path):
+    path = tmp_path / "usage.jsonl"
+    trace = JsonlTrace(path)
+    trace.append("policy_exchange", {"usage": {"input_tokens": 500, "output_tokens": 9}})
+    trace.append("policy_exchange", {"usage": {
+        "input_tokens": 100, "prompt_tokens": 100, "output_tokens": 4, "completion_tokens": 4,
+    }})
+    assert analyze_traces([path])["reported_model_tokens"] == {
+        "jev": {"prompt_tokens": 600, "completion_tokens": 13},
+    }

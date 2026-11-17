@@ -1,0 +1,17 @@
+{
+  "source": "runs/v17-frozen/src/cua_jev/agent_planner.py",
+  "source_sha256": "d2d1d69481e672a0aa3982ccd66939900b07f634828b34182cf88236116aa411",
+  "encoding": "utf-8",
+  "cases": [
+    {
+      "has_controls": false,
+      "characters": 17578,
+      "sha256": "ccdb95142a182906a9dc10ef9543800cf3a558954bf5fd6bc03846a1a6784aa8"
+    },
+    {
+      "has_controls": true,
+      "characters": 17276,
+      "sha256": "e08fb93edeb9aec84e37bc078e3f12a9a3206b09ab916244bdc2b50c26e28e8e"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {"task": "os/f9be0997-4b7c-45c5-b05c-4612b44a6118", "label": "Enable Do Not Disturb"},
+  {"task": "os/e0df059f-28a6-4169-924f-b9623e7184cc", "label": "Rename todo_list_Jan_1 to todo_list_Jan_2"},
+  {"task": "vs_code/57242fad-77ca-454f-b71b-f187181a9f23", "label": "Create test.py on Desktop"},
+  {"task": "vs_code/276cc624-87ea-4f08-ab93-f770e3790175", "label": "Set code wrapping line length to 50"},
+  {"task": "gimp/7767eef2-56a3-4cea-8c9f-48c070c7d65b", "label": "Change dark theme to light"},
+  {"task": "gimp/7b7617bd-57cc-468e-9c91-40c4ec2bcb3d", "label": "Set minimum undo steps to 100"},
+  {"task": "thunderbird/7b1e1ff9-bb85-49be-b01d-d6424be18cd0", "label": "Open in-app profile management"},
+  {"task": "thunderbird/a10b69e1-6034-4a2b-93e1-571d45194f75", "label": "Create COMPANY and UNIVERSITY folders"}
+]

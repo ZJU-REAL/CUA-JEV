@@ -1,0 +1,9 @@
+{
+  "source": "runs/reach_edit_compact_prompt_v18.py",
+  "source_sha256": "9bd2c5e623ef0b4e24c0fe00bfb745c9c161b11dd17002824c29c2587faa7b2c",
+  "prompt_sha256": {
+    "2": "6cc81c3e00ef64bb961617c072054e0bcfecd154e5eeb6a9ef4a87c60cf936c0",
+    "6": "915e24ea2883319342c099a41621dd284953581366633d31967930970d70696e",
+    "12": "b3a134077df551399d06061bd0c4eed69be818be0b5381bd2d0b1e3b8edccbd3"
+  }
+}

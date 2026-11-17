@@ -1,0 +1,22 @@
+{
+  "description": "Recorded Light table-cell and its actual ancestor chain only. Tests add synthetic short read-only sibling labels to reproduce 261/270 controls and capacity boundaries. No task/evaluator content or screenshot is included.",
+  "sources": [
+    {
+      "path": "runs/osworld-fixed8-v11-docker/gimp-7767eef2-56a3-4cea-8c9f-48c070c7d65b/vlm/step-006-a11y.xml",
+      "sha256": "933c2f043546e77e88be75cd3aec8cd823dfd1b6460fe7796a6ef1821013cafe",
+      "observed_full_control_count": 261
+    },
+    {
+      "path": "runs/osworld-fixed8-v11-docker/gimp-7767eef2-56a3-4cea-8c9f-48c070c7d65b/vlm/step-005-a11y.xml",
+      "sha256": "17af810cb522ebf7e08f3711347818b1008f249619bf924c0771e2d91fdacdeb",
+      "observed_full_control_count": 270
+    }
+  ],
+  "screen_size": [
+    1920,
+    1080
+  ],
+  "base_control_count": 4,
+  "xml": "<desktop-frame xmlns:ns0=\"https://accessibility.ubuntu.example.org/ns/state\" xmlns:ns1=\"https://accessibility.ubuntu.example.org/ns/component\" xmlns:ns2=\"https://accessibility.ubuntu.example.org/ns/action\"><application name=\"gimp\"><dialog name=\"Preferences\" ns0:active=\"true\" ns0:enabled=\"true\" ns0:resizable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 431)\" ns1:size=\"(813, 466)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 468)\" ns1:size=\"(813, 429)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 468)\" ns1:size=\"(813, 372)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 480)\" ns1:size=\"(545, 348)\"><page-tab-list name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(545, 303)\" selection=\"true\"><page-tab name=\"\" ns0:enabled=\"true\" ns0:focused=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(0, 0)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(545, 303)\"><scroll-pane name=\"\" ns0:enabled=\"true\" ns0:focusable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(545, 303)\"><viewport name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(545, 303)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(545, 303)\"><panel name=\"Select Theme\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(326, 525)\" ns1:size=\"(545, 303)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(338, 544)\" ns1:size=\"(533, 284)\"><scroll-pane name=\"\" ns0:enabled=\"true\" ns0:focusable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(338, 544)\" ns1:size=\"(533, 245)\"><table name=\"\" ns0:enabled=\"true\" ns0:focusable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns0:manages_descendants=\"true\" ns1:screencoord=\"(339, 545)\" ns1:size=\"(531, 243)\" selection=\"true\"><table-cell name=\"Light\" ns0:enabled=\"true\" ns0:focusable=\"true\" ns0:selectable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:single_line=\"true\" ns0:transient=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(342, 617)\" ns1:size=\"(61, 23)\" ns2:activate_desc=\"activate the cell\" ns2:activate_kb=\"\">Light</table-cell></table></scroll-pane></filler></panel></filler></viewport></scroll-pane></filler></page-tab></page-tab-list></filler></filler></filler></dialog></application></desktop-frame>",
+  "xml_sha256": "66a58395fb8bb56cc655f430b346d27068a9a1a123be1d13cba05cad9cf07293"
+}

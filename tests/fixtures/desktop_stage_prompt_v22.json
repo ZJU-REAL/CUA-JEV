@@ -1,0 +1,20 @@
+{
+  "version": "v22_anonymous_current_field_and_final_commit",
+  "source_experiment_sha256": "f1f25ae61d6a444947ae786165988f40332bbbf63816a27444d979cfaf16a77b",
+  "preserved_base_fixture": "desktop_stage_prompt_v18.json",
+  "changes": [
+    {
+      "from": "Choose the FINAL EDIT for this stage before choosing how to reach it. ",
+      "to": "Choose the next required STATE CHANGE for this stage. Use A only for a reliably named editable field or checkable setting. If a currently observed field is anonymous, use B with its observed role and context; do not invent a name to fit A. If the requested field value is already present but Save/Apply/Confirm remains, use B for that guarded final commit, without another reach_edit or fill. A changes a value/state and never includes a separate final commit. A field's value or an item's filename is not its accessible name. A nearby static label is not an editable target unless controls actually associate that label with an executable field. "
+    },
+    {
+      "from": "commit. fill/check/uncheck use ordinary named target queries and verify real effects. ",
+      "to": "commit. Ordinary fill/check/uncheck target queries require name OR role, with observed app/window/ancestor context as needed; name is not mandatory in B. For a CURRENT anonymous textbox, omit name and use its observed role plus enough context to identify one operation-capable control, for example {\"role\":\"textbox\",\"app\":\"Editor\",\"window\":\"Properties\"}. Never choose the first of multiple matches, use its current value as name, or invent a label. Verify fill with value_equals on the SAME query. If using an anonymous query, guard the edit with its actually observed focused state or current value_equals state, so ambiguous matches cannot silently select another field. If the current stage needs a commit, B may contain fill followed by the observed final button: depends_on refers to fill; the commit preconditions recheck the desired field value/state NOW; the commit postconditions describe its effect, not the already-filled value. Stop the stage after the commit. If the desired value already holds, omit fill and return only this guarded commit. Its postconditions must not already hold. If no supported effect can be specified, do not fabricate one. Do not label a commit as navigation or force it into reach_edit. These examples describe query structure only; use names and contexts from the actual observation. "
+    }
+  ],
+  "prompt_sha256": {
+    "2": "9d5a994c1c607471595bcf2ec28f544e33c046c3f678d16d3887276c2f99cdc6",
+    "6": "252897b60f9e832a5e49acd94286b69754ac44a224e2162a05868b3848dc93b0",
+    "12": "585ae1c6102ccaa9730b7eca97468fcbd6e7f71f870906abec465df1960592e0"
+  }
+}

@@ -34,7 +34,7 @@ def test_registered_cli_does_not_use_shell(monkeypatch):
     receipt = RegisteredCliExecutor()(candidate, "obs", "decision")
     assert receipt.success
     assert seen["kwargs"]["shell"] is False
-    assert seen["argv"] == ["python", "--version"]
+    assert seen["argv"] == [sys.executable, "--version"]
 
 
 def test_powershell_version_is_a_fixed_readonly_command(monkeypatch):

@@ -1,0 +1,1768 @@
+{
+  "kind": "minimized_real_native_menu_and_ocr",
+  "source_task": "gimp/7767eef2-56a3-4cea-8c9f-48c070c7d65b",
+  "limitations": [
+    "Unrelated XML siblings removed; original selected node attributes and text retained.",
+    "Two screenshots are unchanged original VM artifacts. OCR words are real captured native results, not fresh recognition in tests."
+  ],
+  "frames": {
+    "initial": {
+      "xml": "<desktop-frame xmlns:ns0=\"https://accessibility.ubuntu.example.org/ns/state\" xmlns:ns1=\"https://accessibility.ubuntu.example.org/ns/component\" xmlns:ns2=\"https://accessibility.ubuntu.example.org/ns/action\"><application name=\"gimp\"><frame name=\"GNU Image Manipulation Program\" ns0:active=\"true\" ns0:enabled=\"true\" ns0:resizable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 27)\" ns1:size=\"(1850, 1053)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 64)\" ns1:size=\"(1850, 1016)\"><menu-bar name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 64)\" ns1:size=\"(1850, 25)\" selection=\"true\"><menu name=\"Edit\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(106, 64)\" ns1:size=\"(39, 25)\" selection=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"&lt;Alt&gt;e;&lt;Alt&gt;e;\">Edit<tearoff-menu-item name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Undo\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"u;&lt;Alt&gt;e:u;&lt;Primary&gt;z\">Undo</menu-item><menu-item name=\"Redo\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"r;&lt;Alt&gt;e:r;&lt;Primary&gt;y\">Redo</menu-item><menu-item name=\"Undo History\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"h;&lt;Alt&gt;e:h;\">Undo History</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Cut\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"t;&lt;Alt&gt;e:t;&lt;Primary&gt;x\">Cut</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Copy\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"c;&lt;Alt&gt;e:c;&lt;Primary&gt;c\">Copy</menu-item><menu-item name=\"Copy Visible\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"v;&lt;Alt&gt;e:v;&lt;Primary&gt;&lt;Shift&gt;c\">Copy Visible</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Paste\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:p;&lt;Primary&gt;v\">Paste</menu-item><menu-item name=\"Paste In Place\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"l;&lt;Alt&gt;e:l;&lt;Primary&gt;&lt;Alt&gt;v\">Paste In Place</menu-item><menu-item name=\"Paste Into Selection\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"i;&lt;Alt&gt;e:i;\">Paste Into Selection</menu-item><menu-item name=\"Paste Into Selection In Place\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"o;&lt;Alt&gt;e:o;\">Paste Into Selection In Place</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu name=\"Paste as\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" selection=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"a;&lt;Alt&gt;e:a;\">Paste as<tearoff-menu-item name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"New Layer\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"l;&lt;Alt&gt;e:a:l;\">New Layer</menu-item><menu-item name=\"New Layer In Place\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:a:p;\">New Layer In Place</menu-item><menu-item name=\"New Image\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"n;&lt;Alt&gt;e:a:n;&lt;Primary&gt;&lt;Shift&gt;v\">New Image</menu-item><menu-item name=\"New Brush...\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"b;&lt;Alt&gt;e:a:b;\">New Brush...</menu-item><menu-item name=\"New Pattern...\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:a:p;\">New Pattern...</menu-item><menu-item name=\"Empty\" ns2:click_desc=\"\" ns2:click_kb=\"\">Empty</menu-item></menu><menu name=\"Buffer\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" selection=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"b;&lt;Alt&gt;e:b;\">Buffer<tearoff-menu-item name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Cut Named...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"t;&lt;Alt&gt;e:b:t;\">Cut Named...</menu-item><menu-item name=\"Copy Named...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"c;&lt;Alt&gt;e:b:c;\">Copy Named...</menu-item><menu-item name=\"Copy Visible Named...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"v;&lt;Alt&gt;e:b:v;\">Copy Visible Named...</menu-item><menu-item name=\"Paste Named...\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:b:p;\">Paste Named...</menu-item><menu-item name=\"Empty\" ns2:click_desc=\"\" ns2:click_kb=\"\">Empty</menu-item></menu><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Clear\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"e;&lt;Alt&gt;e:e;Delete\">Clear</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Fill with FG Color\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"f;&lt;Alt&gt;e:f;&lt;Primary&gt;comma\">Fill with FG Color</menu-item><menu-item name=\"Fill with BG Color\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"g;&lt;Alt&gt;e:g;&lt;Primary&gt;period\">Fill with BG Color</menu-item><menu-item name=\"Fill with Pattern\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"w;&lt;Alt&gt;e:w;&lt;Primary&gt;semicolon\">Fill with Pattern</menu-item><menu-item name=\"Fill Selection Outline...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"f;&lt;Alt&gt;e:f;\">Fill Selection Outline...</menu-item><menu-item name=\"Fill Path...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"h;&lt;Alt&gt;e:h;\">Fill Path...</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Stroke Selection...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"s;&lt;Alt&gt;e:s;\">Stroke Selection...</menu-item><menu-item name=\"Stroke Path...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"k;&lt;Alt&gt;e:k;\">Stroke Path...</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Preferences\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:p;\">Preferences</menu-item><menu-item name=\"Input Devices\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"i;&lt;Alt&gt;e:i;\">Input Devices</menu-item><menu-item name=\"Keyboard Shortcuts\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"k;&lt;Alt&gt;e:k;\">Keyboard Shortcuts</menu-item><menu-item name=\"Modules\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"m;&lt;Alt&gt;e:m;\">Modules</menu-item><menu-item name=\"Units\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"n;&lt;Alt&gt;e:n;\">Units</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Empty\" ns2:click_desc=\"\" ns2:click_kb=\"\">Empty</menu-item></menu></menu-bar></filler></frame></application></desktop-frame>",
+      "source_xml_sha256": "77530e65c035825bec54d28c8b61a2cca92cd432f5beb50b3e8a07852ada1e77",
+      "image": "osworld_menu_text_v28_initial.png",
+      "image_sha256": "57725061079e7a251ec86b604be129e229fdba550b6573a7195833f21ccdb8da"
+    },
+    "step-001": {
+      "xml": "<desktop-frame xmlns:ns0=\"https://accessibility.ubuntu.example.org/ns/state\" xmlns:ns1=\"https://accessibility.ubuntu.example.org/ns/component\" xmlns:ns2=\"https://accessibility.ubuntu.example.org/ns/action\"><application name=\"gimp\"><frame name=\"GNU Image Manipulation Program\" ns0:active=\"true\" ns0:enabled=\"true\" ns0:resizable=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 27)\" ns1:size=\"(1850, 1053)\"><filler name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:vertical=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 64)\" ns1:size=\"(1850, 1016)\"><menu-bar name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(70, 64)\" ns1:size=\"(1850, 25)\" selection=\"true\"><menu name=\"Edit\" ns0:enabled=\"true\" ns0:focused=\"true\" ns0:sensitive=\"true\" ns0:showing=\"true\" ns0:visible=\"true\" ns1:screencoord=\"(106, 64)\" ns1:size=\"(39, 25)\" selection=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"&lt;Alt&gt;e;&lt;Alt&gt;e;\">Edit<tearoff-menu-item name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Undo\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"u;&lt;Alt&gt;e:u;&lt;Primary&gt;z\">Undo</menu-item><menu-item name=\"Redo\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"r;&lt;Alt&gt;e:r;&lt;Primary&gt;y\">Redo</menu-item><menu-item name=\"Undo History\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"h;&lt;Alt&gt;e:h;\">Undo History</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Cut\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"t;&lt;Alt&gt;e:t;&lt;Primary&gt;x\">Cut</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Copy\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"c;&lt;Alt&gt;e:c;&lt;Primary&gt;c\">Copy</menu-item><menu-item name=\"Copy Visible\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"v;&lt;Alt&gt;e:v;&lt;Primary&gt;&lt;Shift&gt;c\">Copy Visible</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Paste\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:p;&lt;Primary&gt;v\">Paste</menu-item><menu-item name=\"Paste In Place\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"l;&lt;Alt&gt;e:l;&lt;Primary&gt;&lt;Alt&gt;v\">Paste In Place</menu-item><menu-item name=\"Paste Into Selection\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"i;&lt;Alt&gt;e:i;\">Paste Into Selection</menu-item><menu-item name=\"Paste Into Selection In Place\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"o;&lt;Alt&gt;e:o;\">Paste Into Selection In Place</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu name=\"Paste as\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" selection=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"a;&lt;Alt&gt;e:a;\">Paste as<tearoff-menu-item name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"New Layer\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"l;&lt;Alt&gt;e:a:l;\">New Layer</menu-item><menu-item name=\"New Layer In Place\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:a:p;\">New Layer In Place</menu-item><menu-item name=\"New Image\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"n;&lt;Alt&gt;e:a:n;&lt;Primary&gt;&lt;Shift&gt;v\">New Image</menu-item><menu-item name=\"New Brush...\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"b;&lt;Alt&gt;e:a:b;\">New Brush...</menu-item><menu-item name=\"New Pattern...\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:a:p;\">New Pattern...</menu-item><menu-item name=\"Empty\" ns2:click_desc=\"\" ns2:click_kb=\"\">Empty</menu-item></menu><menu name=\"Buffer\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" selection=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"b;&lt;Alt&gt;e:b;\">Buffer<tearoff-menu-item name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Cut Named...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"t;&lt;Alt&gt;e:b:t;\">Cut Named...</menu-item><menu-item name=\"Copy Named...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"c;&lt;Alt&gt;e:b:c;\">Copy Named...</menu-item><menu-item name=\"Copy Visible Named...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"v;&lt;Alt&gt;e:b:v;\">Copy Visible Named...</menu-item><menu-item name=\"Paste Named...\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:b:p;\">Paste Named...</menu-item><menu-item name=\"Empty\" ns2:click_desc=\"\" ns2:click_kb=\"\">Empty</menu-item></menu><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Clear\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"e;&lt;Alt&gt;e:e;Delete\">Clear</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Fill with FG Color\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"f;&lt;Alt&gt;e:f;&lt;Primary&gt;comma\">Fill with FG Color</menu-item><menu-item name=\"Fill with BG Color\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"g;&lt;Alt&gt;e:g;&lt;Primary&gt;period\">Fill with BG Color</menu-item><menu-item name=\"Fill with Pattern\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"w;&lt;Alt&gt;e:w;&lt;Primary&gt;semicolon\">Fill with Pattern</menu-item><menu-item name=\"Fill Selection Outline...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"f;&lt;Alt&gt;e:f;\">Fill Selection Outline...</menu-item><menu-item name=\"Fill Path...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"h;&lt;Alt&gt;e:h;\">Fill Path...</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Stroke Selection...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"s;&lt;Alt&gt;e:s;\">Stroke Selection...</menu-item><menu-item name=\"Stroke Path...\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"k;&lt;Alt&gt;e:k;\">Stroke Path...</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Preferences\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"p;&lt;Alt&gt;e:p;\">Preferences</menu-item><menu-item name=\"Input Devices\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"i;&lt;Alt&gt;e:i;\">Input Devices</menu-item><menu-item name=\"Keyboard Shortcuts\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"k;&lt;Alt&gt;e:k;\">Keyboard Shortcuts</menu-item><menu-item name=\"Modules\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"m;&lt;Alt&gt;e:m;\">Modules</menu-item><menu-item name=\"Units\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns0:visible=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"n;&lt;Alt&gt;e:n;\">Units</menu-item><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><separator name=\"\" ns0:enabled=\"true\" ns0:sensitive=\"true\" ns2:click_desc=\"\" ns2:click_kb=\"\" /><menu-item name=\"Empty\" ns2:click_desc=\"\" ns2:click_kb=\"\">Empty</menu-item></menu></menu-bar></filler></frame></application></desktop-frame>",
+      "source_xml_sha256": "54b38519f89ed3b5b95988c1f7d42f5ae3c85a59c2b94f203a75d1570610bd29",
+      "image": "osworld_menu_text_v28_post.png",
+      "image_sha256": "a2bc21a0bfc6ed9efce808d1b5e359b0292fd2314de9229eabf495d1ce91278f"
+    }
+  },
+  "ocr": {
+    "source_image_sha256": "a2bc21a0bfc6ed9efce808d1b5e359b0292fd2314de9229eabf495d1ce91278f",
+    "size": [
+      1920,
+      1080
+    ],
+    "lines": [
+      [
+        {
+          "text": "Activi",
+          "box": [
+            18.0,
+            8.0,
+            55.0,
+            19.5
+          ]
+        },
+        {
+          "text": "ti",
+          "box": [
+            56.5,
+            8.0,
+            65.0,
+            19.5
+          ]
+        },
+        {
+          "text": "es",
+          "box": [
+            66.5,
+            10.5,
+            80.5,
+            19.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "\uff0c@",
+          "box": [
+            117.5,
+            7.0,
+            132.5,
+            18.0
+          ]
+        },
+        {
+          "text": "GNU",
+          "box": [
+            139.5,
+            8.5,
+            169.5,
+            19.5
+          ]
+        },
+        {
+          "text": "lmage",
+          "box": [
+            174.0,
+            9.0,
+            214.0,
+            22.0
+          ]
+        },
+        {
+          "text": "Manipulation",
+          "box": [
+            217.5,
+            7.0,
+            306.0,
+            22.0
+          ]
+        },
+        {
+          "text": "P",
+          "box": [
+            310.0,
+            8.5,
+            318.0,
+            19.0
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            319.0,
+            10.5,
+            324.0,
+            19.0
+          ]
+        },
+        {
+          "text": "og",
+          "box": [
+            324.5,
+            10.5,
+            341.0,
+            22.0
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            342.0,
+            10.5,
+            347.0,
+            19.0
+          ]
+        },
+        {
+          "text": "am",
+          "box": [
+            347.5,
+            10.5,
+            367.0,
+            19.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "File'",
+          "box": [
+            76.5,
+            70.0,
+            105.5,
+            86.0
+          ]
+        },
+        {
+          "text": "E",
+          "box": [
+            113.0,
+            71.5,
+            120.0,
+            82.5
+          ]
+        },
+        {
+          "text": "\u2022t",
+          "box": [
+            129.5,
+            71.0,
+            139.0,
+            82.0
+          ]
+        },
+        {
+          "text": "\u300a",
+          "box": [
+            145.5,
+            70.0,
+            146.0,
+            86.0
+          ]
+        },
+        {
+          "text": "SeIect",
+          "box": [
+            151.5,
+            70.0,
+            192.0,
+            82.5
+          ]
+        },
+        {
+          "text": "View",
+          "box": [
+            204.0,
+            71.0,
+            237.5,
+            82.5
+          ]
+        },
+        {
+          "text": "lmage",
+          "box": [
+            249.5,
+            72.0,
+            290.0,
+            85.5
+          ]
+        },
+        {
+          "text": "Layer",
+          "box": [
+            302.5,
+            71.5,
+            338.0,
+            85.5
+          ]
+        },
+        {
+          "text": "CO",
+          "box": [
+            350.5,
+            71.5,
+            367.5,
+            82.5
+          ]
+        },
+        {
+          "text": "[",
+          "box": [
+            369.0,
+            70.0,
+            372.0,
+            82.0
+          ]
+        },
+        {
+          "text": "0",
+          "box": [
+            372.5,
+            73.5,
+            380.5,
+            82.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            382.0,
+            73.5,
+            387.0,
+            82.0
+          ]
+        },
+        {
+          "text": "s",
+          "box": [
+            387.5,
+            73.5,
+            393.5,
+            82.5
+          ]
+        },
+        {
+          "text": "TOOls",
+          "box": [
+            406.0,
+            70.0,
+            441.5,
+            82.5
+          ]
+        },
+        {
+          "text": "Fi",
+          "box": [
+            455.0,
+            71.0,
+            465.0,
+            82.5
+          ]
+        },
+        {
+          "text": "lte",
+          "box": [
+            466.5,
+            70.0,
+            484.0,
+            82.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            485.0,
+            73.5,
+            490.0,
+            82.0
+          ]
+        },
+        {
+          "text": "s",
+          "box": [
+            490.5,
+            73.5,
+            496.5,
+            82.5
+          ]
+        },
+        {
+          "text": "Windows",
+          "box": [
+            509.0,
+            70.0,
+            569.5,
+            82.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Oct",
+          "box": [
+            952.5,
+            7.5,
+            976.0,
+            18.5
+          ]
+        },
+        {
+          "text": "2E",
+          "box": [
+            979.5,
+            7.5,
+            992.0,
+            18.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "GNU",
+          "box": [
+            874.5,
+            41.0,
+            905.0,
+            51.0
+          ]
+        },
+        {
+          "text": "lmage",
+          "box": [
+            910.0,
+            41.0,
+            952.0,
+            54.0
+          ]
+        },
+        {
+          "text": "Mani",
+          "box": [
+            957.5,
+            40.0,
+            990.5,
+            51.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Help",
+          "box": [
+            583.0,
+            70.0,
+            612.5,
+            85.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "0",
+          "box": [
+            95.0,
+            263.0,
+            105.0,
+            276.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Crop",
+          "box": [
+            76.0,
+            368.0,
+            103.0,
+            379.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "C",
+          "box": [
+            99.5,
+            386.5,
+            106.5,
+            396.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "\u56d7",
+          "box": [
+            112.5,
+            446.5,
+            129.5,
+            463.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "0",
+          "box": [
+            113.0,
+            473.0,
+            129.0,
+            489.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "0",
+          "box": [
+            114.0,
+            500.0,
+            129.0,
+            516.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Positi",
+          "box": [
+            76.5,
+            561.0,
+            105.5,
+            571.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "UndO",
+          "box": [
+            141.0,
+            97.0,
+            175.0,
+            109.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "RedO",
+          "box": [
+            141.0,
+            122.5,
+            174.0,
+            134.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "UndO",
+          "box": [
+            140.5,
+            147.0,
+            175.5,
+            159.5
+          ]
+        },
+        {
+          "text": "History",
+          "box": [
+            180.0,
+            148.0,
+            228.5,
+            162.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Cut",
+          "box": [
+            140.5,
+            186.5,
+            163.0,
+            197.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Copy",
+          "box": [
+            140.5,
+            212.0,
+            173.0,
+            225.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Copy",
+          "box": [
+            140.5,
+            237.0,
+            173.0,
+            250.0
+          ]
+        },
+        {
+          "text": "VisibIe",
+          "box": [
+            176.0,
+            235.0,
+            221.5,
+            247.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Pa",
+          "box": [
+            140.5,
+            261.5,
+            156.0,
+            272.5
+          ]
+        },
+        {
+          "text": "ste",
+          "box": [
+            157.5,
+            261.5,
+            178.0,
+            272.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Paste",
+          "box": [
+            141.0,
+            286.5,
+            177.5,
+            297.0
+          ]
+        },
+        {
+          "text": "ln",
+          "box": [
+            182.0,
+            287.0,
+            192.5,
+            297.0
+          ]
+        },
+        {
+          "text": "place",
+          "box": [
+            197.0,
+            285.0,
+            232.0,
+            297.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Paste",
+          "box": [
+            141.0,
+            311.5,
+            177.5,
+            322.0
+          ]
+        },
+        {
+          "text": "lntO",
+          "box": [
+            182.0,
+            311.5,
+            207.0,
+            322.0
+          ]
+        },
+        {
+          "text": "selection",
+          "box": [
+            211.5,
+            310.0,
+            272.5,
+            322.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Paste",
+          "box": [
+            141.0,
+            336.5,
+            177.5,
+            347.0
+          ]
+        },
+        {
+          "text": "lntO",
+          "box": [
+            182.0,
+            336.5,
+            207.0,
+            347.0
+          ]
+        },
+        {
+          "text": "selection",
+          "box": [
+            211.5,
+            335.0,
+            272.5,
+            347.0
+          ]
+        },
+        {
+          "text": "ln",
+          "box": [
+            277.0,
+            337.0,
+            287.5,
+            347.0
+          ]
+        },
+        {
+          "text": "place",
+          "box": [
+            292.0,
+            335.0,
+            326.5,
+            347.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Pa",
+          "box": [
+            140.5,
+            361.5,
+            156.0,
+            372.5
+          ]
+        },
+        {
+          "text": "ste",
+          "box": [
+            157.5,
+            361.5,
+            178.0,
+            372.5
+          ]
+        },
+        {
+          "text": "as",
+          "box": [
+            181.5,
+            363.5,
+            195.5,
+            372.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Buffer",
+          "box": [
+            141.0,
+            385.5,
+            182.0,
+            397.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "clear",
+          "box": [
+            140.5,
+            423.0,
+            174.5,
+            435.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            448.0,
+            160.0,
+            460.0
+          ]
+        },
+        {
+          "text": "with",
+          "box": [
+            163.0,
+            448.0,
+            191.5,
+            460.0
+          ]
+        },
+        {
+          "text": "FG",
+          "box": [
+            196.0,
+            450.0,
+            212.0,
+            460.0
+          ]
+        },
+        {
+          "text": "color",
+          "box": [
+            216.5,
+            448.0,
+            252.5,
+            460.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            474.0,
+            160.0,
+            486.0
+          ]
+        },
+        {
+          "text": "with",
+          "box": [
+            163.0,
+            474.5,
+            191.5,
+            486.0
+          ]
+        },
+        {
+          "text": "BG",
+          "box": [
+            196.0,
+            476.0,
+            213.0,
+            486.0
+          ]
+        },
+        {
+          "text": "color",
+          "box": [
+            217.5,
+            474.0,
+            253.5,
+            486.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            501.0,
+            160.0,
+            513.0
+          ]
+        },
+        {
+          "text": "with",
+          "box": [
+            163.0,
+            501.0,
+            191.5,
+            513.0
+          ]
+        },
+        {
+          "text": "Pattern",
+          "box": [
+            196.0,
+            502.5,
+            245.5,
+            513.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            528.0,
+            160.0,
+            540.0
+          ]
+        },
+        {
+          "text": "selection",
+          "box": [
+            163.5,
+            528.0,
+            224.5,
+            540.0
+          ]
+        },
+        {
+          "text": "Outline..",
+          "box": [
+            228.5,
+            528.0,
+            284.0,
+            540.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            553.0,
+            160.0,
+            565.0
+          ]
+        },
+        {
+          "text": "path...",
+          "box": [
+            164.0,
+            553.0,
+            205.0,
+            565.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Ctrl+Z",
+          "box": [
+            405.5,
+            97.0,
+            446.0,
+            109.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Ctrl+Y",
+          "box": [
+            404.5,
+            122.0,
+            445.5,
+            134.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Ctrl+X",
+          "box": [
+            404.5,
+            185.0,
+            446.0,
+            197.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Ctrl+C",
+          "box": [
+            404.5,
+            210.0,
+            446.0,
+            222.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Shift+Ctrl+C",
+          "box": [
+            364.5,
+            235.0,
+            446.0,
+            247.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Ct",
+          "box": [
+            403.5,
+            261.5,
+            418.0,
+            272.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            419.0,
+            263.5,
+            424.0,
+            272.0
+          ]
+        },
+        {
+          "text": "I+V",
+          "box": [
+            424.5,
+            260.0,
+            446.0,
+            272.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Ctrl+Alt+V",
+          "box": [
+            375.5,
+            285.0,
+            445.5,
+            297.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Delete",
+          "box": [
+            403.0,
+            423.0,
+            445.5,
+            435.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "ctrl+,",
+          "box": [
+            409.5,
+            448.0,
+            445.0,
+            462.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "ctrl+.",
+          "box": [
+            409.5,
+            474.0,
+            445.0,
+            486.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "ctrl+;",
+          "box": [
+            409.5,
+            501.0,
+            445.0,
+            515.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Oct",
+          "box": [
+            952.5,
+            7.5,
+            976.0,
+            18.5
+          ]
+        },
+        {
+          "text": "25",
+          "box": [
+            979.5,
+            7.5,
+            994.5,
+            18.5
+          ]
+        },
+        {
+          "text": "01",
+          "box": [
+            1002.5,
+            7.5,
+            1016.0,
+            18.5
+          ]
+        },
+        {
+          "text": "\uff1a",
+          "box": [
+            1018.5,
+            9.0,
+            1021.0,
+            17.0
+          ]
+        },
+        {
+          "text": "19",
+          "box": [
+            1023.0,
+            7.5,
+            1038.0,
+            18.5
+          ]
+        },
+        {
+          "text": "n",
+          "box": [
+            1056.5,
+            5.0,
+            1069.5,
+            18.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "age",
+          "box": [
+            928.0,
+            43.0,
+            952.0,
+            54.0
+          ]
+        },
+        {
+          "text": "ManipuIation",
+          "box": [
+            957.5,
+            39.0,
+            1050.0,
+            54.0
+          ]
+        },
+        {
+          "text": "Program",
+          "box": [
+            1056.0,
+            41.0,
+            1114.0,
+            54.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "2",
+          "box": [
+            1727.0,
+            157.5,
+            1733.5,
+            167.0
+          ]
+        },
+        {
+          "text": "\uff0e",
+          "box": [
+            1733.5,
+            165.0,
+            1736.0,
+            167.0
+          ]
+        },
+        {
+          "text": "Hardness",
+          "box": [
+            1740.0,
+            156.5,
+            1789.0,
+            167.0
+          ]
+        },
+        {
+          "text": "\u00d7",
+          "box": [
+            1837.5,
+            160.5,
+            1843.5,
+            166.0
+          ]
+        },
+        {
+          "text": "SI",
+          "box": [
+            1847.0,
+            157.5,
+            1860.0,
+            167.0
+          ]
+        },
+        {
+          "text": "\u4e3f",
+          "box": [
+            1859.5,
+            156.5,
+            1864.5,
+            169.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Basic,",
+          "box": [
+            1737.5,
+            341.5,
+            1767.5,
+            354.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Spacing",
+          "box": [
+            1728.0,
+            371.0,
+            1770.5,
+            383.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "10",
+          "box": [
+            1868.0,
+            371.5,
+            1880.5,
+            381.5
+          ]
+        },
+        {
+          "text": "\uff0e",
+          "box": [
+            1881.5,
+            379.0,
+            1883.5,
+            381.0
+          ]
+        },
+        {
+          "text": "0",
+          "box": [
+            1884.5,
+            371.5,
+            1891.0,
+            381.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "\u4e4b",
+          "box": [
+            1732.5,
+            399.0,
+            1748.5,
+            414.5
+          ]
+        },
+        {
+          "text": "C",
+          "box": [
+            1857.5,
+            399.0,
+            1872.0,
+            413.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Mode",
+          "box": [
+            1734.0,
+            475.0,
+            1764.0,
+            485.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Opacity",
+          "box": [
+            1728.0,
+            501.5,
+            1771.5,
+            514.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Loc",
+          "box": [
+            1726.5,
+            532.0,
+            1744.5,
+            541.0
+          ]
+        },
+        {
+          "text": "k:",
+          "box": [
+            1746.0,
+            530.5,
+            1753.5,
+            541.0
+          ]
+        },
+        {
+          "text": "/",
+          "box": [
+            1764.0,
+            530.0,
+            1779.0,
+            545.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "NO",
+          "box": [
+            1801.0,
+            476.0,
+            1815.5,
+            485.0
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            1817.0,
+            478.0,
+            1820.5,
+            485.0
+          ]
+        },
+        {
+          "text": "m",
+          "box": [
+            1822.0,
+            478.0,
+            1831.0,
+            485.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "100",
+          "box": [
+            1861.0,
+            503.0,
+            1880.5,
+            512.5
+          ]
+        },
+        {
+          "text": "\uff0e",
+          "box": [
+            1881.5,
+            510.0,
+            1883.5,
+            512.0
+          ]
+        },
+        {
+          "text": "0",
+          "box": [
+            1884.5,
+            502.5,
+            1891.0,
+            512.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "7",
+          "box": [
+            29.5,
+            732.0,
+            43.0,
+            751.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "0",
+          "box": [
+            32.5,
+            754.0,
+            37.5,
+            759.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Positi",
+          "box": [
+            76.5,
+            561.0,
+            105.5,
+            571.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "0",
+          "box": [
+            99.0,
+            593.5,
+            105.5,
+            603.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Size:",
+          "box": [
+            76.0,
+            628.0,
+            101.5,
+            638.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "0",
+          "box": [
+            99.0,
+            660.5,
+            105.5,
+            670.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "\u535c",
+          "box": [
+            99.5,
+            692.0,
+            106.5,
+            701.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Hi(",
+          "box": [
+            90.5,
+            715.0,
+            106.5,
+            725.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "NO",
+          "box": [
+            87.5,
+            747.0,
+            103.0,
+            756.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            528.0,
+            160.0,
+            540.0
+          ]
+        },
+        {
+          "text": "selection",
+          "box": [
+            163.5,
+            528.0,
+            224.5,
+            540.0
+          ]
+        },
+        {
+          "text": "Outline..",
+          "box": [
+            228.5,
+            528.0,
+            284.0,
+            540.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Fill",
+          "box": [
+            141.0,
+            553.0,
+            160.0,
+            565.0
+          ]
+        },
+        {
+          "text": "path...",
+          "box": [
+            164.0,
+            553.0,
+            205.0,
+            565.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "stroke",
+          "box": [
+            140.5,
+            578.0,
+            183.5,
+            590.0
+          ]
+        },
+        {
+          "text": "selection..",
+          "box": [
+            187.5,
+            578.0,
+            256.0,
+            590.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "stroke",
+          "box": [
+            140.5,
+            603.0,
+            183.5,
+            615.0
+          ]
+        },
+        {
+          "text": "path...",
+          "box": [
+            188.0,
+            603.0,
+            229.0,
+            615.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "P",
+          "box": [
+            141.0,
+            642.5,
+            149.0,
+            653.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            150.0,
+            644.5,
+            155.0,
+            653.0
+          ]
+        },
+        {
+          "text": "eferences",
+          "box": [
+            155.5,
+            641.5,
+            220.5,
+            653.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "lnput",
+          "box": [
+            140.5,
+            667.5,
+            175.0,
+            681.0
+          ]
+        },
+        {
+          "text": "Devi",
+          "box": [
+            179.0,
+            667.0,
+            206.0,
+            678.5
+          ]
+        },
+        {
+          "text": "ces",
+          "box": [
+            207.5,
+            669.5,
+            228.5,
+            678.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Keyboa",
+          "box": [
+            141.0,
+            691.0,
+            189.0,
+            706.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            190.5,
+            694.5,
+            196.0,
+            703.0
+          ]
+        },
+        {
+          "text": "d",
+          "box": [
+            196.5,
+            691.0,
+            204.0,
+            703.5
+          ]
+        },
+        {
+          "text": "ShO",
+          "box": [
+            208.5,
+            691.0,
+            232.5,
+            703.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            233.5,
+            694.5,
+            239.0,
+            703.0
+          ]
+        },
+        {
+          "text": "tcuts",
+          "box": [
+            239.5,
+            692.5,
+            272.5,
+            703.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Modules",
+          "box": [
+            140.5,
+            716.0,
+            197.5,
+            728.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Units",
+          "box": [
+            140.5,
+            741.5,
+            174.5,
+            753.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Auto",
+          "box": [
+            131.0,
+            781.0,
+            158.0,
+            790.5
+          ]
+        },
+        {
+          "text": "Sh",
+          "box": [
+            161.5,
+            779.5,
+            174.5,
+            790.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            175.5,
+            783.0,
+            180.0,
+            790.0
+          ]
+        },
+        {
+          "text": "ink",
+          "box": [
+            180.5,
+            779.5,
+            196.5,
+            790.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "Sh",
+          "box": [
+            99.5,
+            809.5,
+            112.5,
+            820.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            113.5,
+            812.5,
+            118.0,
+            820.0
+          ]
+        },
+        {
+          "text": "ink",
+          "box": [
+            118.5,
+            809.5,
+            134.5,
+            820.0
+          ]
+        },
+        {
+          "text": "me",
+          "box": [
+            137.5,
+            812.5,
+            154.5,
+            820.5
+          ]
+        },
+        {
+          "text": "\u300c",
+          "box": [
+            155.5,
+            812.5,
+            160.0,
+            820.0
+          ]
+        },
+        {
+          "text": "ged",
+          "box": [
+            160.5,
+            809.5,
+            180.5,
+            822.5
+          ]
+        }
+      ],
+      [
+        {
+          "text": "\u5584",
+          "box": [
+            93.0,
+            1053.5,
+            100.5,
+            1063.0
+          ]
+        }
+      ],
+      [
+        {
+          "text": "O",
+          "box": [
+            134.0,
+            1054.0,
+            148.5,
+            1068.5
+          ]
+        }
+      ]
+    ],
+    "source_report_sha256": "aa5ed5ab100007aa34d019cde0c92240e7f9af0ac28abd8d92eff72c92f126de"
+  }
+}
