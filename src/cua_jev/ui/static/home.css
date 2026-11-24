@@ -371,3 +371,7 @@ h3 { margin: 0; font-weight: 600; }
 .cj-bench-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cj-bench-table td em { margin-left: 4px; color: var(--muted); font-size: 12px; font-style: normal; }
 .cj-bench-ours th, .cj-bench-ours td { font-weight: 600; }
+.cj-bench-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; }
+.cj-bench-fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.cj-bench-fact b { display: block; margin-bottom: 4px; font-size: 24px; font-variant-numeric: tabular-nums; }
+.cj-bench-fact span { color: var(--muted); font-size: 14px; }

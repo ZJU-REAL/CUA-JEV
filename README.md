@@ -58,6 +58,17 @@ The `s1s2_jev` runner splits the agent in two. **System 2** (a VLM) plans a few 
 
 On OSWorld-MCP, Jev made 17 decisions per episode on average (tool shortlists and channel choices, on-screen grounding, effect and completion checks). The token saving comes mostly from System 2 seeing only a Jev-selected handful of the 131 MCP tools instead of the full catalogue. Each task ran once, so a gap of a few tasks is within run-to-run variation; Jev is stronger on Writer and multi-app tasks and weaker on GIMP and Calc. Setup, exclusions, per-application results and commands: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
+How the two agents used OSWorld-MCP's tools (279 tasks):
+
+| | VLM only | VLM + Jev |
+|---|---:|---:|
+| MCP tools shown to the VLM per decision | 131 | ~10 (Jev shortlist) |
+| Calls to application-specific tools (not the generic `os` shell/file tools) | 49% | **83%** |
+| Calls to the generic shell tool `os.open_shell` | 43% | **10%** |
+| Success in episodes that combined MCP and GUI actions | 17% (14/83) | **30%** (35/117) |
+
+With a Jev shortlist the VLM reaches for the dedicated Writer, Impress, VS Code and VLC tools instead of a shell, and when a task needs both a tool and the GUI, Jev's grounding and effect checks keep the mixed episodes on track.
+
 ## Quick start
 
 Windows, Python 3.11+. The keyless Rule baseline runs first:
