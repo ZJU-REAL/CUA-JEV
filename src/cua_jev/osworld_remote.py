@@ -166,10 +166,11 @@ class RemoteOSWorldEnv:
         ):
             raise ValueError("remote worker command must be a nonempty argument sequence")
         if any(
-            type(value) not in (int, float) or not math.isfinite(value) or not 0 < value <= 600
-            for value in (timeout_s, startup_timeout_s, close_timeout_s)
+            type(value) not in (int, float) or not math.isfinite(value) or not 0 < value <= limit
+            for value, limit in ((timeout_s, 600), (startup_timeout_s, 1800), (close_timeout_s, 600))
         ):
-            raise ValueError("remote worker timeouts must be finite and between zero and 600 seconds")
+            # A fresh guest plus original task setup can exceed 10 minutes on a loaded shared host.
+            raise ValueError("remote worker timeouts must be finite; startup <= 1800 s, others <= 600 s")
         self.timeout_s, self.close_timeout_s = timeout_s, close_timeout_s
         self.instruction = ""
         self.initial_observation: dict = {}
@@ -404,8 +405,8 @@ class RemoteOSWorldEnv:
             raise RemoteOSWorldError("remote worker returned an unexpected image-only step result")
         return observation, result["reward"], result["done"], result["info"]
 
-    def evaluate(self) -> float:
-        value = self._rpc("evaluate")
+    def evaluate(self, *, infeasible: bool = False) -> float:
+        value = self._rpc("evaluate", **({"infeasible": True} if infeasible else {}))
         if type(value) not in (float, int) or not math.isfinite(value) or not 0 <= value <= 1:
             raise RemoteOSWorldError("remote worker returned an invalid evaluation score")
         return float(value)

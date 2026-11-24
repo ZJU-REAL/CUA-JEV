@@ -33,7 +33,9 @@ from .trace import JsonlTrace
 from .trace_analysis import analyze_traces
 
 LEGACY_MODES = ("vlm", "plan_order", "hybrid")
-MODES = (*LEGACY_MODES, "adaptive_rule", "adaptive", "subgoal_rule", "subgoal_jev")
+S1S2_MODES = ("s1s2_rule", "s1s2_jev")
+MODES = (*LEGACY_MODES, "adaptive_rule", "adaptive", "subgoal_rule", "subgoal_jev", *S1S2_MODES)
+THINKING = {"default": None, "on": True, "off": False}
 PILOT_TASKS = (
     "click-button", "click-checkboxes", "click-checkboxes-large", "click-dialog",
     "click-option", "enter-text", "enter-text-2", "choose-list",
@@ -177,6 +179,8 @@ def run_episode(browser, task_type, task_name, seed, mode, base_url, args, direc
     exchanges = ModelExchangeBuffer() if getattr(args, "record_model_exchanges", False) else None
     subgoals = mode in {"subgoal_rule", "subgoal_jev"}
     structured = getattr(args, "structured_browser", False)
+    if mode in S1S2_MODES and not structured:
+        raise ValueError("s1s2 modes require structured_browser")
     if subgoals and not structured:
         raise ValueError("subgoal modes require structured_browser")
     adaptive = mode in {"adaptive", "adaptive_rule", "subgoal_rule", "subgoal_jev"}
@@ -203,8 +207,13 @@ def run_episode(browser, task_type, task_name, seed, mode, base_url, args, direc
         row["goal_sha256"] = hashlib.sha256(goal.encode()).hexdigest()
         (directory / "goal.txt").write_text(goal)
         page.screenshot(path=str(directory / "initial.png"))
+        if mode in S1S2_MODES:
+            return _run_s1s2(row, mode, backend, goal, evaluator, args, directory, trace_path, began, page,
+                             exchanges)
         planner = MultimodalPlanner(
             os.environ["CUA_JEV_MODEL_BASE_URL"], os.environ["CUA_JEV_VLM_MODEL"],
+            enable_thinking=THINKING[getattr(args, "enable_thinking", "default")],
+            thinking_budget=getattr(args, "thinking_budget", None),
             api_key=os.environ["CUA_JEV_MODEL_API_KEY"], allow_insecure_http=True,
             use_env_proxy=False, request_timeout_s=60,
             browser_edit_prefix=adaptive,
@@ -212,7 +221,7 @@ def run_episode(browser, task_type, task_name, seed, mode, base_url, args, direc
         )
         if exchanges:
             exchanges.attach(planner.client)
-        policy = (JevPolicy(retries=2) if uses_jev
+        policy = (JevPolicy(retries=2, model=getattr(args, "jev_model", None)) if uses_jev
                   else PlanOrderPolicy() if mode in {"plan_order", "adaptive_rule", "subgoal_rule"} else None)
         row["setup_wall_ms"] = (time.perf_counter() - began) * 1000
         runner = AgentRunner(
@@ -240,6 +249,9 @@ def run_episode(browser, task_type, task_name, seed, mode, base_url, args, direc
     except Exception as error:
         row["infrastructure_error_type"] = type(error).__name__
         # No exception text: transport errors may include service credentials.
+        if os.environ.get("CUA_JEV_DEBUG_TRACEBACK") == "1":  # local debugging only, never in reported runs
+            import traceback
+            row["debug_traceback"] = traceback.format_exc()[-2000:]
     finally:
         row["episode_wall_ms"] = (time.perf_counter() - began) * 1000
         cleanup_started = time.perf_counter()
@@ -278,6 +290,12 @@ def main(argv=None):
     parser.add_argument("--max-steps", type=int, default=15)
     parser.add_argument("--timeout", type=float, default=120)
     parser.add_argument("--record-model-exchanges", action="store_true")
+    parser.add_argument("--enable-thinking", choices=sorted(THINKING), default="default",
+                        help="provider enable_thinking for EVERY mode's VLM requests")
+    parser.add_argument("--thinking-budget", type=int, default=None,
+                        help="provider thinking_budget for EVERY mode (requires --enable-thinking on)")
+    parser.add_argument("--jev-model", default=None, help="Jev model for every Jev-using mode")
+    parser.add_argument("--s1-choice-gate", type=float, default=0.5)
     parser.add_argument("--extended-controls", action="store_true",
                         help="same bounded ARIA/script-styled control extraction for every comparison mode")
     parser.add_argument("--settle-transitions", action="store_true",
@@ -287,7 +305,7 @@ def main(argv=None):
         parser.error("positive budgets required")
     if any(len(v) != len(set(v)) for v in (args.tasks, args.seeds, args.modes)):
         parser.error("duplicate tasks, seeds or modes would invalidate matched blocks")
-    if any(m.startswith("subgoal_") for m in args.modes) and not args.structured_browser:
+    if any(m.startswith(("subgoal_", "s1s2_")) for m in args.modes) and not args.structured_browser:
         parser.error("subgoal modes require --structured-browser for all comparison modes")
     load_service_profile(args.service_profile)
     if args.jev_proxy_config:
@@ -316,7 +334,9 @@ def main(argv=None):
                               for mode in args.modes},
         "uncertainty_calibration": "disabled; no independently calibrated artifact yet",
         "order": list(schedule(args.tasks, args.seeds, args.modes)),
-        "model_thinking": "provider_default", "concurrency": 1,
+        "model_thinking": args.enable_thinking, "thinking_budget": args.thinking_budget,
+        "jev_model": args.jev_model or os.environ.get("CUA_JEV_MODEL"),
+        "s1_choice_gate": args.s1_choice_gate, "concurrency": 1,
         "raw_model_exchanges_recorded": args.record_model_exchanges,
         "jev_transport": "ssh_reverse_https_connect" if args.jev_proxy_config else "direct",
         "action_backend": "CUA-JEV Playwright DOM and pixel actions; no benchmark oracle access",
@@ -362,6 +382,48 @@ def main(argv=None):
     manifest["experiment_wall_ms"] = (time.perf_counter() - experiment_start) * 1000
     write_json(args.output / "manifest.json", manifest)
     return 0
+
+
+def _run_s1s2(row, mode, backend, goal, evaluator, args, directory, trace_path, began, page, exchanges):
+    """Figure-2 System1/System2 runner; same backend, evaluator, budgets and artifacts.
+
+    Resources it does not own (backend, task, context) are closed by run_episode's finally.
+    """
+    from .jev_decisions import JevDecisionClient
+    from .s1s2_planner import SubgoalPlanner
+    from .s1s2_runner import S1S2Config, S1S2Runner
+
+    planner = SubgoalPlanner(os.environ["CUA_JEV_MODEL_BASE_URL"], os.environ["CUA_JEV_VLM_MODEL"],
+                             api_key=os.environ["CUA_JEV_MODEL_API_KEY"], horizon=8,
+                             enable_thinking=THINKING[getattr(args, "enable_thinking", "default")],
+                             thinking_budget=getattr(args, "thinking_budget", None),
+                             request_timeout_s=60)
+    if exchanges:
+        exchanges.attach(planner.client)  # saved once by run_episode's finally
+    jev = JevDecisionClient(model=getattr(args, "jev_model", None)) if mode == "s1s2_jev" else None
+    try:
+        row["setup_wall_ms"] = (time.perf_counter() - began) * 1000
+        runner = S1S2Runner(backend, planner, jev, config=S1S2Config(
+            s1="jev" if mode == "s1s2_jev" else "rule", max_steps=args.max_steps,
+            timeout_s=args.timeout, choice_gate=getattr(args, "s1_choice_gate", 0.5)),
+            trace=JsonlTrace(trace_path))
+        result = runner.run(goal, evaluator.accept)
+        row.update(result)
+        row["official"] = evaluator.read()
+        row["benchmark_success"] = row["official"]["done"] and row["official"]["reward"] > 0
+        row["observation_metrics"] = dict(backend.observation_metrics)
+        row["evaluation_calls"] = evaluator.calls
+        row["evaluation_wall_ms"] = evaluator.wall_ms
+        page.screenshot(path=str(directory / "final.png"))
+    except Exception as error:
+        row["infrastructure_error_type"] = type(error).__name__
+    finally:
+        if jev is not None:
+            write_json(directory / "jev-exchanges.json", jev.exchanges)
+        for resource in (jev, planner):
+            if resource is not None:
+                resource.close()
+    return row
 
 
 if __name__ == "__main__":

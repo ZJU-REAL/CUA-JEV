@@ -365,3 +365,9 @@ h3 { margin: 0; font-weight: 600; }
   html { scroll-behavior: auto; }
 }
 @media (min-width: 761px) { .cj-hero .cj-pane { width: 212px; } }
+
+/* Benchmarks */
+.cj-bench { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+.cj-bench-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cj-bench-table td em { margin-left: 4px; color: var(--muted); font-size: 12px; font-style: normal; }
+.cj-bench-ours th, .cj-bench-ours td { font-weight: 600; }

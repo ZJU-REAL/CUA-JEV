@@ -22,7 +22,8 @@ from .policy import JevPolicy
 from .trace import JsonlTrace
 from .trace_analysis import analyze_traces
 
-MODES = ("vlm", "adaptive_rule", "adaptive", "subgoal_rule", "subgoal_jev")
+MODES = ("vlm", "adaptive_rule", "adaptive", "subgoal_rule", "subgoal_jev", "s1s2_rule", "s1s2_jev")
+S1S2_MODES = ("s1s2_rule", "s1s2_jev")
 _ANSWER_INSTRUCTION = (
     "\nWhen the task is finished, return done=true with steps=[]. If the user requested an answer, "
     "put the complete final user-facing answer in summary, without a completion preamble. "
@@ -95,10 +96,27 @@ def evaluate_final(task, page, final_answer):
             "evaluator_calls": 1}
 
 
+def _artifact_screenshot(page, directory, row):
+    """The final screenshot is a record only; its failure must not abort official evaluation."""
+    try:
+        page.screenshot(path=str(directory / "agent-final.png"), timeout=15000)
+    except Exception as error:
+        row["artifact_error_type"] = type(error).__name__
+
+
+def _trusted_evaluation_timeouts(page):
+    """The evaluator runs after the agent stopped; a loaded site gets 60 s per page operation."""
+    page.set_default_timeout(60000)
+    page.set_default_navigation_timeout(60000)
+    page.context.set_default_timeout(60000)
+    page.context.set_default_navigation_timeout(60000)
+
+
 def run_episode(browser, task_factory, *, task_id, seed, mode, reset, allowed_origins,
                 directory: Path, max_steps=30, timeout_s=300, planner_factory=None,
                 policy_factory=None, record_model_exchanges=True, setup_timeout_s=None,
-                structured_browser=False):
+                structured_browser=False, enable_thinking=None, thinking_budget=None, jev_model=None,
+                vlm_stale_replans=0):
     if mode not in MODES:
         raise ValueError("unsupported WebArena comparison mode")
     if setup_timeout_s is not None and (
@@ -114,8 +132,8 @@ def run_episode(browser, task_factory, *, task_id, seed, mode, reset, allowed_or
     trace_path = directory / "trace.jsonl"
     exchanges = ModelExchangeBuffer() if record_model_exchanges else None
     subgoals = mode in {"subgoal_rule", "subgoal_jev"}
-    if subgoals and not structured_browser:
-        raise ValueError("subgoal modes require structured_browser")
+    if (subgoals or mode in S1S2_MODES) and not structured_browser:
+        raise ValueError("subgoal and s1s2 modes require structured_browser")
     adaptive = mode in {"adaptive_rule", "adaptive", "subgoal_rule", "subgoal_jev"}
     phase = "reset"
     try:
@@ -167,17 +185,48 @@ def run_episode(browser, task_factory, *, task_id, seed, mode, reset, allowed_or
         phase = "initial_artifact"
         page.screenshot(path=str(directory / "initial.png"))
         phase = "agent_setup"
+        if mode in S1S2_MODES:
+            from .jev_decisions import JevDecisionClient
+            from .s1s2_planner import SubgoalPlanner
+            from .s1s2_runner import S1S2Config, S1S2Runner
+            planner = SubgoalPlanner(os.environ["CUA_JEV_MODEL_BASE_URL"], os.environ["CUA_JEV_VLM_MODEL"],
+                                     api_key=os.environ["CUA_JEV_MODEL_API_KEY"], horizon=8,
+                                     enable_thinking=enable_thinking, thinking_budget=thinking_budget,
+                                     request_timeout_s=60)
+            if exchanges:
+                exchanges.attach(planner.client)
+            policy = JevDecisionClient(model=jev_model) if mode == "s1s2_jev" else None
+            row["setup_wall_ms"] = (time.perf_counter() - began) * 1000
+            phase = "agent"
+            result = S1S2Runner(backend, planner, policy, trace=JsonlTrace(trace_path), config=S1S2Config(
+                s1="jev" if mode == "s1s2_jev" else "rule", max_steps=max_steps, timeout_s=timeout_s,
+                max_s2_calls=max_steps)).run(goal, None)
+            row.update(result)
+            phase = "result_recording"
+            row["observation_metrics"] = dict(backend.observation_metrics)
+            if policy is not None:
+                write_json(directory / "jev-exchanges.json", policy.exchanges)
+            phase = "final_artifact"
+            _artifact_screenshot(page, directory, row)
+            phase = "agent_detach"
+            backend.close()
+            phase = "final_evaluation"
+            _trusted_evaluation_timeouts(page)
+            row["official"] = evaluate_final(task, page, result["final_answer"])
+            row["benchmark_success"] = row["official"]["reward"] > 0
+            return row
         inner = (planner_factory(adaptive=adaptive) if planner_factory else MultimodalPlanner(
             os.environ["CUA_JEV_MODEL_BASE_URL"], os.environ["CUA_JEV_VLM_MODEL"],
             api_key=os.environ["CUA_JEV_MODEL_API_KEY"], allow_insecure_http=True,
             use_env_proxy=False, request_timeout_s=60, browser_edit_prefix=adaptive,
+            enable_thinking=enable_thinking, thinking_budget=thinking_budget,
             compact_browser_controls=structured_browser, browser_subgoals=subgoals,
         ))
         if exchanges and hasattr(inner, "client"):
             exchanges.attach(inner.client)
         planner = AnswerPlanner(inner)
         policy = (policy_factory(mode) if policy_factory else
-                  JevPolicy(retries=2) if mode in {"adaptive", "subgoal_jev"} else
+                  JevPolicy(retries=2, model=jev_model) if mode in {"adaptive", "subgoal_jev"} else
                   PlanOrderPolicy() if mode in {"adaptive_rule", "subgoal_rule"} else None)
         row["setup_wall_ms"] = (time.perf_counter() - began) * 1000
         phase = "agent"
@@ -186,7 +235,8 @@ def run_episode(browser, task_factory, *, task_id, seed, mode, reset, allowed_or
             config=AgentConfig(mode="vlm" if mode == "vlm" else "hybrid", allow_actions=True,
                                max_steps=max_steps, max_plans=max_steps + 5, timeout_s=timeout_s,
                                adaptive_dispatch=adaptive, reuse_verified_post_snapshot=adaptive,
-                               defer_immediate_plan_refresh=True),
+                               defer_immediate_plan_refresh=True,
+                               vlm_stale_replans=vlm_stale_replans if mode == "vlm" else 0),
         ).run(goal).to_dict()
         row.update(result)
         phase = "result_recording"
@@ -198,12 +248,13 @@ def run_episode(browser, task_factory, *, task_id, seed, mode, reset, allowed_or
         row["reported_tokens_by_role"] = analyze_traces([trace_path])["reported_model_tokens"]
         row["final_answer"] = planner.final_answer
         phase = "final_artifact"
-        page.screenshot(path=str(directory / "agent-final.png"))
+        _artifact_screenshot(page, directory, row)
         # Detach agent route guards before the trusted evaluator follows its
         # reference URLs. No model or agent action runs after this boundary.
         phase = "agent_detach"
         backend.close()
         phase = "final_evaluation"
+        _trusted_evaluation_timeouts(page)
         row["official"] = evaluate_final(task, page, planner.final_answer)
         row["benchmark_success"] = row["official"]["reward"] > 0
     except Exception as error:

@@ -345,7 +345,23 @@ class BrowserAgentBackend:
         began = time.perf_counter()
         self.observation_metrics["full" if include_image else "structured_only"] += 1
         try:
-            return self._capture_snapshot(include_image=include_image)
+            for attempt in range(3):
+                try:
+                    return self._capture_snapshot(include_image=include_image)
+                except Exception as error:
+                    # Only transient navigation races are retried (same for every mode); scope
+                    # violations and all other errors propagate unchanged.
+                    message = str(error).splitlines()[0] if str(error) else ""
+                    transient = ("Execution context was destroyed" in message
+                                 or "page changed while capturing observation" in message
+                                 or "navigating and changing the content" in message
+                                 # a loaded site can make one capture time out (same for every mode)
+                                 or (type(error).__name__ == "TimeoutError" and "exceeded" in message))
+                    if not transient or attempt == 2:
+                        raise
+                    self.observation_metrics["transient_retries"] = \
+                        self.observation_metrics.get("transient_retries", 0) + 1
+                    time.sleep(0.5)
         finally:
             self.observation_metrics["wall_ms"] += (time.perf_counter() - began) * 1000
 

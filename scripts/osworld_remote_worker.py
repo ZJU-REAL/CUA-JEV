@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from osworld_observation_profiler import timed_controller  # noqa: E402
 from run_osworld_smoke import (  # noqa: E402
+    VMStartupError,
     bounded_vm_http,
     evaluate_once,
     isolated_docker,
@@ -107,6 +108,87 @@ class ActionError(RuntimeError):
 
 class EvaluationError(RuntimeError):
     pass
+
+
+GUEST_PROXY_SCRIPT = r"""
+export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+gsettings set org.gnome.system.proxy mode 'manual'
+for scheme in http https; do
+  gsettings set org.gnome.system.proxy.$scheme host '10.0.2.100'
+  gsettings set org.gnome.system.proxy.$scheme port 7899
+done
+gsettings set org.gnome.system.proxy ignore-hosts "['localhost', '127.0.0.0/8', '::1']"
+gsettings get org.gnome.system.proxy mode
+"""
+
+
+def guest_setup_diagnostics(env):
+    """Read-only guest state after a failed original setup (processes, listening ports, proxy)."""
+    import requests
+    script = ("ps -eo pid,etimes,args | grep -E 'chrome|socat|soffice' | grep -v grep "
+              "| cut -c1-200 | head -20; "
+              "echo ---; (ss -ltn 2>/dev/null || netstat -ltn) | head -30; echo ---; "
+              "gsettings get org.gnome.system.proxy mode 2>/dev/null; uptime")
+    try:
+        response = requests.post(env.controller.http_server + "/setup/execute",
+                                 json={"command": ["bash", "-c", script], "shell": False}, timeout=60)
+        return {"status_code": response.status_code, "output": str(response.json().get("output", ""))[:6000]}
+    except Exception as error:
+        return {"error_type": type(error).__name__}
+
+
+def wait_for_guest_responsive(env, budget_s=180.0, probe_timeout_s=10.0):
+    """After original task setup, wait (bounded) until the guest answers a screenshot request
+    again. Heavy applications (e.g. GIMP cold start on a loaded host) can make it unresponsive
+    for longer than the readiness checks allow. Read-only; counted as setup time."""
+    import requests
+    started, probes = time.perf_counter(), 0
+    while time.perf_counter() - started < budget_s:
+        probes += 1
+        try:
+            response = requests.get(env.controller.http_server + "/screenshot", timeout=probe_timeout_s)
+            if response.status_code == 200 and response.content:
+                return {"responsive": True, "probes": probes,
+                        "wall_ms": (time.perf_counter() - started) * 1000}
+        except requests.RequestException:
+            pass
+        time.sleep(3)
+    return {"responsive": False, "probes": probes, "wall_ms": (time.perf_counter() - started) * 1000}
+
+
+def _jsonable(value):
+    try:
+        json.dumps(value)
+        return value
+    except (TypeError, ValueError):
+        return repr(value)[:2000]
+
+
+def fresh_complete_observation(env, attempts=6, pause_s=5.0):
+    """One original observation with screenshot and accessibility tree, bounded retries."""
+    for _ in range(attempts):
+        observation = env._get_obs()
+        if (isinstance(observation, dict) and observation.get("screenshot")
+                and observation.get("accessibility_tree")):
+            return observation
+        time.sleep(pause_s)
+    raise VMStartupError({"fresh_observation": {"status": "failed", "attempts": attempts}})
+
+
+def configure_guest_proxy(env):
+    """Point the guest desktop's system proxy at the single forwarded address (before task setup)."""
+    # The guest server's /run_bash_script endpoint is broken (undefined _append_event); use the
+    # same /setup/execute path that original task setup uses, then read the setting back.
+    import requests
+    response = requests.post(env.controller.http_server + "/setup/execute",
+                             json={"command": ["bash", "-c", GUEST_PROXY_SCRIPT], "shell": False}, timeout=60)
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    output = str(body.get("output", ""))
+    return {"configured": response.status_code == 200 and "manual" in output,
+            "status_code": response.status_code, "returncode": body.get("returncode")}
 
 
 def seed_asset_cache(task, asset_cache, output, *, owner_uid):
@@ -391,7 +473,8 @@ class WorkerSession:
         if not isinstance(request, dict) or type(request.get("id")) is not int:
             raise ProtocolError("integer request id required")
         method = request.get("method")
-        expected = {"id", "method", "action", "pause"} if method == "step" else {"id", "method"}
+        expected = ({"id", "method", "action", "pause"} if method == "step"
+                    else {"id", "method", "infeasible"} if method == "evaluate" else {"id", "method"})
         if method == "step" and self.image_only_fill_intermediates:
             expected.add("observation_mode")
         if set(request) - expected or not {"id", "method"} <= set(request):
@@ -444,6 +527,12 @@ class WorkerSession:
             # Evaluation retains upstream behavior; the checked action wrapper
             # is only needed while accepting typed input calls.
             self.guard.close()
+            if "infeasible" in request:
+                if request["infeasible"] is not True:
+                    raise ProtocolError("invalid infeasible flag")
+                # The agent's final declaration, recorded exactly as OSWorld's own FAIL action.
+                self.env.step("FAIL", pause=0)
+                self.declared_infeasible = True
             with self.capture_scope("evaluation"):
                 self.result = evaluate_once(self.env)
             self.save_result()
@@ -527,9 +616,13 @@ def owned_vm_context(args, owner):
     if args.vm_provider == "qemu":
         from cua_jev.osworld_qemu import isolated_qemu
 
-        with isolated_qemu(args.vm_path, args.output, owner) as runtime:
+        run_root = getattr(args, "qemu_scratch", None) or args.output
+        with isolated_qemu(args.vm_path, run_root, owner) as runtime:
             if getattr(args, "guest_mcp_port", False):
                 runtime.enable_mcp_port()
+            if getattr(args, "guest_proxy", None):
+                host, port = args.guest_proxy.rsplit(":", 1)
+                runtime.enable_guest_proxy(host, int(port))
             if getattr(args, "qemu_boot_timeout", None) is not None:
                 runtime.startup_timeout_s = args.qemu_boot_timeout
                 runtime.metadata["qemu_boot_timeout_s"] = args.qemu_boot_timeout
@@ -566,6 +659,8 @@ def parse_args(argv=None):
     parser.add_argument("--guest-mcp-port", action="store_true",
                         help="QEMU only: forward guest MCP port 9292 to an owned loopback port")
     parser.add_argument("--asset-cache", type=Path)
+    parser.add_argument("--guest-proxy",
+                        help="IPv4:port of an HTTP proxy the guest may use via 10.0.2.100:7899")
     parser.add_argument("--owned-boot-budget", choices=BOOT_BUDGET_POLICIES, default=LEGACY_BOOT_BUDGET)
     parser.add_argument("--startup-timeout", type=float,
                         help="inherited existing outer ready budget; valid only with "
@@ -577,10 +672,21 @@ def parse_args(argv=None):
                         help="explicit owned-instance acquisition-order experiment; default original")
     parser.add_argument("--image-only-fill-intermediates", action="store_true")
     parser.add_argument("--no-passive-settling", dest="passive_settling", action="store_false")
+    parser.add_argument("--lenient-startup-checks", action="store_true",
+                        help="harness readiness/settling failures are recorded, not fatal "
+                             "(needs a fresh observation)")
     parser.add_argument("--vm-provider", choices=("docker", "qemu"), default="docker")
+    parser.add_argument("--qemu-scratch", type=Path, default=None,
+                        help="owner-only local-disk directory for the per-episode QEMU overlay")
     parser.add_argument("--qemu-boot-timeout", type=float, default=None,
                         help="explicit owned QEMU boot wait in seconds; default provider budget is 180")
     args = parser.parse_args(argv)
+    if args.qemu_scratch is not None:
+        scratch = args.qemu_scratch.resolve()
+        if (args.vm_provider != "qemu" or not scratch.is_dir()
+                or scratch.stat().st_uid != os.getuid() or scratch.stat().st_mode & 0o077):
+            parser.error("--qemu-scratch must be an owned, owner-only (0700) directory")
+        args.qemu_scratch = scratch
     if args.guest_mcp_port and args.vm_provider != "qemu":
         parser.error("--guest-mcp-port requires an owned QEMU instance")
     if args.qemu_boot_timeout is not None and (
@@ -699,22 +805,69 @@ def main(argv=None):
                 metadata["observation_acquisition_order"] = observation_order.report
                 capture_timing = ObservationCaptureTiming(env)
                 metadata["original_observation_capture_timing"] = capture_timing.report
+                if getattr(args, "guest_proxy", None):
+                    started = time.perf_counter()
+                    metadata["guest_proxy_setup"] = configure_guest_proxy(env)
+                    metadata["guest_proxy_setup"]["wall_ms"] = (time.perf_counter() - started) * 1000
                 started = time.perf_counter()
                 with capture_timing.scope("startup_task_setup"):
-                    observation = reset_checked(env, task)
+                    try:
+                        observation = reset_checked(env, task)
+                    except Exception:
+                        metadata["setup_failure_guest_diagnostics"] = guest_setup_diagnostics(env)
+                        (args.output / "metadata.json").write_text(
+                            json.dumps(metadata, indent=2), encoding="utf-8")
+                        raise
                 metadata["task_setup_wall_ms"] = (time.perf_counter() - started) * 1000
                 record_startup_phase(timeline, "task_setup_completed")
+                if getattr(args, "guest_proxy", None):
+                    metadata["guest_responsiveness_wait"] = wait_for_guest_responsive(env)
+                    record_startup_phase(timeline, "guest_responsive")
+                lenient = getattr(args, "lenient_startup_checks", False)
                 with capture_timing.scope("startup_desktop_readiness"):
-                    observation = wait_for_desktop_ready(
-                        env, observation, output=args.output, report=metadata,
-                    )
+                    try:
+                        observation = wait_for_desktop_ready(
+                            env, observation, output=args.output, report=metadata,
+                        )
+                    except VMStartupError as error:
+                        if not lenient:
+                            raise
+                        # Harness-only check (not part of OSWorld/OSWorld-MCP): record and continue
+                        # with one fresh complete observation; fatal only if none can be taken.
+                        metadata["desktop_readiness_nonfatal_failure"] = _jsonable(
+                            error.args[0] if error.args else {})
+                        observation = fresh_complete_observation(env)
                 record_startup_phase(timeline, "desktop_readiness_completed")
                 with capture_timing.scope("startup_passive_settling"):
-                    observation = wait_for_desktop_settled(
-                        env, observation, output=args.output, report=metadata,
-                        enabled=getattr(args, "passive_settling", True),
-                    )
+                    try:
+                        observation = wait_for_desktop_settled(
+                            env, observation, output=args.output, report=metadata,
+                            enabled=getattr(args, "passive_settling", True),
+                        )
+                    except VMStartupError as error:
+                        if not lenient:
+                            raise
+                        metadata["passive_settling_nonfatal_failure"] = _jsonable(
+                            error.args[0] if error.args else {})
+                        observation = fresh_complete_observation(env)
+                        # Handshake carries a valid observation-bound diagnostic marked "disabled" (no
+                        # stability proof); the real failure is kept in passive_settling_nonfatal_failure.
+                        observation = wait_for_desktop_settled(
+                            env, observation, output=args.output, report=metadata, enabled=False,
+                        )
                 record_startup_phase(timeline, "passive_settling_completed")
+                if getattr(args, "guest_mcp_port", False):
+                    # OSWorld-MCP protocol (its desktop_env.reset, line 311): after the original
+                    # task setup (here after our own settling check, before the agent; --nodefault
+                    # opens no window), start LibreOffice with the UNO socket its MCP tools connect to.
+                    started = time.perf_counter()
+                    env.setup_controller._launch_setup(
+                        'soffice --accept="socket,host=localhost,port=2002;urp;" '
+                        '--norestore --nologo --nodefault',
+                        shell=True)
+                    time.sleep(5)
+                    metadata["osworld_mcp_soffice_launch_wall_ms"] = (time.perf_counter() - started) * 1000
+                    record_startup_phase(timeline, "osworld_mcp_soffice_launched")
                 (args.output / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
                 save_observation_artifacts(args.output, "initial", observation, metadata)
                 image_only = getattr(args, "image_only_fill_intermediates", False)

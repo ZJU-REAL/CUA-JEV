@@ -282,7 +282,20 @@ def _reserve_ports(guest_ports=GUEST_PORTS) -> list[socket.socket]:
         raise
 
 
-def _qemu_command(fds: dict[str, int], ports: dict[int, int]) -> list[str]:
+GUEST_PROXY_ADDRESS = ("10.0.2.100", 7899)
+
+
+def _guest_proxy_spec(proxy):
+    """One fixed guest address forwarded to one explicitly configured HTTP proxy (per connection)."""
+    if proxy is None:
+        return ""
+    host, port = proxy
+    if not re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", host) or type(port) is not int or not 1 <= port <= 65535:
+        raise OwnedQemuError("qemu_guest_proxy_invalid")
+    return f",guestfwd=tcp:{GUEST_PROXY_ADDRESS[0]}:{GUEST_PROXY_ADDRESS[1]}-cmd:/usr/bin/nc {host} {port}"
+
+
+def _qemu_command(fds: dict[str, int], ports: dict[int, int], guest_proxy=None) -> list[str]:
     if set(ports) not in (set(GUEST_PORTS), set(GUEST_PORTS) | {9292}):
         raise OwnedQemuError("qemu_guest_ports_invalid")
 
@@ -313,7 +326,9 @@ def _qemu_command(fds: dict[str, int], ports: dict[int, int]) -> list[str]:
         "none",
         "-no-reboot",
         "-sandbox",
-        "on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny",
+        # guestfwd cmd: needs to spawn one nc per guest connection; nothing else changes.
+        "on,obsolete=deny,elevateprivileges=deny,spawn=" + ("allow" if guest_proxy else "deny")
+        + ",resourcecontrol=deny",
         "-qmp",
         f"unix:/proc/self/fd/{fds['directory']}/qmp.sock,server=on,wait=off",
     ]
@@ -352,7 +367,8 @@ def _qemu_command(fds: dict[str, int], ports: dict[int, int]) -> list[str]:
         "VGA",
         "-netdev",
         "user,id=guest,restrict=on,"
-        + ",".join(f"hostfwd=tcp:127.0.0.1:{host}-:{guest}" for guest, host in ports.items()),
+        + ",".join(f"hostfwd=tcp:127.0.0.1:{host}-:{guest}" for guest, host in ports.items())
+        + _guest_proxy_spec(guest_proxy),
         "-device",
         "e1000,netdev=guest",
     ]
@@ -416,6 +432,19 @@ class OwnedQemuProvider:
         self._log_thread: threading.Thread | None = None
         self._closed = False
         self._guest_ports = GUEST_PORTS
+        self._guest_proxy = None
+
+    def enable_guest_proxy(self, host: str, port: int) -> None:
+        """Opt in before boot: the guest reaches ONLY this proxy, at 10.0.2.100:7899."""
+        if self._closed or self._process is not None or self.metadata["starts"]:
+            raise OwnedQemuError("qemu_guest_proxy_requires_fresh_provider")
+        _guest_proxy_spec((host, port))
+        self._guest_proxy = (host, port)
+        guest_host, guest_port = GUEST_PROXY_ADDRESS
+        self.metadata["guest_proxy"] = {"guest_address": f"{guest_host}:{guest_port}",
+                                        "upstream": f"{host}:{port}",
+                                        "network": "user,restrict=on + guestfwd"}
+        self.metadata["sandbox"] = "on,obsolete=deny,elevateprivileges=deny,spawn=allow,resourcecontrol=deny"
 
     def enable_mcp_port(self) -> None:
         """Opt in before boot to one owned loopback forward for the guest MCP server."""
@@ -544,7 +573,7 @@ class OwnedQemuProvider:
             self._ports = dict(
                 zip(self._guest_ports, (sock.getsockname()[1] for sock in reservations), strict=True)
             )
-            command = _qemu_command(self._fds, self._ports)
+            command = _qemu_command(self._fds, self._ports, self._guest_proxy)
             launch, cpus = _limited_launch(command)
             for sock in reservations:
                 sock.close()

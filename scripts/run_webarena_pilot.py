@@ -87,6 +87,12 @@ def main(argv=None):
     parser.add_argument("--structured-browser", action="store_true")
     parser.add_argument("--modes", choices=MODES, nargs="+", default=["vlm", "adaptive_rule", "adaptive"])
     parser.add_argument("--max-steps", type=int, default=30)
+    parser.add_argument("--enable-thinking", choices=["default", "on", "off"], default="default",
+                        help="provider enable_thinking for EVERY mode")
+    parser.add_argument("--thinking-budget", type=int, default=None, help="requires --enable-thinking on")
+    parser.add_argument("--vlm-stale-replans", type=int, default=0,
+                        help="vlm baseline: zero-input stale rejections re-grounded by VLM, not charged")
+    parser.add_argument("--jev-model", default=None, help="Jev model for every Jev-using mode")
     parser.add_argument("--timeout", type=float, default=300)
     parser.add_argument("--setup-timeout", type=float, default=60,
                         help="trusted login/navigation wait per operation; restored before agent execution")
@@ -101,7 +107,7 @@ def main(argv=None):
         parser.error("output must remain in the current user's home")
     if any(len(values) != len(set(values)) for values in (args.tasks, args.seeds, args.modes)):
         parser.error("duplicate tasks, seeds or modes")
-    if any(m.startswith("subgoal_") for m in args.modes) and not args.structured_browser:
+    if any(m.startswith(("subgoal_", "s1s2_")) for m in args.modes) and not args.structured_browser:
         parser.error("subgoal modes require --structured-browser for all comparison modes")
     site_config = read_site_config(args.site_profile)
     load_service_profile(args.service_profile)
@@ -159,6 +165,9 @@ def main(argv=None):
             "max_steps": args.max_steps,
             "timeout_s": args.timeout,
             "structured_browser": args.structured_browser,
+            "model_thinking": args.enable_thinking, "thinking_budget": args.thinking_budget,
+            "jev_model": args.jev_model or os.environ.get("CUA_JEV_MODEL"),
+            "vlm_stale_replans": args.vlm_stale_replans,
             "setup_operation_timeout_s": args.setup_timeout,
             "order": list(schedule(args.tasks, args.seeds, args.modes)),
             "models": {"vlm": os.environ["CUA_JEV_VLM_MODEL"], "jev": os.environ["CUA_JEV_MODEL"]},
@@ -225,6 +234,9 @@ def main(argv=None):
                         timeout_s=args.timeout,
                         setup_timeout_s=args.setup_timeout,
                         structured_browser=args.structured_browser,
+                        enable_thinking={"default": None, "on": True, "off": False}[args.enable_thinking],
+                        thinking_budget=args.thinking_budget, jev_model=args.jev_model,
+                        vlm_stale_replans=args.vlm_stale_replans,
                     )
                     sites_clean = finish_episode_sites(row, instances)
                     write_json(args.output / f"{index:04}-{task_id}-{seed}-{mode}" / "result.json", row)

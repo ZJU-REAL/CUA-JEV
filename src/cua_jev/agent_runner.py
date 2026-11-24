@@ -333,6 +333,10 @@ class AgentConfig:
     reuse_verified_pending_snapshot: bool = False
     jev_network_recovery: bool = False
     stale_recovery_on_progress: bool = False
+    # VLM baseline: a zero-input stale preflight rejection (page changed while the
+    # model was thinking) is re-grounded by a fresh VLM step instead of being
+    # charged as an action failure; bounded per verified progress.
+    vlm_stale_replans: int = 0
     jev_capacity_recovery: bool = False
     whole_goal_recheck: bool = False
     jev_capacity_recovery_policy: str = "vlm_once_v1"
@@ -887,6 +891,7 @@ class AgentRunner:
         capacity_phase = cfg.jev_capacity_recovery_policy in {"vlm_phase_v2", "vlm_phase_v3"}
         capacity_phase_v3 = cfg.jev_capacity_recovery_policy == "vlm_phase_v3"
         stale_recovery_used = False
+        vlm_stale_replans = 0
         whole_goal_input_epoch = 0
         unexplained_planning_input_epoch = 0
         whole_goal_attempted_epoch = None
@@ -3878,6 +3883,7 @@ class AgentRunner:
                     pending_reason = ""
                     continue
                 if verified:
+                    vlm_stale_replans = 0
                     unexplained_recovery_ticket = (
                         unexplained_context_recovery_active and unexplained_planning_reuse_enabled
                     )
@@ -4124,6 +4130,18 @@ class AgentRunner:
                         if unexplained_recovery_ticket:
                             recovery_planning_snapshot_source += ("unexplained_context_planning_only",)
                 else:
+                    first_error = ((step_result.receipt.error or "").strip().splitlines() or [""])[0]
+                    if (cfg.mode == "vlm" and vlm_stale_replans < cfg.vlm_stale_replans
+                            and "stale" in first_error
+                            and not step_result.receipt.output.get("environment_steps")):
+                        vlm_stale_replans += 1
+                        emit("agent_vlm_stale_replan", {"error": first_error[:160],
+                                                        "attempt": vlm_stale_replans, "task_success": False})
+                        time.sleep(0.3)
+                        post_snapshot_source = None
+                        plan = None
+                        pending_reason = "effect_failed"
+                        continue
                     action_failures += 1
                     if (navigation_continuation_eligible and navigation_cycle
                             and navigation_witness is not None and len(ready) == 1 and not recovery_plan

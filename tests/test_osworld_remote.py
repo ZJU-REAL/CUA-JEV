@@ -235,7 +235,7 @@ def test_successful_handshake_records_received_and_accepted_times(tmp_path):
     env.close()
 
 
-@pytest.mark.parametrize("value", [True, False, 0, -1, 601, float("nan"), float("inf")])
+@pytest.mark.parametrize("value", [True, False, 0, -1, 1801, float("nan"), float("inf")])
 def test_startup_timeout_rejects_invalid_values_before_process_launch(tmp_path, value):
     with pytest.raises(ValueError, match="timeouts"):
         RemoteOSWorldEnv("host", ["worker"], log_path=tmp_path / "worker.log", startup_timeout_s=value,
