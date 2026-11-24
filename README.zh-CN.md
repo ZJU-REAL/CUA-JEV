@@ -19,7 +19,7 @@
 
 CUA-JEV 是基于 [Jev](https://docs.typesafe.ai/introduction) 的 Computer-Use Agent 开源参考框架。文本模型提出有依据的下一步；任务适配器把它展开为**当前合法、可执行、可验证**的 `意图 × 通道` 候选（GUI、DOM、UIA、COM、CLI、MCP、文件 API）；Jev 选出**具体动作及其执行路线**；Guard、执行器与独立验证器闭合循环。
 
-> 案例为单次录制，不是基准评测；已发布的桌面工作流仅支持 Windows，不声称任意任务泛化。
+> Windows 案例为单次录制，不是基准评测；基准评测结果见下文[基准评测](#基准评测vlm-作为-system-2jev-作为-system-1)。不声称任意任务泛化。
 
 ## 核心机制
 
@@ -41,6 +41,33 @@ CUA-JEV 是基于 [Jev](https://docs.typesafe.ai/introduction) 的 Computer-Use 
 | [![Git 工作流指南录屏预览](website/media/windows-git-guide.jpg)](https://zjureal.com/CUA-JEV/#case-git-guide) | [![PowerShell 学习指南录屏预览](website/media/windows-powershell-guide.jpg)](https://zjureal.com/CUA-JEV/#case-powershell-guide) |
 
 早期任务专属工作流、开放任务实验与 Roadmap：[docs/EXPERIMENTS.zh-CN.md](docs/EXPERIMENTS.zh-CN.md) · [开放任务说明](docs/OPEN_TASKS.md)。
+
+## 基准评测：VLM 作为 System 2，Jev 作为 System 1
+
+`s1s2_jev` 运行器把智能体分成两层。**System 2**（VLM）根据当前截图和结构化信息规划几个简短的语义子目标。**System 1**（Jev 加确定性代码）负责：
+- 把每个子目标绑定到当前界面上的具体控件或屏幕区域；
+- 选择执行通道（GUI 或某个 MCP 工具）；
+- 看截图核验执行效果；
+- 某一步失败时，从 System 2 给出的备选做法里挑一个接着做；
+- 仍然无法继续时，才交回 System 2。
+
+基线是同一个 VLM 每一步都自己决定（`vlm` 模式）。两组都用 Qwen3.7-Plus，思考预算 512 token；System 1 使用 `jev-1.14.0`。
+
+| MiniWoB++（125 道任务） | 成功数 | 每回合 agent 用时 | 每回合 VLM 调用 | 每回合 VLM token |
+|---|---:|---:|---:|---:|
+| 仅 VLM | 62 | 42.5 秒 | 3.7 | 7.1k |
+| VLM + Jev | **62** | **23.9 秒**（−44%） | **2.0**（−46%） | **2.5k**（−65%） |
+
+| OSWorld-MCP（279 道任务） | 成功数 | 每回合 agent 用时 | 每回合 VLM 调用 | 每回合 VLM token |
+|---|---:|---:|---:|---:|
+| 仅 VLM | 103 | 223 秒 | 14.9 | 338k |
+| VLM + Jev | **104** | **199 秒**（−11%） | **11.6**（−22%） | **49k**（−86%） |
+
+在 OSWorld-MCP 上，Jev 平均每回合做 17 次决策，包括筛选工具、选择通道、在屏幕上定位目标，以及核验执行效果和任务是否完成。token 节省主要来自一点：System 2 只看到 Jev 从 131 个 MCP 工具里筛出的几个，而不是完整的工具列表。
+
+每道任务只跑了一次，所以几道题以内的差距属于单次运行之间的正常波动。分应用看，Jev 组在 Writer 和多应用任务上更强，在 GIMP 和 Calc 上较弱。
+
+实验设置、排除项、分应用结果和复现命令见 [docs/BENCHMARKS.zh-CN.md](docs/BENCHMARKS.zh-CN.md)。
 
 ## 快速开始
 

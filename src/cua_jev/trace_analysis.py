@@ -129,8 +129,10 @@ def analyze_traces(paths: list[str | Path]) -> dict[str, Any]:
                 role = payload.get("role", "jev" if kind == "policy_exchange" else None)
                 usage = payload.get("usage")
                 if isinstance(role, str) and isinstance(usage, dict):
-                    for name in ("prompt_tokens", "completion_tokens", "total_tokens"):
-                        value = usage.get(name)
+                    for name, alternate in (("prompt_tokens", "input_tokens"),
+                                             ("completion_tokens", "output_tokens"),
+                                             ("total_tokens", "total_tokens")):
+                        value = usage.get(name, usage.get(alternate))
                         if type(value) is int and value >= 0:
                             token_usage[role][name] += value
 

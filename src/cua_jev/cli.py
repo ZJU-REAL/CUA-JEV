@@ -35,6 +35,9 @@ from .verify import VerifierRegistry
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cua-jev", description="Typed hybrid action routing with Jev")
     sub = parser.add_subparsers(dest="command", required=True)
+    from .agent_cli import configure_parser
+
+    configure_parser(sub)
     sub.add_parser("doctor", help="Report optional Windows capability availability")
     demo = sub.add_parser("demo", help="Run the reproducible multi-channel routing demo")
     demo.add_argument("--policy", choices=("rule", "jev"), default="rule")
@@ -377,6 +380,13 @@ def _chat_planner(args: argparse.Namespace, *, model: str | None = None) -> Chat
 def main(argv: list[str] | None = None) -> int:
     load_local_env()
     args = _parser().parse_args(argv)
+    if args.command == "agent-browser":
+        from .agent_cli import run
+
+        try:
+            return run(args)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from None
     if args.command == "doctor":
         print(json.dumps(doctor(), indent=2, ensure_ascii=False))
         return 0

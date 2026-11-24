@@ -12,6 +12,9 @@ dist-pages/
 .env
 .env.*
 !.env.example
+/private/
+HANDOFF_PRIVATE_*.md
+*.private.json
 runs/
 .runs/
 artifacts/
@@ -19,3 +22,4 @@ demo-workspace/
 # Local experiment notes and intermediate pilot accounting; the reviewed site snapshot is public.
 benchmarks/
 docs/PUBLISHING.md
+runs-osworld/

@@ -144,3 +144,98 @@ def test_jev_policy_never_falls_back_on_authentication_failure():
     with pytest.raises(PolicyError, match="authentication failed"):
         policy.choose(Observation("read", "read file", {}), candidates())
     assert "fallback" not in policy.last_exchange
+
+
+@pytest.mark.parametrize("failure,code", [
+    (httpx.ConnectTimeout, "connect_timeout"),
+    (httpx.ReadTimeout, "timeout"),
+    (httpx.ConnectError, "connection_error"),
+])
+def test_transport_failure_has_typed_sanitized_diagnostics_and_resets(failure, code):
+    failing = True
+
+    def handler(request):
+        if failing:
+            raise failure("secret endpoint and key", request=request)
+        return httpx.Response(200, json={"answers": {"action": {
+            "choice": "mcp", "probabilities": {"gui": 0.1, "mcp": 0.9}, "confidence": 0.8,
+        }}})
+
+    policy = JevPolicy(api_key="secret", retries=1, sleep=lambda _: None,
+                       client=httpx.Client(transport=httpx.MockTransport(handler)))
+    with pytest.raises(PolicyError):
+        policy.choose(Observation("test", "test", {}), candidates())
+    assert policy.last_failure == {
+        "code": code, "attempts": 2, "retryable": True, "http_status": None,
+    }
+    assert "secret" not in str(policy.last_failure)
+    failing = False
+    policy.choose(Observation("test", "test", {}), candidates())
+    assert policy.last_failure == {}
+
+
+@pytest.mark.parametrize("body", [[], {"answers": {"action": {"choice": "invented"}}}])
+def test_invalid_response_records_failure_without_raw_provider_data(body):
+    policy = JevPolicy(api_key="secret", retries=0, client=httpx.Client(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=body)),
+    ))
+    with pytest.raises(PolicyError):
+        policy.choose(Observation("test", "test", {}), candidates())
+    assert policy.last_failure == {
+        "code": "invalid_response", "attempts": 1, "retryable": False, "http_status": None,
+    }
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 422, 451])
+def test_permanent_http_failure_stops_without_retry_or_fallback(status):
+    requests, sleeps = [], []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(status, text="private provider details and credential")
+
+    policy = JevPolicy(
+        api_key="secret", retries=4, fallback_on_transport=True, sleep=sleeps.append,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(PolicyError) as error:
+        policy.choose(Observation("test", "test", {}), candidates())
+    assert len(requests) == 1
+    assert sleeps == []
+    assert policy.last_failure["attempts"] == 1
+    assert policy.last_failure["retryable"] is False
+    assert "fallback" not in policy.last_exchange
+    assert "private provider" not in str(error.value)
+    assert "private provider" not in str(policy.last_exchange)
+    assert policy.last_exchange["retry_history"][0]["http_status"] == status
+
+
+def test_recovered_service_call_keeps_sanitized_retry_diagnostics():
+    requests, sleeps = [], []
+
+    def handler(request):
+        requests.append(request)
+        if len(requests) == 1:
+            return httpx.Response(503, text="private provider error")
+        if len(requests) == 2:
+            raise httpx.ReadTimeout("private provider timeout", request=request)
+        return httpx.Response(200, json={"answers": {"action": {
+            "choice": "mcp", "probabilities": {"gui": 0.1, "mcp": 0.9}, "confidence": 0.8,
+        }}})
+
+    policy = JevPolicy(
+        api_key="secret", retries=4, sleep=sleeps.append,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    policy.choose(Observation("test", "test", {}), candidates())
+    history = policy.last_exchange["retry_history"]
+    assert [(item["attempt"], item["code"], item["http_status"]) for item in history] == [
+        (1, "http_status", 503), (2, "timeout", None),
+    ]
+    assert all(item["elapsed_ms"] >= 0 for item in history)
+    assert sleeps == [0.5, 1.0]
+    assert policy.last_exchange["attempts"] == 3
+    assert policy.last_failure == {}
+    assert "private provider" not in str(history)
+    policy.choose(Observation("test", "test", {}), candidates())
+    assert policy.last_exchange["retry_history"] == []

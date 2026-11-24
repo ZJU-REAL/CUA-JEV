@@ -1,0 +1,327 @@
+{
+  "status": "schema_contract_examples_not_execution_results",
+  "case_count": 14,
+  "instructions": "Use actual53 tool parameters as input, project only under future semantic_tools_v54. For action cases validate #/$defs/action with original parameter $defs, or the actual H1 steps.items plus id. Never detach refs without their original definitions.",
+  "parser_boundary": "All targets/refs/coordinates are symbolic fixtures, not input authorization. Original parser and grounding guards still decide runtime validity.",
+  "cases": [
+    {
+      "id": "native_ref",
+      "at": "action",
+      "instance": {
+        "operation": "click",
+        "ref": "CURRENT_REF"
+      },
+      "projected_generation_allows": true
+    },
+    {
+      "id": "raw_key_null_defaults_empty_arrays",
+      "at": "action",
+      "instance": {
+        "operation": "key_press",
+        "value": "enter",
+        "target": null,
+        "box": null,
+        "ref": "",
+        "preconditions": [],
+        "postconditions": []
+      },
+      "projected_generation_allows": true
+    },
+    {
+      "id": "semantic_control_null_box_empty_ref_pre",
+      "at": "action",
+      "instance": {
+        "operation": "fill",
+        "target": {
+          "name": "Current field",
+          "app": "Example"
+        },
+        "value": "desired text",
+        "postconditions": [
+          {
+            "kind": "value_equals",
+            "target": {
+              "name": "Current field",
+              "app": "Example"
+            },
+            "value": "desired text"
+          }
+        ],
+        "ref": "",
+        "box": null,
+        "preconditions": []
+      },
+      "projected_generation_allows": true
+    },
+    {
+      "id": "semantic_guarded_key",
+      "at": "action",
+      "instance": {
+        "operation": "type_text",
+        "value": "desired text",
+        "target": null,
+        "preconditions": [
+          {
+            "kind": "focused",
+            "target": {
+              "name": "Current field",
+              "app": "Example"
+            }
+          }
+        ],
+        "postconditions": [
+          {
+            "kind": "value_equals",
+            "target": {
+              "name": "Current field",
+              "app": "Example"
+            },
+            "value": "desired text"
+          }
+        ]
+      },
+      "projected_generation_allows": true
+    },
+    {
+      "id": "ref_plus_semantic_predicate",
+      "at": "action",
+      "instance": {
+        "operation": "click",
+        "ref": "CURRENT_REF",
+        "postconditions": [
+          {
+            "kind": "exists",
+            "target": {
+              "name": "Current panel",
+              "app": "Example"
+            }
+          }
+        ]
+      },
+      "projected_generation_allows": false
+    },
+    {
+      "id": "target_without_effect",
+      "at": "action",
+      "instance": {
+        "operation": "click",
+        "target": {
+          "name": "Current field",
+          "app": "Example"
+        }
+      },
+      "projected_generation_allows": false
+    },
+    {
+      "id": "visual_with_semantic_predicate",
+      "at": "action",
+      "instance": {
+        "operation": "visual_click",
+        "label": "Current visible control",
+        "box": [
+          100,
+          100,
+          200,
+          200
+        ],
+        "postconditions": [
+          {
+            "kind": "exists",
+            "target": {
+              "name": "Current panel",
+              "app": "Example"
+            }
+          }
+        ]
+      },
+      "projected_generation_allows": false
+    },
+    {
+      "id": "H1_visual_with_root_completion",
+      "at": "H1_root",
+      "instance": {
+        "summary": "Synthetic current state",
+        "done": false,
+        "steps": [
+          {
+            "id": "s1",
+            "operation": "visual_click",
+            "label": "Current visible control",
+            "box": [
+              100,
+              100,
+              200,
+              200
+            ]
+          }
+        ],
+        "completion_conditions": [
+          {
+            "kind": "exists",
+            "target": {
+              "name": "Current panel",
+              "app": "Example"
+            }
+          }
+        ]
+      },
+      "projected_generation_allows": false
+    },
+    {
+      "id": "H1_semantic_completion_done_hint_true",
+      "at": "H1_root",
+      "instance": {
+        "summary": "Synthetic current state",
+        "done": true,
+        "steps": [
+          {
+            "id": "s1",
+            "operation": "fill",
+            "target": {
+              "name": "Current field",
+              "app": "Example"
+            },
+            "value": "desired text",
+            "postconditions": [
+              {
+                "kind": "value_equals",
+                "target": {
+                  "name": "Current field",
+                  "app": "Example"
+                },
+                "value": "desired text"
+              }
+            ],
+            "ref": "",
+            "box": null,
+            "preconditions": []
+          }
+        ],
+        "completion_conditions": [
+          {
+            "kind": "value_equals",
+            "target": {
+              "name": "Current field",
+              "app": "Example"
+            },
+            "value": "desired text"
+          }
+        ]
+      },
+      "projected_generation_allows": true,
+      "boundary": "Original parser normalizes done=false when valid semantic steps exist; projection does not force it."
+    },
+    {
+      "id": "H1_empty_advisory_done_completion",
+      "at": "H1_root",
+      "instance": {
+        "summary": "Synthetic current state",
+        "done": true,
+        "steps": [],
+        "completion_conditions": [
+          {
+            "kind": "exists",
+            "target": {
+              "name": "Current panel",
+              "app": "Example"
+            }
+          }
+        ]
+      },
+      "projected_generation_allows": true
+    },
+    {
+      "id": "H1_numeric_literal_repair_visual_fill",
+      "at": "H1_root_with_matching_repair_offer",
+      "offered_prepare_repair_token": "abababababababababababababababab",
+      "instance": {
+        "summary": "Synthetic current state",
+        "done": false,
+        "steps": [
+          {
+            "id": "s1",
+            "operation": "visual_fill",
+            "label": "Current visible input",
+            "box": [
+              100,
+              100,
+              200,
+              200
+            ],
+            "value": "7",
+            "target": null,
+            "preconditions": [],
+            "postconditions": []
+          }
+        ],
+        "prepare_repair": "abababababababababababababababab"
+      },
+      "projected_generation_allows": true,
+      "boundary": "Existing token binding/image/retained-plan checks remain authoritative; no key strategy is added."
+    },
+    {
+      "id": "guarded_current_ref_commit_exception",
+      "at": "unchanged_$defs.commit",
+      "instance": {
+        "operation": "click",
+        "ref": "CURRENT_COMMIT_REF",
+        "preconditions": [
+          {
+            "kind": "value_equals",
+            "target": {
+              "ref": "CURRENT_FIELD_REF"
+            },
+            "value": "desired text"
+          }
+        ],
+        "postconditions": [
+          {
+            "kind": "absent",
+            "target": {
+              "name": "Current form",
+              "app": "Example"
+            }
+          }
+        ]
+      },
+      "projected_generation_allows": true,
+      "boundary": "No action intersection is applied to commit."
+    },
+    {
+      "id": "H1_raw_done_true_empty_completion",
+      "at": "H1_root",
+      "instance": {
+        "summary": "Synthetic current state",
+        "done": true,
+        "steps": [
+          {
+            "id": "s1",
+            "operation": "visual_click",
+            "label": "Current visible control",
+            "box": [
+              100,
+              100,
+              200,
+              200
+            ]
+          }
+        ],
+        "completion_conditions": []
+      },
+      "projected_generation_allows": true,
+      "boundary": "Preserve old raw defaults; existing parser normalizes nonempty-step done."
+    },
+    {
+      "id": "H1_empty_false_inherited_gap",
+      "at": "H1_root",
+      "instance": {
+        "summary": "Synthetic current state",
+        "done": false,
+        "steps": [],
+        "completion_conditions": []
+      },
+      "projected_generation_allows": true,
+      "boundary": "Deliberately inherited schema gap: original parser rejects empty steps with done=false. This draft does not claim completeness."
+    }
+  ]
+}

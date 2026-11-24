@@ -1,0 +1,2748 @@
+{
+  "kind": "recorded_public_navigation_controls",
+  "source": "runs/osworld-semantic-v7/gimp-7767eef2-56a3-4cea-8c9f-48c070c7d65b/hybrid/trace.jsonl",
+  "source_sha256": "c691ba48e5e95196e238f77b9fa2362b0f3ea654a875ed12f2a99785d89d83ea",
+  "note": "Public observations 1/10 plus corresponding candidate bound_control fields 2/11. Noncandidate geometry and field values not present in public observations remain absent; no raw XML or pixels are reconstructed.",
+  "snapshots": [
+    {
+      "sequence": 1,
+      "url": "osworld://desktop",
+      "title": "GNU Image Manipulation Program",
+      "a11y_complete": true,
+      "recorded_candidate_count": 42,
+      "controls": [
+        {
+          "ref": "d0",
+          "label": "GNU Image Manipulation Program",
+          "tag": "container",
+          "role": "frame",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "active": true
+        },
+        {
+          "ref": "d1",
+          "label": "File",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            36,
+            59,
+            55,
+            82
+          ]
+        },
+        {
+          "ref": "d2",
+          "label": "Edit",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            55,
+            59,
+            76,
+            82
+          ]
+        },
+        {
+          "ref": "d3",
+          "label": "Select",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            76,
+            59,
+            103,
+            82
+          ]
+        },
+        {
+          "ref": "d4",
+          "label": "View",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            103,
+            59,
+            127,
+            82
+          ]
+        },
+        {
+          "ref": "d5",
+          "label": "Image",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            127,
+            59,
+            154,
+            82
+          ]
+        },
+        {
+          "ref": "d6",
+          "label": "Layer",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            154,
+            59,
+            179,
+            82
+          ]
+        },
+        {
+          "ref": "d7",
+          "label": "Colors",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            179,
+            59,
+            208,
+            82
+          ]
+        },
+        {
+          "ref": "d8",
+          "label": "Tools",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            208,
+            59,
+            233,
+            82
+          ]
+        },
+        {
+          "ref": "d9",
+          "label": "Filters",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            233,
+            59,
+            262,
+            82
+          ]
+        },
+        {
+          "ref": "d10",
+          "label": "Windows",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            262,
+            59,
+            300,
+            82
+          ]
+        },
+        {
+          "ref": "d11",
+          "label": "Help",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            300,
+            59,
+            322,
+            82
+          ]
+        },
+        {
+          "ref": "d12",
+          "label": "",
+          "tag": "container",
+          "checked": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d13",
+          "label": "Crop",
+          "tag": "button",
+          "disabled": true,
+          "role": "tab",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d14",
+          "label": "Crop",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d15",
+          "label": "Current layer only",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            353,
+            131,
+            372
+          ]
+        },
+        {
+          "ref": "d16",
+          "label": "Delete cropped pixels",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            376,
+            131,
+            395
+          ]
+        },
+        {
+          "ref": "d17",
+          "label": "Allow growing",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            399,
+            131,
+            419
+          ]
+        },
+        {
+          "ref": "d18",
+          "label": "Expand from center",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            424,
+            131,
+            444
+          ]
+        },
+        {
+          "ref": "d19",
+          "label": "",
+          "tag": "input",
+          "role": "textbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "text",
+          "value": "1:1",
+          "box": [
+            46,
+            476,
+            97,
+            507
+          ]
+        },
+        {
+          "ref": "d20",
+          "label": "",
+          "tag": "input",
+          "role": "radio",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "radio",
+          "box": [
+            98,
+            476,
+            115,
+            507
+          ]
+        },
+        {
+          "ref": "d21",
+          "label": "",
+          "tag": "input",
+          "role": "radio",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "radio",
+          "box": [
+            115,
+            476,
+            131,
+            507
+          ]
+        },
+        {
+          "ref": "d22",
+          "label": "",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            447,
+            51,
+            474
+          ]
+        },
+        {
+          "ref": "d23",
+          "label": "Aspect ratio",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            52,
+            447,
+            131,
+            474
+          ]
+        },
+        {
+          "ref": "d24",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            46,
+            540,
+            88,
+            569
+          ]
+        },
+        {
+          "ref": "d25",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            89,
+            540,
+            131,
+            569
+          ]
+        },
+        {
+          "ref": "d26",
+          "label": "Position:",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d27",
+          "label": "pixels",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            105,
+            511,
+            131,
+            538
+          ]
+        },
+        {
+          "ref": "d28",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            46,
+            602,
+            88,
+            631
+          ]
+        },
+        {
+          "ref": "d29",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            89,
+            602,
+            131,
+            631
+          ]
+        },
+        {
+          "ref": "d30",
+          "label": "Size:",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d31",
+          "label": "pixels",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            105,
+            573,
+            131,
+            600
+          ]
+        },
+        {
+          "ref": "d32",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "50.0",
+          "box": [
+            46,
+            656,
+            131,
+            679
+          ]
+        },
+        {
+          "ref": "d33",
+          "label": "Highlight",
+          "tag": "input",
+          "checked": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            635,
+            131,
+            655
+          ]
+        },
+        {
+          "ref": "d34",
+          "label": "No guides",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            40,
+            682,
+            131,
+            709
+          ]
+        },
+        {
+          "ref": "d35",
+          "label": "Auto Shrink",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d36",
+          "label": "Shrink merged",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            745,
+            131,
+            765
+          ]
+        },
+        {
+          "ref": "d37",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            40,
+            968,
+            62,
+            997
+          ]
+        },
+        {
+          "ref": "d38",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            62,
+            968,
+            85,
+            997
+          ]
+        },
+        {
+          "ref": "d39",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            85,
+            968,
+            108,
+            997
+          ]
+        },
+        {
+          "ref": "d40",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            108,
+            968,
+            131,
+            997
+          ]
+        },
+        {
+          "ref": "d41",
+          "label": "",
+          "tag": "container",
+          "role": "panel",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "focused": true,
+          "active": true
+        },
+        {
+          "ref": "d42",
+          "label": "2. Hardness 050 (51 × 51)",
+          "tag": "button",
+          "role": "tab",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            899,
+            89,
+            909,
+            106
+          ]
+        },
+        {
+          "ref": "d43",
+          "label": "",
+          "tag": "input",
+          "role": "textbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "text",
+          "box": [
+            899,
+            113,
+            997,
+            143
+          ]
+        },
+        {
+          "ref": "d44",
+          "label": "2. Hardness 050 (51 × 51)",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d45",
+          "label": "",
+          "tag": "input",
+          "role": "textbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "text",
+          "value": "Basic, ",
+          "box": [
+            899,
+            307,
+            997,
+            337
+          ]
+        },
+        {
+          "ref": "d46",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "10.0",
+          "box": [
+            899,
+            338,
+            997,
+            360
+          ]
+        },
+        {
+          "ref": "d47",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            899,
+            361,
+            915,
+            391
+          ]
+        },
+        {
+          "ref": "d48",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            915,
+            361,
+            931,
+            391
+          ]
+        },
+        {
+          "ref": "d49",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            931,
+            361,
+            947,
+            391
+          ]
+        },
+        {
+          "ref": "d50",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d51",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            964,
+            361,
+            979,
+            391
+          ]
+        },
+        {
+          "ref": "d52",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d53",
+          "label": "Lock:",
+          "tag": "button",
+          "disabled": true,
+          "role": "tab",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d54",
+          "label": "Normal",
+          "tag": "button",
+          "disabled": true,
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d55",
+          "label": "Default",
+          "tag": "button",
+          "disabled": true,
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d56",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true
+        },
+        {
+          "ref": "d57",
+          "label": "Lock:",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d58",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d59",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d60",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d61",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d62",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d63",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d64",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d65",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d66",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d67",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d68",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d69",
+          "label": "@!0,0;BDHF",
+          "tag": "container",
+          "role": "frame",
+          "app": "gjs",
+          "window": "@!0,0;BDHF"
+        },
+        {
+          "ref": "d70",
+          "label": "Home",
+          "tag": "text",
+          "role": "label",
+          "app": "gjs",
+          "window": "@!0,0;BDHF",
+          "ancestors": [
+            "frame: @!0,0;BDHF"
+          ]
+        },
+        {
+          "ref": "d71",
+          "label": "",
+          "tag": "container",
+          "role": "window",
+          "app": "gnome-shell",
+          "focused": true,
+          "active": true
+        },
+        {
+          "ref": "d72",
+          "label": "Activities",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d73",
+          "label": "Activities",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d74",
+          "label": "",
+          "tag": "text",
+          "disabled": true,
+          "role": "text",
+          "app": "gnome-shell",
+          "ancestors": [
+            "label: Activities"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d75",
+          "label": "GNU Image Manipulation Program",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d76",
+          "label": "GNU Image Manipulation Program",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gnome-shell",
+          "ancestors": [
+            "menu: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d77",
+          "label": "",
+          "tag": "text",
+          "disabled": true,
+          "role": "text",
+          "app": "gnome-shell",
+          "ancestors": [
+            "menu: GNU Image Manipulation Program",
+            "label: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d78",
+          "label": "GNOME top-bar clock",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d79",
+          "label": "GNOME top-bar clock",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d80",
+          "label": "GNOME top-bar clock",
+          "tag": "text",
+          "disabled": true,
+          "role": "text",
+          "app": "gnome-shell",
+          "ancestors": [
+            "label: GNOME top-bar clock"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d81",
+          "label": "System",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d82",
+          "label": "Google Chrome",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d83",
+          "label": "Thunderbird Mail",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d84",
+          "label": "Visual Studio Code",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d85",
+          "label": "VLC media player",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d86",
+          "label": "LibreOffice Writer",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d87",
+          "label": "LibreOffice Calc",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d88",
+          "label": "LibreOffice Impress",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d89",
+          "label": "GNU Image Manipulation Program",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d90",
+          "label": "Files",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d91",
+          "label": "Ubuntu Software",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d92",
+          "label": "Help",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d93",
+          "label": "Trash",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d94",
+          "label": "Show Applications",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gnome-shell",
+          "active": true
+        }
+      ]
+    },
+    {
+      "sequence": 10,
+      "url": "osworld://desktop",
+      "title": "GNU Image Manipulation Program",
+      "a11y_complete": true,
+      "recorded_candidate_count": 42,
+      "controls": [
+        {
+          "ref": "d0",
+          "label": "GNU Image Manipulation Program",
+          "tag": "container",
+          "role": "frame",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "active": true
+        },
+        {
+          "ref": "d1",
+          "label": "File",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            36,
+            59,
+            55,
+            82
+          ]
+        },
+        {
+          "ref": "d2",
+          "label": "Edit",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "focused": true,
+          "active": true,
+          "box": [
+            55,
+            59,
+            76,
+            82
+          ]
+        },
+        {
+          "ref": "d3",
+          "label": "Select",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            76,
+            59,
+            103,
+            82
+          ]
+        },
+        {
+          "ref": "d4",
+          "label": "View",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            103,
+            59,
+            127,
+            82
+          ]
+        },
+        {
+          "ref": "d5",
+          "label": "Image",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            127,
+            59,
+            154,
+            82
+          ]
+        },
+        {
+          "ref": "d6",
+          "label": "Layer",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            154,
+            59,
+            179,
+            82
+          ]
+        },
+        {
+          "ref": "d7",
+          "label": "Colors",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            179,
+            59,
+            208,
+            82
+          ]
+        },
+        {
+          "ref": "d8",
+          "label": "Tools",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            208,
+            59,
+            233,
+            82
+          ]
+        },
+        {
+          "ref": "d9",
+          "label": "Filters",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            233,
+            59,
+            262,
+            82
+          ]
+        },
+        {
+          "ref": "d10",
+          "label": "Windows",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            262,
+            59,
+            300,
+            82
+          ]
+        },
+        {
+          "ref": "d11",
+          "label": "Help",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            300,
+            59,
+            322,
+            82
+          ]
+        },
+        {
+          "ref": "d12",
+          "label": "",
+          "tag": "container",
+          "checked": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d13",
+          "label": "Crop",
+          "tag": "button",
+          "disabled": true,
+          "role": "tab",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d14",
+          "label": "Crop",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d15",
+          "label": "Current layer only",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            353,
+            131,
+            372
+          ]
+        },
+        {
+          "ref": "d16",
+          "label": "Delete cropped pixels",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            376,
+            131,
+            395
+          ]
+        },
+        {
+          "ref": "d17",
+          "label": "Allow growing",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            399,
+            131,
+            419
+          ]
+        },
+        {
+          "ref": "d18",
+          "label": "Expand from center",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            424,
+            131,
+            444
+          ]
+        },
+        {
+          "ref": "d19",
+          "label": "",
+          "tag": "input",
+          "role": "textbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "text",
+          "value": "1:1",
+          "box": [
+            46,
+            476,
+            97,
+            507
+          ]
+        },
+        {
+          "ref": "d20",
+          "label": "",
+          "tag": "input",
+          "role": "radio",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "radio",
+          "box": [
+            98,
+            476,
+            115,
+            507
+          ]
+        },
+        {
+          "ref": "d21",
+          "label": "",
+          "tag": "input",
+          "role": "radio",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "radio",
+          "box": [
+            115,
+            476,
+            131,
+            507
+          ]
+        },
+        {
+          "ref": "d22",
+          "label": "",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            447,
+            51,
+            474
+          ]
+        },
+        {
+          "ref": "d23",
+          "label": "Aspect ratio",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            52,
+            447,
+            131,
+            474
+          ]
+        },
+        {
+          "ref": "d24",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            46,
+            540,
+            88,
+            569
+          ]
+        },
+        {
+          "ref": "d25",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            89,
+            540,
+            131,
+            569
+          ]
+        },
+        {
+          "ref": "d26",
+          "label": "Position:",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d27",
+          "label": "pixels",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            105,
+            511,
+            131,
+            538
+          ]
+        },
+        {
+          "ref": "d28",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            46,
+            602,
+            88,
+            631
+          ]
+        },
+        {
+          "ref": "d29",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "0.0",
+          "box": [
+            89,
+            602,
+            131,
+            631
+          ]
+        },
+        {
+          "ref": "d30",
+          "label": "Size:",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d31",
+          "label": "pixels",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            105,
+            573,
+            131,
+            600
+          ]
+        },
+        {
+          "ref": "d32",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "50.0",
+          "box": [
+            46,
+            656,
+            131,
+            679
+          ]
+        },
+        {
+          "ref": "d33",
+          "label": "Highlight",
+          "tag": "input",
+          "checked": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            635,
+            131,
+            655
+          ]
+        },
+        {
+          "ref": "d34",
+          "label": "No guides",
+          "tag": "button",
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            40,
+            682,
+            131,
+            709
+          ]
+        },
+        {
+          "ref": "d35",
+          "label": "Auto Shrink",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d36",
+          "label": "Shrink merged",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "input_type": "checkbox",
+          "box": [
+            40,
+            745,
+            131,
+            765
+          ]
+        },
+        {
+          "ref": "d37",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            40,
+            968,
+            62,
+            997
+          ]
+        },
+        {
+          "ref": "d38",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            62,
+            968,
+            85,
+            997
+          ]
+        },
+        {
+          "ref": "d39",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            85,
+            968,
+            108,
+            997
+          ]
+        },
+        {
+          "ref": "d40",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            108,
+            968,
+            131,
+            997
+          ]
+        },
+        {
+          "ref": "d41",
+          "label": "2. Hardness 050 (51 × 51)",
+          "tag": "button",
+          "role": "tab",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            899,
+            89,
+            909,
+            106
+          ]
+        },
+        {
+          "ref": "d42",
+          "label": "",
+          "tag": "input",
+          "role": "textbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "text",
+          "box": [
+            899,
+            113,
+            997,
+            143
+          ]
+        },
+        {
+          "ref": "d43",
+          "label": "2. Hardness 050 (51 × 51)",
+          "tag": "text",
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d44",
+          "label": "",
+          "tag": "input",
+          "role": "textbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "text",
+          "value": "Basic, ",
+          "box": [
+            899,
+            307,
+            997,
+            337
+          ]
+        },
+        {
+          "ref": "d45",
+          "label": "",
+          "tag": "input",
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true,
+          "input_type": "number",
+          "value": "10.0",
+          "box": [
+            899,
+            338,
+            997,
+            360
+          ]
+        },
+        {
+          "ref": "d46",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            899,
+            361,
+            915,
+            391
+          ]
+        },
+        {
+          "ref": "d47",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            915,
+            361,
+            931,
+            391
+          ]
+        },
+        {
+          "ref": "d48",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            931,
+            361,
+            947,
+            391
+          ]
+        },
+        {
+          "ref": "d49",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d50",
+          "label": "",
+          "tag": "button",
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true,
+          "box": [
+            964,
+            361,
+            979,
+            391
+          ]
+        },
+        {
+          "ref": "d51",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d52",
+          "label": "Lock:",
+          "tag": "button",
+          "disabled": true,
+          "role": "tab",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d53",
+          "label": "Normal",
+          "tag": "button",
+          "disabled": true,
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d54",
+          "label": "Default",
+          "tag": "button",
+          "disabled": true,
+          "role": "combobox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d55",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "spinbutton",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "editable": true,
+          "active": true
+        },
+        {
+          "ref": "d56",
+          "label": "Lock:",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d57",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d58",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d59",
+          "label": "",
+          "tag": "input",
+          "disabled": true,
+          "role": "checkbox",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d60",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d61",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d62",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d63",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d64",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d65",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d66",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d67",
+          "label": "",
+          "tag": "button",
+          "disabled": true,
+          "role": "button",
+          "app": "gimp",
+          "window": "GNU Image Manipulation Program",
+          "ancestors": [
+            "frame: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d68",
+          "label": "@!0,0;BDHF",
+          "tag": "container",
+          "role": "frame",
+          "app": "gjs",
+          "window": "@!0,0;BDHF"
+        },
+        {
+          "ref": "d69",
+          "label": "Home",
+          "tag": "text",
+          "role": "label",
+          "app": "gjs",
+          "window": "@!0,0;BDHF",
+          "ancestors": [
+            "frame: @!0,0;BDHF"
+          ]
+        },
+        {
+          "ref": "d70",
+          "label": "",
+          "tag": "container",
+          "role": "window",
+          "app": "gnome-shell",
+          "focused": true,
+          "active": true
+        },
+        {
+          "ref": "d71",
+          "label": "Activities",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d72",
+          "label": "Activities",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d73",
+          "label": "",
+          "tag": "text",
+          "disabled": true,
+          "role": "text",
+          "app": "gnome-shell",
+          "ancestors": [
+            "label: Activities"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d74",
+          "label": "GNU Image Manipulation Program",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d75",
+          "label": "GNU Image Manipulation Program",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gnome-shell",
+          "ancestors": [
+            "menu: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d76",
+          "label": "",
+          "tag": "text",
+          "disabled": true,
+          "role": "text",
+          "app": "gnome-shell",
+          "ancestors": [
+            "menu: GNU Image Manipulation Program",
+            "label: GNU Image Manipulation Program"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d77",
+          "label": "GNOME top-bar clock",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d78",
+          "label": "GNOME top-bar clock",
+          "tag": "text",
+          "disabled": true,
+          "role": "label",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d79",
+          "label": "GNOME top-bar clock",
+          "tag": "text",
+          "disabled": true,
+          "role": "text",
+          "app": "gnome-shell",
+          "ancestors": [
+            "label: GNOME top-bar clock"
+          ],
+          "active": true
+        },
+        {
+          "ref": "d80",
+          "label": "System",
+          "tag": "button",
+          "role": "menuitem",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d81",
+          "label": "Google Chrome",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d82",
+          "label": "Thunderbird Mail",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d83",
+          "label": "Visual Studio Code",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d84",
+          "label": "VLC media player",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d85",
+          "label": "LibreOffice Writer",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d86",
+          "label": "LibreOffice Calc",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d87",
+          "label": "LibreOffice Impress",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d88",
+          "label": "GNU Image Manipulation Program",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d89",
+          "label": "Files",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d90",
+          "label": "Ubuntu Software",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d91",
+          "label": "Help",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d92",
+          "label": "Trash",
+          "tag": "button",
+          "role": "button",
+          "app": "gnome-shell",
+          "active": true
+        },
+        {
+          "ref": "d93",
+          "label": "Show Applications",
+          "tag": "input",
+          "role": "checkbox",
+          "app": "gnome-shell",
+          "active": true
+        }
+      ]
+    }
+  ]
+}

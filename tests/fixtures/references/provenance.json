@@ -1,0 +1,17 @@
+{
+  "source_host": "zju-18",
+  "retrieved_at": "2026-11-16",
+  "purpose": "Frozen source for historical regression comparisons, not imported runtime code.",
+  "files": [
+    {
+      "file": "agent_planner_v56.py",
+      "source": "/home/chenbofan/cbf_workspace/CUA-JEV-docker-20261027-zju48-v56/src/cua_jev/agent_planner.py",
+      "sha256": "f4a4decc2383b4d6c9fe77de2d46887e7e868425f1c5eeaae1e7771943bf6b40"
+    },
+    {
+      "file": "osworld_backend_v73.py",
+      "source": "/home/chenbofan/cbf_workspace/CUA-JEV-docker-zju48-v73-targeted-01/src/cua_jev/osworld_backend.py",
+      "sha256": "f09f260ffc4989bfae36dd020547624149bc1c4c34084ec72f2de35c97c20110"
+    }
+  ]
+}

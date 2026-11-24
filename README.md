@@ -19,7 +19,7 @@
 
 CUA-JEV is an open-source reference framework for computer-use agents built on [Jev](https://docs.typesafe.ai/introduction). A text model proposes grounded next actions; task adapters turn them into **legal, executable, verifiable** `intent × channel` candidates (GUI, DOM, UIA, COM, CLI, MCP, file API); Jev picks **the action and the route that executes it**; a guard, an executor and an independent verifier close the loop.
 
-> Recorded single runs, not benchmarks. Published desktop workflows are Windows-only; arbitrary-task generalization is not claimed.
+> The Windows recordings are single runs, not benchmarks; benchmark results are reported separately in [Benchmarks](#benchmarks-vlm-system-2--jev-system-1). Arbitrary-task generalization is not claimed.
 
 ## How it works
 
@@ -41,6 +41,22 @@ Four real model + Jev runs (18–21 actions each, zero VLM calls). Click a previ
 | [![Git workflow guide recording preview](website/media/windows-git-guide.jpg)](https://zjureal.com/CUA-JEV/#case-git-guide) | [![PowerShell learning guide recording preview](website/media/windows-powershell-guide.jpg)](https://zjureal.com/CUA-JEV/#case-powershell-guide) |
 
 Earlier task-specific workflows, open-task pilots and the roadmap: [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) · [open-task notes](docs/OPEN_TASKS.md).
+
+## Benchmarks: VLM System 2 + Jev System 1
+
+The `s1s2_jev` runner splits the agent in two. **System 2** (a VLM) plans a few short semantic subgoals from the current screenshot and structure. **System 1** (Jev plus deterministic code) binds each subgoal to a live control or screen region, picks the execution channel (GUI or an MCP tool), checks the effect on the screen, tries a System-2 alternative when a step fails, and returns to System 2 only when it cannot continue. The baseline is the same VLM choosing every step itself (`vlm` mode). Both use Qwen3.7-Plus with a 512-token thinking budget; System 1 uses `jev-1.14.0`.
+
+| MiniWoB++ (125 tasks) | Success | Agent time / episode | VLM calls / episode | VLM tokens / episode |
+|---|---:|---:|---:|---:|
+| VLM only | 62 | 42.5 s | 3.7 | 7.1k |
+| VLM + Jev | **62** | **23.9 s** (−44%) | **2.0** (−46%) | **2.5k** (−65%) |
+
+| OSWorld-MCP (279 tasks) | Success | Agent time / episode | VLM calls / episode | VLM tokens / episode |
+|---|---:|---:|---:|---:|
+| VLM only | 103 | 223 s | 14.9 | 338k |
+| VLM + Jev | **104** | **199 s** (−11%) | **11.6** (−22%) | **49k** (−86%) |
+
+On OSWorld-MCP, Jev made 17 decisions per episode on average (tool shortlists and channel choices, on-screen grounding, effect and completion checks). The token saving comes mostly from System 2 seeing only a Jev-selected handful of the 131 MCP tools instead of the full catalogue. Each task ran once, so a gap of a few tasks is within run-to-run variation; Jev is stronger on Writer and multi-app tasks and weaker on GIMP and Calc. Setup, exclusions, per-application results and commands: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ## Quick start
 

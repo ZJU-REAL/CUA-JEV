@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="static/home.css?v=20261114p">
+  <link rel="stylesheet" href="static/home.css?v=20261124b">
 </head>
 <body class="cj-body">
   <a class="cj-skip" href="#main">Skip to content</a>
@@ -17,7 +17,7 @@
     <div class="cj-nav-in">
       <a class="cj-brand" href="#top" aria-label="CUA-JEV home"><img src="static/title.svg?v=20261114p" alt="CUA-JEV" width="127" height="26"></a>
       <nav class="cj-nav-links" aria-label="Sections">
-        <a href="#idea">Idea</a><a href="#how">How it works</a><a href="#windows-cases">Recordings</a><a href="#quick-start">Quick start</a>
+        <a href="#idea">Idea</a><a href="#how">How it works</a><a href="#benchmarks">Benchmarks</a><a href="#windows-cases">Recordings</a><a href="#quick-start">Quick start</a>
       </nav>
       <a class="cj-nav-gh" href="https://github.com/ZJU-REAL/CUA-JEV" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
     </div>
@@ -166,6 +166,41 @@
         </div>
         <ol class="cj-sc-trace" data-k="trace" aria-label="Trace lines"></ol>
       </div>
+    </section>
+
+    <!-- ============ BENCHMARKS ============ -->
+    <section class="cj-sec" id="benchmarks">
+      <div class="cj-head">
+        <h2>VLM plans, Jev acts: same accuracy, less time and far fewer tokens.</h2>
+        <p>A VLM (System 2) plans a few semantic subgoals; Jev (System 1) binds each to a live control or screen region, picks GUI or an MCP tool, checks the effect on screen and only hands back when it cannot continue. The baseline is the same VLM choosing every step. Per-episode means.</p>
+      </div>
+      <div class="cj-bench">
+        <div class="cj-matrix-card">
+          <p class="cj-card-title">MiniWoB++ · 125 tasks</p>
+          <div class="cj-matrix-scroll">
+            <table class="cj-matrix cj-bench-table">
+              <thead><tr><th scope="col">Agent</th><th scope="col">Success</th><th scope="col">Agent time</th><th scope="col">VLM calls</th><th scope="col">VLM tokens</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">VLM only</th><td>62</td><td>42.5 s</td><td>3.7</td><td>7.1k</td></tr>
+                <tr class="cj-bench-ours"><th scope="row">VLM + Jev</th><td>62</td><td>23.9 s <em>−44%</em></td><td>2.0 <em>−46%</em></td><td>2.5k <em>−65%</em></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="cj-matrix-card">
+          <p class="cj-card-title">OSWorld-MCP · 279 tasks</p>
+          <div class="cj-matrix-scroll">
+            <table class="cj-matrix cj-bench-table">
+              <thead><tr><th scope="col">Agent</th><th scope="col">Success</th><th scope="col">Agent time</th><th scope="col">VLM calls</th><th scope="col">VLM tokens</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">VLM only</th><td>103</td><td>223 s</td><td>14.9</td><td>338k</td></tr>
+                <tr class="cj-bench-ours"><th scope="row">VLM + Jev</th><td>104</td><td>199 s <em>−11%</em></td><td>11.6 <em>−22%</em></td><td>49k <em>−86%</em></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="cj-onenote">One run per task, so a gap of a few tasks is within run-to-run variation. Qwen3.7-Plus (512-token thinking) and jev-1.14.0; OSWorld-MCP without its 76 Chrome tasks, 50 steps and 30 minutes per episode for both agents. Jev is weaker on GIMP and Calc. <a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/docs/BENCHMARKS.md" target="_blank" rel="noreferrer">Setup, exclusions and per-application results</a>.</p>
     </section>
 
     <!-- ============ RECORDINGS ============ -->

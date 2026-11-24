@@ -1,0 +1,13 @@
+{
+  "version": "v23",
+  "previous_fixture_preserved": "desktop_stage_prompt_v22.json",
+  "prompt_sha256": {
+    "2": "f754b3852e7184679adef4a0098e0bd7e707755a069e6b4a2d2df3cb57ee1b0f",
+    "6": "47eaa1ef1099327e6234dfa33e0601486041fa7522df71b0eedc27cda5f50ddb",
+    "12": "daac20a20ee52ccd750159fd3e1eb5ab7c80b6a11e98db1a8449ff85cad9bc42"
+  },
+  "source_sha256": "514f2a34d78a4ac64e6d784749d337bf71a19b7da6da03ddd9c90484f0bf577c",
+  "experiment_source": "runs/stage_first_prompt_v23.py",
+  "experiment_sha256": "2e4faae5db8569cf4a2e1071aa5625655b6cfbb6f42eb843b7d7cb12e9ca3df4",
+  "difference_from_experiment": "Added generic explicit contains guidance for uncertain future label suffix, and retained existing native gesture/state/default rules. No parser or capability changes."
+}
