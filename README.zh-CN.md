@@ -69,6 +69,17 @@ CUA-JEV 是基于 [Jev](https://docs.typesafe.ai/introduction) 的 Computer-Use 
 
 实验设置、排除项、分应用结果和复现命令见 [docs/BENCHMARKS.zh-CN.md](docs/BENCHMARKS.zh-CN.md)。
 
+两组在 OSWorld-MCP 上的工具使用情况（279 道任务）：
+
+| | 仅 VLM | VLM + Jev |
+|---|---:|---:|
+| 每次决策时 VLM 看到的 MCP 工具数 | 131 | 约 10 个（由 Jev 筛选） |
+| 应用专用工具的调用占比（不含通用的 `os` 命令行和文件工具） | 49% | **83%** |
+| 通用命令行工具 `os.open_shell` 的调用占比 | 43% | **10%** |
+| 同时用到 MCP 工具和 GUI 操作的回合中的成功率 | 17%（14/83） | **30%**（35/117） |
+
+有了 Jev 的筛选，VLM 会直接调用 Writer、Impress、VS Code、VLC 这些应用的专用工具，而不是绕道命令行。当任务既要用工具又要操作界面时，Jev 负责定位目标并核验每一步的效果，这类混合回合的成功率因此更高。
+
 ## 快速开始
 
 需要 Windows 与 Python 3.11+。先运行无需密钥的 Rule 基线：

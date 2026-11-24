@@ -59,6 +59,20 @@ On the 53 tasks that all three agents solved, the mean agent time is 27.4 s (VLM
 
 What Jev did on OSWorld-MCP, summed over the 279 tasks: 2,430 MCP tool calls routed, 1,156 on-screen groundings (456 of them replacing a System-2 coordinate guess), 235 confirmations that an action had taken effect when the pixel check saw no change, and 28 completion claims sent back to System 2.
 
+### Tool use
+
+| | VLM only | VLM + Jev |
+|---|---:|---:|
+| MCP tools shown to the VLM per decision | 131 | ~10 (Jev shortlist) |
+| MCP calls / GUI actions per episode | 7.6 / 3.3 | 8.7 / 11.0 |
+| Episodes that used MCP | 78% | 80% |
+| Calls to application-specific tools (not the generic `os` tools) | 49% | 83% |
+| Calls to `os.open_shell` | 43% (925 / 2,132) | 10% (246 / 2,430) |
+| Success in episodes that used only MCP | 44% (59/135) | 40% (42/106) |
+| Success in episodes that combined MCP and GUI | 17% (14/83) | 30% (35/117) |
+
+Calls by tool family: VLM only uses `os` 1,096, `libreoffice_calc` 519, `libreoffice_impress` 323, `libreoffice_writer` 99, `code` 46, `vlc` 14; VLM + Jev uses `libreoffice_impress` 799, `libreoffice_calc` 718, `os` 403, `libreoffice_writer` 234, `code` 114, `vlc` 78. Tool-call failure rates are 5% and 8%. Episode types are counted per agent, so the two columns of the last two rows cover different task sets. Whether a subgoal goes to MCP or the GUI is mostly decided by System 2 from the Jev shortlist; Jev rarely overrides a tool System 2 attached to a GUI subgoal.
+
 ## Limits
 
 - One run per task and agent; no held-out split. The runner's thresholds were tuned on these benchmarks.

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="static/home.css?v=20261124b">
+  <link rel="stylesheet" href="static/home.css?v=20261124c">
 </head>
 <body class="cj-body">
   <a class="cj-skip" href="#main">Skip to content</a>
@@ -199,6 +199,11 @@
             </table>
           </div>
         </div>
+      </div>
+      <div class="cj-bench-facts">
+        <div class="cj-bench-fact"><b>10 of 131</b><span>MCP tools the VLM sees per decision, shortlisted by Jev</span></div>
+        <div class="cj-bench-fact"><b>49% → 83%</b><span>tool calls that use application-specific tools instead of the generic <code>os</code> shell</span></div>
+        <div class="cj-bench-fact"><b>17% → 30%</b><span>success in episodes that combine MCP tools with GUI actions</span></div>
       </div>
       <p class="cj-onenote">One run per task, so a gap of a few tasks is within run-to-run variation. Qwen3.7-Plus (512-token thinking) and jev-1.14.0; OSWorld-MCP without its 76 Chrome tasks, 50 steps and 30 minutes per episode for both agents. Jev is weaker on GIMP and Calc. <a href="https://github.com/ZJU-REAL/CUA-JEV/blob/main/docs/BENCHMARKS.md" target="_blank" rel="noreferrer">Setup, exclusions and per-application results</a>.</p>
     </section>
